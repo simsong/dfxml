@@ -299,7 +299,7 @@ class dftime(ComparableMixin):
             return self.iso8601_
         except AttributeError:
             # We better have a Unix timestamp representation?
-            self.iso8601_ = time.strftime("%FT%TZ",time.gmtime(self.timestamp_))
+            self.iso8601_ = time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime(self.timestamp_))
             return self.iso8601_
     
     def timestamp(self):
