@@ -657,10 +657,12 @@ class fileobject:
                     fstype = self.volume.ftype_str()
                     if fstype != None:
                         fstype_flag = '-f' + fstype
-                    cmd = ['icat',fstype_flag,'-b',str(block_size),'-o',str(offset/block_size),imagefile.name,str(inode)] 
+                        cmd = ['icat',fstype_flag,'-b',str(block_size),'-o',str(offset/block_size),imagefile.name,str(inode)]
+                    else:
+                        cmd = ['icat','-b',str(block_size),'-o',str(offset/block_size),imagefile.name,str(inode)]
                     (data,err) = Popen(cmd, stdout=PIPE,stderr=PIPE).communicate()
                     # Check for an error
-                    if len(err) > 0 :  
+                    if len(err) > 0 :
                         raise ValueError("icat error (" + err.strip() + "): "+" ".join(cmd))
                     return data
                 else :
