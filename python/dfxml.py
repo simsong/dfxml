@@ -682,7 +682,7 @@ class fileobject:
         if calcMD5: tf.md5 = hashlib.md5()
         if calcSHA1: tf.sha1 = hashlib.sha1()
         for run in self.byte_runs():
-            self.imagefile.seek(run.img_start)
+            self.imagefile.seek(run.img_offset)
             count = run.len
             while count>0:
                 xfer_len = min(count,1024*1024)        # transfer up to a megabyte at a time
@@ -699,7 +699,7 @@ class fileobject:
         """Saves the file."""
         with open(filename,"wb") as f:
             for run in self.byte_runs():
-                self.imagefile.seek(run.img_start)
+                self.imagefile.seek(run.img_offset)
                 count = run.len
                 while count>0:
                     xfer_len = min(count,1024*1024)        # transfer up to a megabyte at a time 
