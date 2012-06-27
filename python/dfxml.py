@@ -272,8 +272,10 @@ class dftime(ComparableMixin):
     def __repr__(self):
         return self.iso8601() or "None"
     def __le__(self,b):
+        if b is None: return None
         return self.iso8601().__le__(b.iso8601())
     def __gt__(self,b):
+        if b is None: return None
         return self.iso8601().__gt__(b.iso8601())
     def _cmpkey(self):
         """Provide a key to use for comparisons; for use with ComparableMixin parent class."""
@@ -1347,6 +1349,11 @@ if __name__=="__main__":
         assert test_unicode_string == safe_b64decode(test_base64_string)
         print("Unicode value parsing good!")
         print("Testing dftime values")
+        test_comparison_dftime = dftime("1900-01-02T02:03:04Z")
+        assert ( None > test_comparison_dftime ) is None
+        assert ( None < test_comparison_dftime ) is None
+        assert ( test_comparison_dftime > None ) is None
+        assert ( test_comparison_dftime < None ) is None
         check_equal("1900-01-02T02:03:04Z",-2208895016,True)
         check_equal("2000-01-02T02:03:04Z","2000-01-02T03:03:04-0100",False)
         check_equal("2000-01-02T02:03:04-0100","2000-01-02T02:03:04-0100",True)
