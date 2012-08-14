@@ -438,7 +438,7 @@ class registry_cell_object:
         self._full_path   = None
 
         """Keys have two types:  "root" (0x2c,0xac) and not-root.  Values have several more types."""
-        self.type        = None
+        self._type        = None
 
         """Keep handy a handle on the registry object"""
         self.registry_handle = None
@@ -460,6 +460,13 @@ class registry_cell_object:
         Unlike DFXML, registry paths are delimited with a backslash due to the forward slash being a legal and commonly observed character in cell names.
         """
         return self._full_path
+
+    def type(self):
+        """
+        This is the data type of the cell.  Keys can be root or not-root; values have several types, like UTF-8, binary, etc.
+        Presently, this exports as a string representation of the type, not the numeric type code.
+        """
+        return self._type
 
     def _myname(self):
         """This function is called by repr and str, due to (vague memories of) the possibility of an infinite loop if __repr__ calls __self__."""
@@ -499,9 +506,9 @@ class registry_key_object(registry_cell_object):
     def mtime(self):
         return self._mtime
     def root(self):
-        if self.type == None:
+        if self.type() is None:
             return None
-        return self.type == "root"
+        return self.type() == "root"
 
 class registry_value_object(registry_cell_object):
     def __init__(self):
@@ -977,19 +984,19 @@ class regxml_reader(xml_reader):
             
             #Note these two tests for root and parent _are_ supposed to be independent tests.
             if attrs.get("root",None) == "1":
-                new_object.type = "root"
+                new_object._type = "root"
             else:
-                new_object.type = ""
+                new_object._type = ""
 
             if len(self.objectstack) > 1:
                 new_object.parent_key = self.objectstack[-1]
 
             #Sanity check:  root key implies no parent
-            if new_object.type == "root":
+            if new_object.type() == "root":
                 assert new_object.parent_key == None
             #Sanity check:  no parent implies root key --OR-- recovered key
             if new_object.parent_key == None:
-                assert new_object.used == False or new_object.type == "root"
+                assert new_object.used == False or new_object.type() == "root"
 
             #Define new_object.name
             #Force a name for keys. If the key has no recorded name, apply artificial name prefix to nonce.
@@ -1013,9 +1020,9 @@ class regxml_reader(xml_reader):
         elif name in ["value"]:
             new_object = registry_value_object()
             new_object.parent_key = self.objectstack[-1]
-            new_object.type = attrs.get("type",None)
+            new_object._type = attrs.get("type",None)
 
-            if new_object.type == "string-list":
+            if new_object.type() == "string-list":
                 new_object.strings = []
             
             #Store decoded name
