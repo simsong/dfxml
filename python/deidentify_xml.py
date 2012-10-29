@@ -1,10 +1,10 @@
 #!/usr/bin/python
 #
-# sanitize_xml.py:
-# Given XML for a disk, remove all personally identifiable information (PII), but leave the XML
-# in a form that is somewhat useful.
+# deidentify_xml.py:
+# Given XML for a disk, remove information that might be personally identifying from filenames.
+# remember the mapping so that directory names don't get changed.
 #
-# 
+# 2012-10-27 slg - updated to Python3
 
 private_dirs = ["home/","usr/home","Users"]
 ok_top_paths_win = ["program files/","System","Windows"]
@@ -16,14 +16,15 @@ import os.path, os, sys
 
 partdir = {}
 def sanitize_part(part):
+    """Sanitize a part of a pathname in a consistent manner"""
     if part not in partdir:
         partdir[part] = "P%07d" % (len(partdir)+1)
     return partdir[part]
 
-def sanitize_filename(fn):
-    """Given a filename, sanitize it."""
-    ofn = fn
-    jfn = fn
+def sanitize_filename(fname):
+    """Given a filename, sanitize each part and return it."""
+    ofn = fname
+    jfn = fname
     if jfn[0]=='/': jfn=jfn[1:]
     pathok = False
     for p in ok_top_paths:
@@ -33,39 +34,42 @@ def sanitize_filename(fn):
     if not pathok:
         # if the path is not okay, replace all of the parts
         # and the name up to the .ext
-        parts = fn.split("/")
+        parts = fname.split("/")
         parts[:-1] = [sanitize_part(s) for s in parts[:-1]]
         (root,ext) = os.path.splitext(parts[-1])
         if ext not in acceptable_extensions:
             parts[-1] = sanitize_part(root) + ext
-        fn = "/".join(parts)
-    if ofn[0]=='/' and fn[0]!='/':
-        fn = "/" + fn
-    return fn
+        fname = "/".join(parts)
+    if ofn[0]=='/' and fname[0]!='/':
+        fname = "/" + fname
+    return fname
     
 class xml_sanitizer:
-    """Read and write the XML, but sanitize the filenames."""
+    """Read and write the XML, but sanitize the filename elementss."""
     def __init__(self,out):
         self.out = out
-        self.cdata = u""
+        self.cdata = ""
         
     def _start_element(self, name, attrs):
         """ Handles the start of an element for the XPAT scanner"""
-        s = []
+        s = ['<',name]
         if attrs:
-            s.append("")
-            for (a,v) in attrs.iteritems():
-                s.append("%s='%s'" % (a,v))
-        self.out.write("<%s%s>" % (name," ".join(s)))
-        self.cdata = u""                 # new element
+            for (a,v) in attrs.items():
+                if '"' not in v:
+                    s += [a,'="',v,'"']
+                else:
+                    s += [a,"='",v,"'"]
+        s += ['>']
+        self.out.write("".join(s))
+        self.cdata = ""                 # new element
 
     def _end_element(self, name):
         """Handles the end of an element for the XPAT scanner"""
         if name=="filename":
             self.cdata = sanitize_filename(self.cdata)
         if self.cdata=="\n": self.cdata=""
-        self.out.write("%s</%s>\n" % (self.cdata,name))
-        self.cdata = u""
+        self.out.write("".join([self.cdata,'</',name,'>']))
+        self.cdata = ""
 
     def _char_data(self, data):
         """Handles XML data"""
@@ -84,7 +88,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     global options
     parser = OptionParser()
-    parser.add_option("-t","--test")
+    parser.add_option("-t","--test",help='Test a specific pathanme to sanitize')
     (options,args) = parser.parse_args()
 
     if options.test:
@@ -92,15 +96,10 @@ if __name__=="__main__":
             for (dirpath,dirnames,filenames) in os.walk(options.test):
                 for filename in filenames:
                     fn = dirpath+"/"+filename
-                    print "%s\n   %s" % (fn,sanitize_filename(fn))
+                    print("%s\n   %s" % (fn,sanitize_filename(fn)))
 
     x = xml_sanitizer(sys.stdout)
-    if args[0].endswith(".xml"):
-        f = open(args[0])
-    else:
-        from subprocess import Popen,PIPE
-        f = Popen(['fiwalk',"-x",args[0]],stdout=PIPE).stdout
-    x.process_xml_stream(f)
+    x.process_xml_stream(open(args[0],'rb'))
     
             
             
