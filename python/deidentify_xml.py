@@ -56,9 +56,9 @@ class xml_sanitizer:
         if attrs:
             for (a,v) in attrs.items():
                 if '"' not in v:
-                    s += [a,'="',v,'"']
+                    s += [' ',a,'="',v,'"']
                 else:
-                    s += [a,"='",v,"'"]
+                    s += [" ",a,"='",v,"'"]
         s += ['>']
         self.out.write("".join(s))
         self.cdata = ""                 # new element

@@ -1,3 +1,7 @@
+2012-10-31    <simsong@ncr.nps.edu>
+
+	* deidentify_xml.py (xml_sanitizer._start_element): fixed problem quoting attributes
+
 2012-04-03  Simson Garfinkel  <simsong@mncrnpsedu.local>
 
 	* dfxml.py: globally changed .data to .cdata for consistency.
