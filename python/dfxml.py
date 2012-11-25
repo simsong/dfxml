@@ -496,6 +496,12 @@ class registry_cell_object:
         """
         return None
 
+    def md5(self):
+        """
+        Return None. Meant to be overwritten.
+        """
+        return None
+
 class registry_key_object(registry_cell_object):
     def __init__(self):
         registry_cell_object.__init__(self)
@@ -517,6 +523,9 @@ class registry_value_object(registry_cell_object):
 
         self._cell_type = "registry_value_object"
         
+        #TODO Replace to be in line with fileobjects: fileobject.hashdigest is a dictionary
+        self._hashcache = dict()
+
         """List for the string-list type of value."""
         self.strings = None
 
@@ -528,23 +537,41 @@ class registry_value_object(registry_cell_object):
     #    else:
     #        return None
 
-    def sha1(self):
+    def _hash(self, hashfunc):
         """
         Return cached hash, populating cache if necessary.
-        If self.value_data is None, this should return None.
+        hashfunc expected values: The functions hashlib.sha1, hashlib.md5.
+        If self.value_data is None, or there are no strings in a "string-list" type, this should return None.
+        Interpretation: Registry values of type "string-list" are hashed by feeding each element of the list into the hash .update() function. All other Registry values are fed in the same way, as a 1-element list.
+        For example, a string type value cell with data "a" fed into this function returns md5("a") (if hashlib.md5 were requested).  A string-list type value cell with data ["a","b"] returns md5("ab").
+        This is a simplification to deal with Registry string encodings, and may change in the future.
         """
-        if self._sha1 is None:
-            if self.value_data != None:
-                h = hashlib.sha1()
-                if type(self.value_data) == type(""):
+        if self._hashcache.get(repr(hashfunc)) is None:
+            feed_list = []
+            if self.type() == "string-list":
+                feed_list = self.strings
+            elif not self.value_data is None:
+                feed_list.append(self.value_data)
+            #Normalize to hash .update() required type
+            for (elemindex, elem) in enumerate(feed_list):
+                if type(elem) == type(""):
                     #String data take a little extra care:
                     #"The bytes in your ... file are being automatically decoded to Unicode by Python 3 as you read from the file"
                     #http://stackoverflow.com/a/7778340/1207160
-                    h.update(self.value_data.encode("utf-8"))
-                else:
-                    h.update(self.value_data)
-                self._sha1 = h.hexdigest()
-        return self._sha1
+                    feed_list[elemindex] = elem.encode("utf-8")
+            #Hash if there's data to hash
+            if len(feed_list) > 0:
+                h = hashfunc()
+                for elem in feed_list:
+                    h.update(elem)
+                self._hashcache[repr(hashfunc)] = h.hexdigest()
+        return self._hashcache.get(repr(hashfunc))
+
+    def sha1(self):
+        return self._hash(hashlib.sha1)
+
+    def md5(self):
+        return self._hash(hashlib.md5)
 
 class fileobject:
     """The base class for file objects created either through XML DOM or EXPAT"""
@@ -1104,7 +1131,7 @@ class regxml_reader(xml_reader):
         elif name in ["string"]:
             value_object = self.objectstack[-1]
             if value_object.strings == None:
-                raise ValueError("regxml_reader._end_element:  parsing error, string found but parent's type can't support a string list.")
+                raise ValueError("regxml_reader._end_element:  parsing error, string element found, but parent's type can't support a string list.")
             value_object.strings.append(self.cdata)
             self.cdata = None
         elif name in ["byte_runs","byte_run"]:
