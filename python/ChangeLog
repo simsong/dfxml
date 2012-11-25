@@ -1,3 +1,7 @@
+2012-11-24    <ajnelson@cs.ucsc.edu>
+
+	* dfxml.py (class byte_runs): change comparator methods (Python 3 doesn't use __cmp__)
+
 2012-10-31    <simsong@ncr.nps.edu>
 
 	* deidentify_xml.py (xml_sanitizer._start_element): fixed problem quoting attributes

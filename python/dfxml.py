@@ -28,6 +28,7 @@ Each object has the attributes:
 where encoding, if present, is 0 for raw, 1 for NTFS compressed.
 
 """
+import sys
 from sys import stderr
 from subprocess import Popen,PIPE
 import base64
@@ -128,7 +129,9 @@ class byte_run:
     Originally this was an array,
     which is faster than an attributed object. But this approach is more expandable,
     and it's only 70% the speed of an array under Python3.0.
-    
+        
+    Note that Python 3 removed the __cmp__ class method:
+        <http://docs.python.org/release/3.0.1/whatsnew/3.0.html#ordering-comparisons>
     """
     # declaring slots prevents other attributes from appearing,
     # but that prevents the code from working with new XML that has new fields.
@@ -140,11 +143,21 @@ class byte_run:
         self.sector_size = 512          # default
         self.hashdigest  = dict()       # 
 
-    def __cmp__(self,other):
-        if self.img_offset != None and other.img_offset != None:
-            return cmp(self.img_offset,other.img_offset)
-        elif self.file_offset != None and other.file_offset != None:
-            return cmp(self.file_offset,other.file_offset)
+    def __lt__(self,other):
+        if self.img_offset is not None and other.img_offset is not None:
+            return self.img_offset < other.img_offset
+        elif self.file_offset is not None and other.file_offset is not None:
+            return self.file_offset < other.file_offset
+        else:
+            raise ValueError("Byte run objects are incomparable")
+    
+    def __eq__(self,other):
+        if self.img_offset is not None and other.img_offset is not None:
+            return self.img_offset == other.img_offset
+        elif self.file_offset is not None and other.file_offset is not None:
+            return self.file_offset == other.file_offset
+        else:
+            raise ValueError("Byte run objects are incomparable")
 
     def __str__(self):
         try:
@@ -233,7 +246,6 @@ class ComparableMixin(object):
     def __ne__(self, other):
         return self._compare(other, lambda s, o: s != o)
 
-import sys
 class dftime(ComparableMixin):
     """Represents a DFXML time. Automatically converts between representations and caches the
     results as necessary.."""
@@ -1367,7 +1379,13 @@ if __name__=="__main__":
         db.add(a)
         b = byte_run(5,5)
         db.add(b)
-        assert db.intersects(byte_run(0,5))==byte_run(0,5)
+        try:
+            assert db.intersects(byte_run(0,5))==byte_run(0,5)
+        except:
+            print(type(cmp))
+            print(db.intersects(byte_run(0,5)))
+            print(byte_run(0,5))
+            raise
         assert db.intersects(byte_run(0,1))
         assert db.intersects(byte_run(2,3))
         assert db.intersects(byte_run(4,1))
