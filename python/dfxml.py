@@ -1095,7 +1095,6 @@ class regxml_reader(xml_reader):
             # TODO adjust hivexml to not use a plain "encoding" attribute
             value_encoding = attrs.get("encoding", attrs.get("value_encoding")) 
             if value_encoding == "base64":
-                import sys
                 if sys.version_info.major>2:
                     value_data = bytes(value_data,encoding='ascii')
                 return base64.b64decode(value_data)
