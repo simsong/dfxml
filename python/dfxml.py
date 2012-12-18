@@ -669,9 +669,10 @@ class fileobject:
         """Returns True if the file is allocated, False if it was not
         (that is, if it was deleted or is an orphan).
         Note that we need to be tolerant of mixed case, as it was changed.
+        We also need to tolerate the case of the unalloc tag being used.
         """
         if self.filename()=="$OrphanFiles": return False
-        return isone(self.tag("alloc")) or isone(self.tag("ALLOC"))
+        return isone(self.tag("alloc")) or isone(self.tag("ALLOC")) or not isone(self.tag("unalloc"))
 
     def compressed(self):
         if not self.has_tag("compressed") and not self.has_tag("compressed") : return False

@@ -1,6 +1,7 @@
 2012-12-17    <ajnelson@cs.ucsc.edu>
 
 	* dfxml.py (class dftime): add parser and tests for email timestamp format
+	* dfxml.py (class fileobject): correct 'allocation' interpretation
 
 2012-11-24    <ajnelson@cs.ucsc.edu>
 
