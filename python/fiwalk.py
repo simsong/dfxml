@@ -13,61 +13,71 @@ from sys import stderr
 from subprocess import Popen,PIPE
 ALLOC_ONLY = 1
 
+fiwalk_cached_installed_version = None
 def fiwalk_installed_version(fiwalk='fiwalk'):
     """Return the current version of fiwalk that is installed"""
+    global fiwalk_cached_installed_version
+    if fiwalk_cached_installed_version:
+        return fiwalk_cached_installed_version
     from subprocess import Popen,PIPE
     import re
-    for line in Popen([fiwalk,'-V'],stdout=PIPE).stdout.read().split("\n"):
+    for line in Popen([fiwalk,'-V'],stdout=PIPE).stdout.read().decode('utf-8').split("\n"):
         g = re.search("^FIWalk Version:\s+(.*)$",line)
         if g:
-            return g.group(1)
+            fiwalk_cached_installed_version = g.group(1)
+            return fiwalk_cached_installed_version
     return None
 
 class XMLDone(Exception):
     def __init__(self,value):
         self.value = value
 
+class version:
+    def __init__(self):
+        self.cdata = ""
+        self.in_element = []
+        self.version = None
+    def start_element(self,name,attrs):
+        if(name=='volume'):     # too far?
+            raise XMLDone(None)
+        self.in_element += [name]
+        self.cdata = ""
+    def end_element(self,name):
+        if ("fiwalk" in self.in_element) and ("creator" in self.in_element) and ("version" in self.in_element):
+            raise XMLDone(self.cdata)
+        if ("fiwalk" in self.in_element) and ("fiwalk_version" in self.in_element):
+            raise XMLDone(self.cdata)
+        if ("version" in self.in_element) and ("dfxml" in self.in_element) and ("creator" in self.in_element):
+            raise XMLDone(self.cdata)
+        self.in_element.pop()
+        self.cdata = ""
+    def char_data(self,data):
+        self.cdata += data
+
+    def get_version(self,fn):
+        import xml.parsers.expat
+        p = xml.parsers.expat.ParserCreate()
+        p.StartElementHandler  = self.start_element
+        p.EndElementHandler    = self.end_element
+        p.CharacterDataHandler = self.char_data
+        try:
+            p.ParseFile(open(fn,'rb'))
+        except XMLDone as e:
+            return e.value
+        except xml.parsers.expat.ExpatError:
+            return None             # XML error
+        
 def fiwalk_xml_version(filename=None):
     """Returns the fiwalk version that was used to create an XML file.
     Uses the "quick and dirt" approach to getting to getting out the XML version."""
 
-    in_element = set()
-    cdata = ""
-    version = None
-    def start_element(name,attrs):
-        global cdata
-        in_element.add(name)
-        cdata = ""
-    def end_element(name):
-        global cdata
-        if ("fiwalk" in in_element) and ("creator" in in_element) and ("version" in in_element):
-            raise XMLDone(cdata)
-        if ("fiwalk" in in_element) and ("fiwalk_version" in in_element):
-            raise XMLDone(cdata)
-        in_element.remove(name)
-        cdata = ""
-    def char_data(data):
-        global cdata
-        cdata += data
-
-    import xml.parsers.expat
-    p = xml.parsers.expat.ParserCreate()
-    p.StartElementHandler  = start_element
-    p.EndElementHandler    = end_element
-    p.CharacterDataHandler = char_data
-    try:
-        p.ParseFile(open(filename))
-    except XMLDone(e):
-        return e.value
-    except xml.parsers.expat.ExpatError:
-        return None             # XML error
-    return None
-    
+    p = version()
+    return p.get_version(filename)
 
 ################################################################
 def E01_glob(fn):
     import os.path
-    "If the filename ends .E01, then glob it. Currently only handles E01 through EZZ"""
+    """If the filename ends .E01, then glob it. Currently only handles E01 through EZZ"""
     ret = [fn]
     if fn.endswith(".E01") and os.path.exists(fn):
         fmt = fn.replace(".E01",".E%02d")
@@ -127,3 +137,6 @@ def fileobjects_using_dom(imagefile=None,xmlfile=None,fiwalk="fiwalk",flags=0,ca
         xmlfile = fiwalk_xml_stream(imagefile=imagefile,flags=flags,fiwalk=fiwalk)
     return dfxml.fileobjects_dom(xmlfile=xmlfile,imagefile=imagefile,flags=flags)
 
+if __name__=="__main__":
+    import sys
+    print(fiwalk_xml_version(sys.argv[1]))
