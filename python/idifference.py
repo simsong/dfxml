@@ -259,11 +259,11 @@ class DiskState:
         self.prior_fname = self.current_fname
         self.current_fname = fname
         if fname.endswith("xml"):
-            with open(infile,'rb') as xmlfile:
+            with open(fname,'rb') as xmlfile:
                 for fi in dfxml.iter_dfxml(xmlfile, preserve_elements=True):
                     self.process_fi(fi)
         else:
-            fiwalk.fiwalk_using_sax(imagefile=open(infile,'rb'), flags=fiwalk.ALLOC_ONLY, callback=self.process_fi)
+            fiwalk.fiwalk_using_sax(imagefile=open(fname,'rb'), flags=fiwalk.ALLOC_ONLY, callback=self.process_fi)
 
     def print_fis(self,title,fis):
         h2(title)

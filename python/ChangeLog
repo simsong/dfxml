@@ -1,6 +1,6 @@
 2013-11-02    <a.nelson@prometheuscomputing.com>
 
-	* idifference.py: Imported null-variable tests to help idifference to be used as a module
+	* idifference.py: Imported null-variable tests, and corrected a variable reference, to help idifference to be used as a module
 	* idifference.py: Imported extra, granular counters on disk state changes
 
 2013-11-01    <a.nelson@prometheuscomputing.com>
