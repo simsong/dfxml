@@ -129,6 +129,14 @@ class DiskState:
         self.notimeline = notimeline
         self.summary = summary
         self.include_dotdirs = include_dotdirs
+        self.changed_mtime_tally = 0
+        self.changed_atime_tally = 0
+        self.changed_ctime_tally = 0
+        self.changed_crtime_tally = 0
+        self.changed_dir_sha1_tally = 0
+        self.changed_file_sha1_tally = 0
+        self.changed_filesize_tally = 0
+        self.changed_first_byterun_tally = 0
         self.next()
         
     def next(self):
@@ -150,6 +158,14 @@ class DiskState:
             self.timeline = None
         else:
             self.timeline = set()
+        self.changed_mtime_tally = 0
+        self.changed_atime_tally = 0
+        self.changed_ctime_tally = 0
+        self.changed_crtime_tally = 0
+        self.changed_dir_sha1_tally = 0
+        self.changed_file_sha1_tally = 0
+        self.changed_filesize_tally = 0
+        self.changed_first_byterun_tally = 0
 
     def process_fi(self,fi):
         global options
@@ -173,15 +189,51 @@ class DiskState:
         ofi = self.fnames.get(fi.filename(),None)
         if ofi:
             dprint("   found ofi")
+            any_diff = False
             if ofi.sha1()!=fi.sha1():
                 dprint("      >>> sha1 changed")
                 self.changed_content.add((ofi,fi))
+                any_diff = True
             elif ofi.atime() != fi.atime() or \
                     ofi.mtime() != fi.mtime() or \
                     ofi.crtime() != fi.crtime() or \
                     ofi.ctime() != fi.ctime():
                 dprint("      >>> time changed")
                 self.changed_properties.add((ofi,fi))
+                any_diff = True
+
+            if any_diff:
+                #Count the types of changes that happened
+                if ofi.filesize() != fi.filesize():
+                    self.changed_filesize_tally += 1
+                if ofi.sha1() != fi.sha1():
+                    if ofi.is_dir():
+                        self.changed_dir_sha1_tally += 1
+                    elif ofi.is_file():
+                        self.changed_file_sha1_tally += 1
+                if ofi.mtime() != fi.mtime():
+                    self.changed_mtime_tally += 1
+                if ofi.atime() != fi.atime():
+                    self.changed_atime_tally += 1
+                if ofi.ctime() != fi.ctime():
+                    self.changed_ctime_tally += 1
+                if ofi.crtime() != fi.crtime():
+                    self.changed_crtime_tally += 1
+                if ofi.byte_runs() and fi.byte_runs():
+                    brdiff = 0
+                    ofirstbr = ofi.byte_runs()[0]
+                    nfirstbr =  fi.byte_runs()[0]
+                    try:
+                        if ofirstbr.file_offset == nfirstbr.file_offset:
+                            brdiff = 1
+                        if ofirstbr.img_offset == nfirstbr.img_offset:
+                            brdiff = 1
+                        if ofirstbr.fs_offset == nfirstbr.fs_offset:
+                            brdiff = 1
+                    except:
+                        pass
+                    self.changed_first_byterun_tally += brdiff
+          
 
         # If a new file, note that (and optionally add to the timeline)
         if not ofi:
