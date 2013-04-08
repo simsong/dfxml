@@ -84,7 +84,10 @@ def hash_file(fn,x):
     x.push("fileobject")
 
     if not args.nofilenames:
-        x.xmlout("filename",fn)
+        if args.stripprefix and fn.startswith(args.stripprefix):
+            x.xmlout("filename",fn[ len(args.stripprefix) : ])
+        else:
+            x.xmlout("filename",fn)
 
     if not args.nometadata:
         x.xmlout("filesize",os.path.getsize(fn))
@@ -210,6 +213,7 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--extract',help='Specify a DFXML to extract a hash set from')
     parser.add_argument('--nometadata',help='Do not include file metadata (times & size) in XML',action='store_true')
     parser.add_argument('--nofilenames',help='Do not include filenames in XML',action='store_true')
+    parser.add_argument('--stripprefix',help='Remove matching prefix string from filenames (e.g. "/mnt/diskname" would reduce "/mnt/diskname/foo" to "/foo", and would not affect "/run/mnt/diskname/foo")')
     parser.add_argument('--title',help='HASHSET Title')
     parser.add_argument('--description',help='HASHSET Description')
     parser.add_argument('--publisher',help='HASHSET Publisher')
@@ -220,7 +224,7 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--abstract',help='HASHSET Abstract')
     parser.add_argument('--classification',help='HASHSET Classification')
     parser.add_argument('--contact',help='HASHSET Contact if found')
-    parser.add_argument('targets',help='What to aprse',nargs='+')
+    parser.add_argument('targets',help='What to parse',nargs='+')
     args = parser.parse_args()
 
     if args.extract:
