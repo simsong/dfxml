@@ -1,3 +1,7 @@
+2013-04-23    <a.nelson@prometheuscomputing.com>
+
+	* idifference.py: Relax input name requirements; passing a ".dfxml" file silently failed.
+
 2013-04-08    <a.nelson@prometheuscomputing.com>
 
 	* dfxml_tool.py (class fileobject): add filename simplifier
