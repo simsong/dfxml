@@ -19,7 +19,7 @@
 
 
 #include "config.h"
-#include "be13_api/beregex.h"
+#include "beregex.h"
 
 #ifdef WIN32
 #include <winsock2.h>
