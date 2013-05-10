@@ -10,16 +10,22 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
  * Extended by Simson Garfinkel with a nice C++ API.
+ * 
+ * Slightly cleaned up by Joel Young <jdyoung@nps.edu>
  */
 
 /* $Id: md5.h 389 2011-07-10 19:03:02Z xchatty $ */
 
-#ifndef __MD5_H
-#define __MD5_H
+#ifndef MD5_H_GUARD
+#define MD5_H_GUARD
 
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+#ifdef WIN32
+#include <winsock.h>
+#endif
 
 /* __BEGIN_DECLS should be used at the beginning of your declarations,
    so that C++ compilers don't mangle their names.  Use __END_DECLS at
@@ -59,6 +65,7 @@ __END_DECLS
 #ifdef __cplusplus
 #include <string.h>
 #include <string>
+#include <cstdio>
 /**
  * md5_t represents an md5 residue
  */
@@ -87,7 +94,7 @@ public:
     const char *hexdigest(char *hexbuf,size_t bufsize) const {
 	const char *hexbuf_start = hexbuf;
 	for(unsigned int i=0;i<sizeof(digest) && bufsize>=3;i++){
-	    snprintf(hexbuf,bufsize,"%02x",digest[i]);
+	    std::snprintf(hexbuf,bufsize,"%02x",digest[i]);
 	    hexbuf  += 2;
 	    bufsize -= 2;
 	}
@@ -108,12 +115,14 @@ public:
 	if(this->digest[0] != s2.digest[0]) return false;
 	return memcmp(this->digest,s2.digest, this->SIZE) == 0;
     }
+
+
+    friend std::ostream& operator<<(std::ostream& os,const md5_t& md5) {
+        os << md5.hexdigest();
+        return os;
+    };
 };
 
-std::ostream & operator <<(std::ostream &os,const md5_t &md5) {
-    os << md5.hexdigest();
-    return os;
-};
 
 
 
@@ -145,4 +154,4 @@ public:
     }
 };
 #endif
-#endif /* ifndef __MD5_H */
+#endif /* ifndef MD5_H_GUARD */
