@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dfxml>
+  <creator version='1.0'>
+    <program>vi</program>
+    <version>7.3</version>
+    <command_line>vi pre.xml</command_line>
+  </creator>
+  <fileobject>
+    <filename>i_will_be_deleted.txt</filename>
+    <name_type>r</name_type>
+    <inode>123456</inode>
+    <filesize>20</filesize>
+    <mtime>2013-01-01T00:00:00Z</mtime>
+    <atime>2013-01-01T00:00:00Z</atime>
+    <ctime>2013-01-01T00:00:00Z</ctime>
+    <byte_runs>
+      <byte_run file_offset='0' img_offset='1234512' len='20'/>
+    </byte_runs>
+    <hashdigest type='md5'>3d90d31043ad6158de35eacc7ac39069</hashdigest>
+    <hashdigest type='sha1'>2a5630f9e70b4931f6b6fc3d9d7f483007012352</hashdigest>
+  </fileobject>
+  <fileobject>
+    <filename>password.txt</filename>
+    <name_type>r</name_type>
+    <inode>123457</inode>
+    <filesize>12</filesize>
+    <mtime>2013-01-01T00:00:00Z</mtime>
+    <atime>2013-01-01T00:00:00Z</atime>
+    <ctime>2013-01-01T00:00:00Z</ctime>
+    <byte_runs>
+      <byte_run file_offset='0' img_offset='234512' len='12'/>
+    </byte_runs>
+    <hashdigest type='md5'>3d90d31043ad6158de35eacc7ac39069</hashdigest>
+    <hashdigest type='sha1'>2a5630f9e70b4931f6b6fc3d9d7f483007012352</hashdigest>
+  </fileobject>
+</dfxml>
