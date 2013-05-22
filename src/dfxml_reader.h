@@ -1,5 +1,5 @@
-#ifndef DFXML_H
-#define DFXML_H
+#ifndef _DFXML_READER_H_
+#define _DFXML_READER_H_
 
 #include <stdio.h>
 #include <string>
@@ -8,7 +8,9 @@
 #include <map>
 #include <sstream>
 
+#ifdef HAVE_MD5_H
 #include "md5.h"
+#endif
 
 class saxobject {
 public:
@@ -42,6 +44,7 @@ public:
     int64_t file_offset;
     int64_t len;
     int64_t sector_size;
+#ifdef HAVE_MD5_H
     md5_t md5() const {
 	hashmap_t::const_iterator it = hashdigest.find("md5");
 	if(it==hashdigest.end()) std::cout << "end found\n";
@@ -49,6 +52,7 @@ public:
 	if(it!=hashdigest.end()) return md5_t::fromhex(it->second);
 	throw new no_hash();
     }
+#endif
 };
 std::ostream & operator <<(std::ostream &os,const byte_run &b);
 
@@ -85,25 +89,27 @@ public:;
     byte_runs_t byte_runs;
 
     std::string filename(){return _tags["filename"];}
+#ifdef HAVE_MD5_H
     md5_t md5() const {
 	std::map<std::string,std::string>::const_iterator it = hashdigest.find("md5");
 	if(it!=hashdigest.end()) return md5_t::fromhex(it->second);
 	throw new no_hash();
     }
+#endif
 };
 
 typedef void (*fileobject_callback_t)(file_object &);
-class XMLReader {
+class dfxml_reader {
 public:
-    XMLReader():tagstack(),cdata(){}
-    virtual ~XMLReader(){}
+    dfxml_reader():tagstack(),cdata(){}
+    virtual ~dfxml_reader(){}
     static std::string getattrs(const char **attrs,const std::string &name);
     static uint64_t getattri(const char **attrs,const std::string &name);
     std::stack<std::string> tagstack;
     std::stringstream cdata;
 };
 
-class file_object_reader:public XMLReader{
+class file_object_reader:public dfxml_reader{
 private:
     /*** neither copying nor assignment is implemented ***
      *** We do this by making them private constructors that throw exceptions. ***/
@@ -112,7 +118,7 @@ private:
 	    return "copying feature_recorder objects is not implemented.";
 	}
     };
-    file_object_reader(const file_object_reader&that):XMLReader(),volumeobject(),fileobject(),callback(),hashdigest_type(){
+    file_object_reader(const file_object_reader&that):dfxml_reader(),volumeobject(),fileobject(),callback(),hashdigest_type(){
 	throw new not_impl();
     }
     const file_object_reader &operator=(const file_object_reader&){ throw new not_impl();}
@@ -124,7 +130,7 @@ public:;
     static void characterDataHandler(void *userData,const XML_Char *s,int len);
 
     virtual ~file_object_reader(){};
-    file_object_reader(): XMLReader(),volumeobject(),fileobject(),callback(),hashdigest_type(){}
+    file_object_reader(): dfxml_reader(),volumeobject(),fileobject(),callback(),hashdigest_type(){}
     volumeobject_sax *volumeobject;
     file_object *fileobject;		// the object currently being read
     fileobject_callback_t callback;
