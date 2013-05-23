@@ -1,0 +1,7 @@
+DFXML = \
+      dfxml/src/dfxml_generator.cpp \
+      dfxml/src/dfxml_generator.h 
+      dfxml/src/dfxml_reader.cpp \
+      dfxml/src/dfxml_reader.h \
+      dfxml/src/hash_t.h \
+      dfxml/src/dfxml_reader.h 
