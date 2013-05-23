@@ -7,6 +7,8 @@
 #include <expat.h>
 #include <time.h>
 #include <netinet/in.h>
+#include <string.h>
+#include <algorithm>
 
 #include "dfxml_reader.h"
 
