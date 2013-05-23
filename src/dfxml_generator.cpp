@@ -40,9 +40,9 @@
 #define MUTEX_UNLOCK(M) {}
 #endif
 
-//#ifdef HAVE_TRE_TRE_H
-//#include <tre/tre.h>
-//#endif
+#ifdef HAVE_TRE_TRE_H
+#include <tre/tre.h>
+#endif
 
 #include <iostream>
 #include <stdarg.h>
