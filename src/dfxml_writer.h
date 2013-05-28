@@ -63,7 +63,7 @@
 
 #ifdef __cplusplus
 #include "cppmutex.h"
-class dfxml_generator {
+class dfxml_writer {
 private:
     /*** neither copying nor assignment is implemented ***
      *** We do this by making them private constructors that throw exceptions. ***/
@@ -72,13 +72,13 @@ private:
             return "copying feature_recorder objects is not implemented.";
         }
     };
-    dfxml_generator(const dfxml_generator &fr) __attribute__((__noreturn__)):
+    dfxml_writer(const dfxml_writer &fr) __attribute__((__noreturn__)):
         M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),
 	t0(),t_last_timestamp(),
         make_dtd(),outfilename(),oneline(){
         throw new not_impl();
     }
-    const dfxml_generator &operator=(const dfxml_generator &x){ throw new not_impl(); }
+    const dfxml_writer &operator=(const dfxml_writer &x){ throw new not_impl(); }
     /****************************************************************/
 
 public:
@@ -122,9 +122,9 @@ public:
     }
 
 
-    dfxml_generator();                                       // defaults to stdout
-    dfxml_generator(const std::string &outfilename,bool makeDTD); // write to a file, optionally making a DTD
-    virtual ~dfxml_generator(){};
+    dfxml_writer();                                       // defaults to stdout
+    dfxml_writer(const std::string &outfilename,bool makeDTD); // write to a file, optionally making a DTD
+    virtual ~dfxml_writer(){};
     void set_tempfile_template(const std::string &temp);
 
     static std::string xmlescape(const std::string &xml);
