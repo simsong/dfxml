@@ -1,3 +1,10 @@
+2013-05-28    <a.nelson@prometheuscomputing.com>
+
+	* python: Integrated three changesets from end of 2012
+	* dfxml.py, rdifference.py: Change interface of RegXML cell type
+	* dfxml.py: Revise method of hashing data of Registry "value" cells
+	* dfxml.py: Trim superfluous code
+
 2013-04-23    <a.nelson@prometheuscomputing.com>
 
 	* idifference.py: Relax input name requirements; passing a ".dfxml" file silently failed.
