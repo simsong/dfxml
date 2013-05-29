@@ -1,0 +1,1 @@
+$ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp ; git push git@github.com:simsong/dfxml.git master
