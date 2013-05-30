@@ -143,6 +143,10 @@ public:
 	if(this->digest[0] != s2.digest[0]) return false;
 	return memcmp(this->digest,s2.digest, SIZE) == 0;
     }
+    friend std::ostream& operator<<(std::ostream& os,const hash__ &s2) {
+        os << s2.hexdigest();
+        return os;
+    }
 };
 
 typedef hash__<EVP_md5,16> md5_t;
