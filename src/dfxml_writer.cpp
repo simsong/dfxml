@@ -712,7 +712,7 @@ void dfxml_writer::add_DFXML_build_environment()
     xmlout("tre", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
 #ifdef HAVE_SECTORID
-    xmlout("library", "", std::string("name=\"sector_hash_client\" version=\"") + sector_hash_version() + "\"",false);
+    xmlout("library", "", std::string("name=\"sector_hash_query\" version=\"") + sector_hash_query_version() + "\"",false);
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.

@@ -47,6 +47,10 @@
 #include <sys/utsname.h>
 #endif
 
+#ifdef HAVE_SECTORID
+#include <sector_hash_query.hpp>
+#endif
+
 #ifndef __BEGIN_DECLS
 #if defined(__cplusplus)
 #define __BEGIN_DECLS   extern "C" {
