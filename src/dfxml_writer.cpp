@@ -648,8 +648,8 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <exiv2/error.hpp>
 #endif
 
-#ifdef HAVE_SECTOR_HASH_VERSION_H
-#include <sector_hash_version.h>
+#ifdef HAVE_SECTORID
+#include <sector_hash_query.hpp>
 #endif
 
 #ifdef HAVE_AFFLIB_AFFLIB_H
