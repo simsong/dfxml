@@ -1,3 +1,4 @@
+#include <config.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -6,7 +7,16 @@
 #include <stdlib.h>
 #include <expat.h>
 #include <time.h>
-#include <netinet/in.h>
+#include <stdint.h>
+/* We need netinet/in.h or windowsx.h */
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#ifdef WIN32
+#  include <winsock2.h>
+#  include <windows.h>
+#  include <windowsx.h>
+#endif
 #include <string.h>
 #include <algorithm>
 
