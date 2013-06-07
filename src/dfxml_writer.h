@@ -188,6 +188,9 @@ public:
     void xmlout( const std::string &tag,const uint32_t value){ xmlprintf(tag,"",xml_PRIu32.c_str(),value); }
     void xmlout( const std::string &tag,const int64_t value){ xmlprintf(tag,"",xml_PRId64.c_str(),value); }
     void xmlout( const std::string &tag,const uint64_t value){ xmlprintf(tag,"",xml_PRIu64.c_str(),value); }
+#ifdef __APPLE__
+    void xmlout( const std::string &tag,const long unsigned int value){ xmlprintf(tag,"",xml_PRIu64.c_str(),value); }
+#endif
 #endif
     void xmlout( const std::string &tag,const double value){ xmlprintf(tag,"","%f",value); }
     void xmlout( const std::string &tag,const struct timeval &ts) {
