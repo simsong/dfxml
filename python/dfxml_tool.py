@@ -7,6 +7,10 @@
 # http://jedmodes.sourceforge.net/doc/DC-Metadata/dcmi-terms-for-jedmodes.html
 # http://www.ukoln.ac.uk/metadata/dcmi/mixing-matching-faq/
 
+__version__ = '1.0.0'
+
+import sys
+import os.path
 import hashlib
 from xml.sax.saxutils import escape
 
@@ -38,6 +42,24 @@ class xml:
         self.pop('metadata')
         self.write('\n')
         
+    def provenance(self):
+        global args
+        if args.allprovenance or \
+           args.commandline or \
+           args.pythonversion:
+            self.push('creator')
+            self.xmlout('program', os.path.basename(sys.argv[0]))
+            self.xmlout('version', __version__)
+            self.push('execution_environment')
+            if args.allprovenance or args.commandline:
+                self.xmlout('command_line', ' '.join(sys.argv))
+            
+            if args.allprovenance or args.pythonversion:
+                self.xmlout('python_version', sys.version)
+
+            self.pop('execution_environment')
+            self.pop('creator')
+            self.f.write('\n')
 
     def push(self,tag,attribs={},attrib_delim=' '):
         """Enter an XML block, with optional attributes on the tag"""
@@ -257,7 +279,6 @@ def extract(fn):
     
 
 if(__name__=='__main__'):
-    import os.path,sys
     from argparse import ArgumentParser
     global args
 
@@ -285,6 +306,12 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--stripprefix',help='Remove matching prefix string from filenames (e.g. "/mnt/diskname" would reduce "/mnt/diskname/foo" to "/foo", and would not affect "/run/mnt/diskname/foo")')
     parser.add_argument('--stripleaddirs',help='Remove N leading directories from filenames (e.g. 1 would reduce "/mnt/diskname/foo" to "mnt/diskname/foo", 2 would reduce the same to "diskname/foo")',default=0,type=int)
     parser.add_argument('--includedirs',help='Include directories alongside files in file system walk output',action='store_true')
+
+    provenance_group = parser.add_argument_group('provenance', 'Options to record execution environment details in the output.')
+    provenance_group.add_argument('--allprovenance',help='Include all provenance information requestable in this option group',action='store_true')
+    provenance_group.add_argument('--commandline', help='Record command line in output',action='store_true')
+    provenance_group.add_argument('--pythonversion', help='Record Python version in output',action='store_true')
+
     parser.add_argument('--title',help='HASHSET Title')
     parser.add_argument('--description',help='HASHSET Description')
     parser.add_argument('--publisher',help='HASHSET Publisher')
@@ -324,6 +351,7 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
                    'contactIfFound':args.contact
                    }
                   )
+    x.provenance()
 
     # Generate the hashes
 
