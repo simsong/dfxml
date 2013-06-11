@@ -1,3 +1,7 @@
+2013-06-11    <a.nelson@prometheuscomputing.com>
+
+	* dfxml_tool.py: Report file read failures
+
 2013-05-28    <a.nelson@prometheuscomputing.com>
 
 	* python: Integrated three changesets from end of 2012

@@ -109,8 +109,19 @@ def hash_file(fn,x):
     if args.piecewise:
         x.push("byte_runs")
     offset = 0
+    read_error = False
     while True:
-        buf = f.read(chunk_size)
+        buf = ""
+        try:
+            buf = f.read(chunk_size)
+        except:
+            warning = "Warning: read() failed.  Cannot produce hash."
+            read_error = True
+            x.write("<!--")
+            x.write(warning)
+            x.write("-->\n")
+            sys.stderr.write("%s  File: %r\n" % (warning, fn))
+            buf = ""
         if buf=="": break
 
         if args.md5:    md5_all.update(buf)
@@ -142,12 +153,13 @@ def hash_file(fn,x):
     if args.piecewise:
         x.pop("byte_runs")
 
-    if args.md5:
-        x.write("<hashdigest type='MD5'>%s</hashdigest>\n" % (md5_all.hexdigest()))
-    if args.sha1:
-        x.write("<hashdigest type='SHA1'>%s</hashdigest>\n" % (sha1_all.hexdigest()))
-    if args.sha256:
-        x.write("<hashdigest type='SHA256'>%s</hashdigest>\n" % (sha256_all.hexdigest()))
+    if not read_error:
+        if args.md5:
+            x.write("<hashdigest type='MD5'>%s</hashdigest>\n" % (md5_all.hexdigest()))
+        if args.sha1:
+            x.write("<hashdigest type='SHA1'>%s</hashdigest>\n" % (sha1_all.hexdigest()))
+        if args.sha256:
+            x.write("<hashdigest type='SHA256'>%s</hashdigest>\n" % (sha256_all.hexdigest()))
     x.pop("fileobject")
     x.write("\n")
     
