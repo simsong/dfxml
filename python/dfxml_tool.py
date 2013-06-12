@@ -72,9 +72,8 @@ class xml:
         self.f.write(s)
 
 
-def xmlout_times(fn,x):
+def xmlout_times(fn,x,fistat):
     global args
-    fistat = os.stat(fn)
     for (time_tag, time_field) in [
       ("mtime",  "st_mtime"),
       ("atime",  "st_atime"),
@@ -93,7 +92,7 @@ def xmlout_times(fn,x):
                 text_out = str(time_data)
             x.xmlout(time_tag, text_out, attrs_dict)
 
-def emit_directory(fn,x):
+def emit_directory(fn,x,partno=None):
     x.push("fileobject")
 
     if not args.nofilenames:
@@ -103,8 +102,12 @@ def emit_directory(fn,x):
             x.xmlout("filename",fn)
 
     if not args.nometadata:
-        x.xmlout("filesize",os.path.getsize(fn))
-        xmlout_times(fn,x)
+        fistat = os.stat(fn)
+        if partno:
+            x.xmlout("partition",partno)
+        x.xmlout("inode",fistat.st_ino)
+        x.xmlout("filesize",fistat.st_size)
+        xmlout_times(fn,x,fistat)
     
     x.xmlout("name_type", "d")
 
@@ -114,7 +117,7 @@ def emit_directory(fn,x):
     x.pop("fileobject")
     x.write("\n")
     
-def hash_file(fn,x):
+def hash_file(fn,x,partno=None):
     import hashlib
     
     try:
@@ -132,9 +135,18 @@ def hash_file(fn,x):
             x.xmlout("filename",fn)
 
     if not args.nometadata:
-        x.xmlout("filesize",os.path.getsize(fn))
-        xmlout_times(fn,x)
-    
+        fistat = os.stat(fn)
+        if partno:
+            x.xmlout("partition",partno)
+        x.xmlout("inode",fistat.st_ino)
+        x.xmlout("filesize",fistat.st_size)
+
+        xmlout_times(fn,x,fistat)
+
+    #Distinguish regular files from directories, if directories are requested
+    if args.includedirs:
+        x.xmlout("name_type", "r")
+
     if args.addfixml:
         x.write(args.addxml)
 
@@ -310,14 +322,14 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
 
     # Generate the hashes
 
-    for fn in args.targets:
+    for (fn_no, fn) in enumerate(args.targets):
         if os.path.isdir(fn):
             for (dirpath,dirnames,filenames) in os.walk(fn):
                 if args.includedirs:
                     for dn in dirnames:
-                        emit_directory(os.path.join(dirpath,dn),x)
+                        emit_directory(os.path.join(dirpath,dn),x, fn_no+1)
                 for fn in filenames:
-                    hash_file(os.path.join(dirpath,fn),x)
+                    hash_file(os.path.join(dirpath,fn),x, fn_no+1)
         else:
             hash_file(fn,x)
     x.pop("dfxml")
