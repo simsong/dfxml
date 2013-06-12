@@ -98,6 +98,8 @@ def emit_directory(fn,x,partno=None):
     if not args.nofilenames:
         if args.stripprefix and fn.startswith(args.stripprefix):
             x.xmlout("filename",fn[ len(args.stripprefix) : ])
+        elif args.stripleaddirs and args.stripleaddirs > 0:
+            x.xmlout("filename","/".join(fn.split("/")[args.stripleaddirs:]))
         else:
             x.xmlout("filename",fn)
 
@@ -131,6 +133,8 @@ def hash_file(fn,x,partno=None):
     if not args.nofilenames:
         if args.stripprefix and fn.startswith(args.stripprefix):
             x.xmlout("filename",fn[ len(args.stripprefix) : ])
+        elif args.stripleaddirs and args.stripleaddirs > 0:
+            x.xmlout("filename","/".join(fn.split("/")[args.stripleaddirs:]))
         else:
             x.xmlout("filename",fn)
 
@@ -279,6 +283,7 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--nometadata',help='Do not include file metadata (times & size) in XML',action='store_true')
     parser.add_argument('--nofilenames',help='Do not include filenames in XML',action='store_true')
     parser.add_argument('--stripprefix',help='Remove matching prefix string from filenames (e.g. "/mnt/diskname" would reduce "/mnt/diskname/foo" to "/foo", and would not affect "/run/mnt/diskname/foo")')
+    parser.add_argument('--stripleaddirs',help='Remove N leading directories from filenames (e.g. 1 would reduce "/mnt/diskname/foo" to "mnt/diskname/foo", 2 would reduce the same to "diskname/foo")',default=0,type=int)
     parser.add_argument('--includedirs',help='Include directories alongside files in file system walk output',action='store_true')
     parser.add_argument('--title',help='HASHSET Title')
     parser.add_argument('--description',help='HASHSET Description')

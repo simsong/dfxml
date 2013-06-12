@@ -4,6 +4,7 @@
 	* dfxml_tool.py: Optionally output file system timestamps in ISO-8601
 	* dfxml_tool.py: Optionally include directories in output listing
 	* dfxml_tool.py: Include additional file metadata (partition and inode numbers)
+	* dfxml_tool.py: Add alternative filename simplifier
 
 2013-06-11    <a.nelson@prometheuscomputing.com>
 
