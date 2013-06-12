@@ -72,6 +72,27 @@ class xml:
         self.f.write(s)
 
 
+def xmlout_times(fn,x):
+    global args
+    fistat = os.stat(fn)
+    for (time_tag, time_field) in [
+      ("mtime",  "st_mtime"),
+      ("atime",  "st_atime"),
+      ("ctime",  "st_ctime"),
+      ("crtime", "st_birthtime")
+    ]:
+        if time_field in dir(fistat):
+            attrs_dict = dict()
+            time_data = getattr(fistat,time_field)
+            #Format timestamp data
+            if args.iso_8601:
+                import dfxml
+                text_out = str(dfxml.dftime(time_data))
+            else:
+                attrs_dict["format"] = "time_t"
+                text_out = str(time_data)
+            x.xmlout(time_tag, text_out, attrs_dict)
+
 def hash_file(fn,x):
     import hashlib
     
@@ -91,9 +112,7 @@ def hash_file(fn,x):
 
     if not args.nometadata:
         x.xmlout("filesize",os.path.getsize(fn))
-        x.xmlout("mtime",os.path.getmtime(fn),{'format':'time_t'})
-        x.xmlout("ctime",os.path.getctime(fn),{'format':'time_t'})
-        x.xmlout("atime",os.path.getatime(fn),{'format':'time_t'})
+        xmlout_times(fn,x)
     
     if args.addfixml:
         x.write(args.addxml)
@@ -223,6 +242,7 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--sha256',help='Generate sha256 hashes',action='store_true')
     parser.add_argument('--output',help='Specify output filename (default stdout)')
     parser.add_argument('--extract',help='Specify a DFXML to extract a hash set from')
+    parser.add_argument('--iso-8601',help='Format timestamps as ISO-8601 in metadata',action='store_true')
     parser.add_argument('--nometadata',help='Do not include file metadata (times & size) in XML',action='store_true')
     parser.add_argument('--nofilenames',help='Do not include filenames in XML',action='store_true')
     parser.add_argument('--stripprefix',help='Remove matching prefix string from filenames (e.g. "/mnt/diskname" would reduce "/mnt/diskname/foo" to "/foo", and would not affect "/run/mnt/diskname/foo")')
