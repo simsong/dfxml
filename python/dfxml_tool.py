@@ -93,6 +93,27 @@ def xmlout_times(fn,x):
                 text_out = str(time_data)
             x.xmlout(time_tag, text_out, attrs_dict)
 
+def emit_directory(fn,x):
+    x.push("fileobject")
+
+    if not args.nofilenames:
+        if args.stripprefix and fn.startswith(args.stripprefix):
+            x.xmlout("filename",fn[ len(args.stripprefix) : ])
+        else:
+            x.xmlout("filename",fn)
+
+    if not args.nometadata:
+        x.xmlout("filesize",os.path.getsize(fn))
+        xmlout_times(fn,x)
+    
+    x.xmlout("name_type", "d")
+
+    if args.addfixml:
+        x.write(args.addxml)
+
+    x.pop("fileobject")
+    x.write("\n")
+    
 def hash_file(fn,x):
     import hashlib
     
@@ -246,6 +267,7 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--nometadata',help='Do not include file metadata (times & size) in XML',action='store_true')
     parser.add_argument('--nofilenames',help='Do not include filenames in XML',action='store_true')
     parser.add_argument('--stripprefix',help='Remove matching prefix string from filenames (e.g. "/mnt/diskname" would reduce "/mnt/diskname/foo" to "/foo", and would not affect "/run/mnt/diskname/foo")')
+    parser.add_argument('--includedirs',help='Include directories alongside files in file system walk output',action='store_true')
     parser.add_argument('--title',help='HASHSET Title')
     parser.add_argument('--description',help='HASHSET Description')
     parser.add_argument('--publisher',help='HASHSET Publisher')
@@ -291,6 +313,9 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     for fn in args.targets:
         if os.path.isdir(fn):
             for (dirpath,dirnames,filenames) in os.walk(fn):
+                if args.includedirs:
+                    for dn in dirnames:
+                        emit_directory(os.path.join(dirpath,dn),x)
                 for fn in filenames:
                     hash_file(os.path.join(dirpath,fn),x)
         else:

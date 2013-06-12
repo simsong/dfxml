@@ -2,6 +2,7 @@
 
 	* dfxml_tool.py: Report file creation and metadata-change time, when available
 	* dfxml_tool.py: Optionally output file system timestamps in ISO-8601
+	* dfxml_tool.py: Optionally include directories in output listing
 
 2013-06-11    <a.nelson@prometheuscomputing.com>
 
