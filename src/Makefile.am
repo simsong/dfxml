@@ -4,13 +4,10 @@ EXTRA_DIST = \
 	beregex.cpp \
 	beregex.h \
 	cppmutex.h \
-	md5.c \
-	md5.h \
-	unicode_escape.cpp \
-	unicode_escape.h \
-	utf8.h \
-	utf8/checked.h \
-	utf8/core.h \
-	utf8/unchecked.h \
-	xml.cpp \
-	xml.h
+	cpu_info.c \
+	cpu_stat.cpp \
+	dfxml_generator.cpp \
+	dfxml_generator.h \
+	dfxml_reader.cpp \
+	dfxml_reader.h
+

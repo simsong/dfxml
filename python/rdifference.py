@@ -118,7 +118,6 @@ class HiveState:
         self.cnames = self.new_cnames
         self.new_cnames = dict()
         self.new_files          = set()     # set of file objects
-        self.renamed_files      = set()     # set of (oldfile,newfile) file objects
         self.changed_content    = set()     # set of (oldfile,newfile) file objects
         self.changed_properties = set()     # list of (oldfile,newfile) file objects
         if self.notimeline:
@@ -141,12 +140,22 @@ class HiveState:
         # See if this filename changed or was resized
         ocell = self.cnames.get(cell.full_path(),None)
         if ocell:
-            dprint("   found ocell")
+            dprint("   found ocell: " + cell.full_path())
             if ocell.sha1()!=cell.sha1():
                 dprint("      >>> sha1 changed")
                 self.changed_content.add((ocell,cell))
+
             if ocell.mtime() != cell.mtime():
-                dprint("      >>> mtime changed")
+                dprint("      >>> Mtime changed")
+                self.changed_properties.add((ocell,cell))
+            elif ocell.type() != cell.type():
+                dprint("      >>> Cell content type changed")
+                self.changed_properties.add((ocell,cell))
+            elif type(ocell) != type(cell):
+                dprint("      >>> Cell structural type changed")
+                self.changed_properties.add((ocell,cell))
+            elif ( (ocell.parent_key and ocell.parent_key.mtime()) or None ) != ( (cell.parent_key and cell.parent_key.mtime()) or None ):
+                dprint("      >>> Parent mtimes changed")
                 self.changed_properties.add((ocell,cell))
 
         # If a new file, note that (and optionally add to the timeline)
@@ -189,8 +198,8 @@ class HiveState:
             if ocell.mtime() != cell.mtime():
                 res.add((ocell.full_path(),"mtime changed",ptime(ocell.mtime()),"->",ptime(cell.mtime())))
                 if self.timeline: self.timeline.add((cell.mtime(),cell.full_path(),"mtime changed",prtime(ocell.mtime()),"->",prtime(cell.mtime())))
-            if ocell.type != cell.type:
-                res.add((ocell.full_path(),"cell type changed",ocell.type,"->",cell.type))
+            if ocell.type() != cell.type():
+                res.add((ocell.full_path(),"cell type changed",ocell.type(),"->",cell.type()))
                 if self.timeline: self.timeline.add((cell.mtime(),cell.full_path(),"cell type changed",prtime(ocell.mtime()),"->",prtime(cell.mtime())))
 
         if res:

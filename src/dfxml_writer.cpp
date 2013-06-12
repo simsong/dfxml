@@ -19,7 +19,6 @@
 
 
 #include "config.h"
-#include "beregex.h"
 
 #ifdef WIN32
 #include <winsock2.h>
@@ -45,8 +44,6 @@
 #include <tre/tre.h>
 #endif
 
-
-
 #include <iostream>
 #include <stdarg.h>
 #include <string.h>
@@ -67,7 +64,7 @@
 
 using namespace std;
 
-#include "xml.h"
+#include "dfxml_writer.h"
 
 static const char *xml_header = "<?xml version='1.0' encoding='UTF-8'?>\n";
 
@@ -110,10 +107,10 @@ int mkstemp(char *tmpl)
 #endif
 
 
-std::string xml::xml_PRId32("%"PRId32); // gets around compiler bug
-std::string xml::xml_PRIu32("%"PRIu32); // gets around compiler bug
-std::string xml::xml_PRId64("%"PRId64); // gets around compiler bug
-std::string xml::xml_PRIu64("%"PRIu64); // gets around compiler bug
+std::string dfxml_writer::xml_PRId32("%"PRId32); // gets around compiler bug
+std::string dfxml_writer::xml_PRIu32("%"PRIu32); // gets around compiler bug
+std::string dfxml_writer::xml_PRId64("%"PRId64); // gets around compiler bug
+std::string dfxml_writer::xml_PRIu64("%"PRIu64); // gets around compiler bug
 
 static const char *cstr(const string &str){
     return str.c_str();
@@ -132,7 +129,7 @@ static string encoding_r("%0D");
 static string encoding_n("%0A");
 static string encoding_t("%09");
 
-string xml::xmlescape(const string &xml)
+std::string dfxml_writer::xmlescape(const string &xml)
 {
     string ret;
     for(string::const_iterator i = xml.begin(); i!=xml.end(); i++){
@@ -160,7 +157,7 @@ string xml::xmlescape(const string &xml)
  * Strip an XML string as necessary for a tag name.
  */
 
-string xml::xmlstrip(const string &xml)
+std::string dfxml_writer::xmlstrip(const string &xml)
 {
     string ret;
     for(string::const_iterator i = xml.begin(); i!=xml.end(); i++){
@@ -176,7 +173,7 @@ string xml::xmlstrip(const string &xml)
  * Turns a map into a blob of XML.
  */
 
-std::string xml::xmlmap(const xml::strstrmap_t &m,const std::string &outer,const std::string &attrs)
+std::string dfxml_writer::xmlmap(const dfxml_writer::strstrmap_t &m,const std::string &outer,const std::string &attrs)
 {
     std::stringstream ss;
     ss << "<" << outer;
@@ -191,7 +188,7 @@ std::string xml::xmlmap(const xml::strstrmap_t &m,const std::string &outer,const
 
 
 /* This goes to stdout */
-xml::xml():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_template("/tmp/xml_XXXXXXXX"),
+dfxml_writer::dfxml_writer():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_template("/tmp/xml_XXXXXXXX"),
            t0(),t_last_timestamp(),make_dtd(false),outfilename(),oneline()
 {
 #ifdef HAVE_PTHREAD
@@ -203,7 +200,7 @@ xml::xml():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_temp
 }
 
 /* This should be rewritten so that the temp file is done on close, not on open */
-xml::xml(const std::string &outfilename_,bool makeDTD):
+dfxml_writer::dfxml_writer(const std::string &outfilename_,bool makeDTD):
     M(),outf(outfilename_.c_str(),ios_base::out),
     out(),tags(),tag_stack(),tempfilename(),tempfile_template(outfilename_+"_tmp_XXXXXXXX"),
     t0(),t_last_timestamp(),make_dtd(false),outfilename(outfilename_),oneline()
@@ -221,77 +218,8 @@ xml::xml(const std::string &outfilename_,bool makeDTD):
     *out << xml_header;
 }
 
-/**
- * opening an existing DFXML file...
- * Scan through and see if we can process.
- * We can only process XML in which tags are on lines by themselves or else both open and close are on the same line.
- */
-xml::xml(const std::string &outfilename_,class existing &e):
-    M(),outf(), out(),tags(),tag_stack(),tempfilename(),tempfile_template(),
-    t0(),t_last_timestamp(),make_dtd(false),outfilename(outfilename_),oneline()
-{
-#ifdef HAVE_PTHREAD
-    pthread_mutex_init(&M,NULL);
-#endif
-    gettimeofday(&t0,0);
-    gettimeofday(&t_last_timestamp,0);
 
-    outf.open(outfilename.c_str(),ios_base::in|ios_base::out);
-    if(!outf.is_open()){
-        cerr << outfilename << strerror(errno) << ": Cannot open\n";
-        exit(1);
-    }
-    out = &outf;
-    // Scan all of the lines, looking for elements in tagmap
-    beregex tag_beg("<([^/> ]+)",0);
-    beregex tag_end("</([^> ]+)",0);
-    beregex tag_val(">([^<]*)<",0);
-
-    // compute the regular expression to get the attribute
-    string areg("=((\'[^\']+\')|(\"[^\"]+\"))");
-    if(e.attrib) areg = *(e.attrib) + areg;
-
-    beregex tag_attrib(areg.c_str(),0);
-
-    std::string line;
-    int linenumber = 0;
-    while(getline(outf,line)){
-        linenumber++;
-        string begs = tag_beg.search(line);
-        string ends = tag_end.search(line);
-
-        if(ends.size()==0 && line.find("/>")!=string::npos) ends=begs; // handle <value foo='bar'/>
-
-        if(begs.size()>0 && ends.size()==0){
-            tag_stack.push(begs);
-        }
-
-        if(begs.size()==0 && ends.size()>0){
-            string popped = tag_stack.top();
-            tag_stack.pop();
-            if(ends != popped){
-                cerr << "xml is inconsistent at line " << linenumber << ".\n" 
-                     << "expected: " << popped << "\n"
-                     << "saw:      " << ends << "\n";
-                exit(1);
-            }
-        }
-
-        if(e.tagmap && begs.size()>0 && begs==ends && e.tagmap->find(begs)!=e.tagmap->end()){
-            (*e.tagmap)[begs] = tag_val.search(line);
-        }
-
-        if(e.tagid && e.tagid_set && (*e.tagid)==begs){
-            string a = tag_attrib.search(line);
-            if(a.size()>0) a = a.substr(1,a.size()-2);
-            (*e.tagid_set).insert(a);
-        }
-    }
-}
-
-
-
-void xml::set_tempfile_template(const std::string &temp)
+void dfxml_writer::set_tempfile_template(const std::string &temp)
 {
     tempfile_template = temp;
 }
@@ -299,7 +227,7 @@ void xml::set_tempfile_template(const std::string &temp)
 
 
 
-void xml::close()
+void dfxml_writer::close()
 {
     MUTEX_LOCK(&M);
     outf.close();
@@ -337,7 +265,7 @@ void xml::close()
     MUTEX_UNLOCK(&M);
 }
 
-void xml::write_dtd()
+void dfxml_writer::write_dtd()
 {
     *out << "<!DOCTYPE fiwalk\n";
     *out << "[\n";
@@ -353,7 +281,7 @@ void xml::write_dtd()
 /**
  * make sure that a tag is valid and, if so, add it to the list of tags we use
  */
-void xml::verify_tag(string tag)
+void dfxml_writer::verify_tag(string tag)
 {
     if(tag[0]=='/') tag = tag.substr(1);
     if(tag.find(" ") != string::npos){
@@ -363,19 +291,19 @@ void xml::verify_tag(string tag)
     tags.insert(tag);
 }
 
-void xml::puts(const string &v)
+void dfxml_writer::puts(const string &v)
 {
     *out << v;
 }
 
-void xml::spaces()
+void dfxml_writer::spaces()
 {
     for(unsigned int i=0;i<tag_stack.size() && !oneline;i++){
         *out << "  ";
     }
 }
 
-void xml::tagout(const string &tag,const string &attribute)
+void dfxml_writer::tagout(const string &tag,const string &attribute)
 {
     verify_tag(tag);
     *out << "<" << tag;
@@ -411,7 +339,7 @@ extern "C" {
 #endif
 
 
-void xml::printf(const char *fmt,...)
+void dfxml_writer::printf(const char *fmt,...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -419,7 +347,7 @@ void xml::printf(const char *fmt,...)
     /** printf to stream **/
     char *ret = 0;
     if(vasprintf(&ret,fmt,ap) < 0){
-        *out << "xml::xmlprintf: " << strerror(errno);
+        *out << "dfxml_writer::xmlprintf: " << strerror(errno);
         exit(EXIT_FAILURE);
     }
     *out << ret;
@@ -429,7 +357,7 @@ void xml::printf(const char *fmt,...)
     va_end(ap);
 }
 
-void xml::push(const string &tag,const string &attribute)
+void dfxml_writer::push(const string &tag,const string &attribute)
 {
     spaces();
     tag_stack.push(tag);
@@ -437,7 +365,7 @@ void xml::push(const string &tag,const string &attribute)
     if(!oneline) *out << '\n';
 }
 
-void xml::pop()
+void dfxml_writer::pop()
 {
     assert(tag_stack.size()>0);
     string tag = tag_stack.top();
@@ -447,7 +375,7 @@ void xml::pop()
     *out << '\n';
 }
 
-void xml::set_oneline(bool v)
+void dfxml_writer::set_oneline(bool v)
 {
     if(v==true) spaces();
     if(v==false) *out << "\n";
@@ -455,7 +383,7 @@ void xml::set_oneline(bool v)
 }
 
 
-void xml::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
+void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                 unsigned long *ecx, unsigned long *edx) {
 #if defined(__i386__) && defined(__PIC__)
     __asm__ __volatile__("pushl %%ebx      \n\t" /* save %ebx */
@@ -476,7 +404,7 @@ void xml::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
 
 
 
-void xml::add_cpuid()
+void dfxml_writer::add_cpuid()
 {
 #ifdef HAVE_ASM_CPUID
 #ifndef __WORDSIZE
@@ -508,7 +436,7 @@ void xml::add_cpuid()
 #endif
 }
 
-void xml::add_DFXML_execution_environment(const std::string &command_line)
+void dfxml_writer::add_DFXML_execution_environment(const std::string &command_line)
 {
 
     push("execution_environment");
@@ -560,7 +488,7 @@ void xml::add_DFXML_execution_environment(const std::string &command_line)
 #include "psapi.h"
 #endif
 
-void xml::add_rusage()
+void dfxml_writer::add_rusage()
 {
 #ifdef WIN32
     /* Note: must link -lpsapi for this */
@@ -610,7 +538,7 @@ void xml::add_rusage()
 #endif
 }
 
-void xml::add_timestamp(const std::string &name)
+void dfxml_writer::add_timestamp(const std::string &name)
 {
     struct timeval t1;
     gettimeofday(&t1,0);
@@ -655,7 +583,7 @@ void xml::add_timestamp(const std::string &name)
 /****************************************************************
  *** THESE ARE THE ONLY THREADSAFE ROUTINES
  ****************************************************************/
-void xml::comment(const string &comment_)
+void dfxml_writer::comment(const string &comment_)
 {
     MUTEX_LOCK(&M);
     *out << "<!-- " << comment_ << " -->\n";
@@ -664,7 +592,7 @@ void xml::comment(const string &comment_)
 }
 
 
-void xml::xmlprintf(const std::string &tag,const std::string &attribute, const char *fmt,...)
+void dfxml_writer::xmlprintf(const std::string &tag,const std::string &attribute, const char *fmt,...)
 {
     MUTEX_LOCK(&M);    
     spaces();
@@ -675,7 +603,7 @@ void xml::xmlprintf(const std::string &tag,const std::string &attribute, const c
     /** printf to stream **/
     char *ret = 0;
     if(vasprintf(&ret,fmt,ap) < 0){
-        cerr << "xml::xmlprintf: " << strerror(errno) << "\n";
+        cerr << "dfxml_writer::xmlprintf: " << strerror(errno) << "\n";
         exit(EXIT_FAILURE);
     }
     *out << ret;
@@ -689,7 +617,7 @@ void xml::xmlprintf(const std::string &tag,const std::string &attribute, const c
     MUTEX_UNLOCK(&M);
 }
 
-void xml::xmlout(const string &tag,const string &value,const string &attribute,bool escape_value)
+void dfxml_writer::xmlout(const string &tag,const string &value,const string &attribute,bool escape_value)
 {
     MUTEX_LOCK(&M);
     spaces();
@@ -706,12 +634,12 @@ void xml::xmlout(const string &tag,const string &value,const string &attribute,b
     MUTEX_UNLOCK(&M);
 }
 
-#ifdef HAVE_LIBEWF
+#ifdef HAVE_LIBEWF_H
 #include <libewf.h>
 #endif
 
-#ifdef HAVE_EXIV2
-#ifdef GNUC_HAS_DIAGNOSTIC_PRAGMA
+#if defined(HAVE_EXIV2) && defined(HAVE_EXIV2_IMAGE_HPP)
+#ifdef DFXML_GNUC_HAS_DIAGNOSTIC_PRAGMA
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Weffc++"
 #endif
@@ -721,16 +649,16 @@ void xml::xmlout(const string &tag,const string &value,const string &attribute,b
 #endif
 
 #ifdef HAVE_SECTORID
-#include <sector_hash_version.h>
+#include <sector_hash_query.hpp>
 #endif
 
-#ifdef HAVE_LIBAFFLIB
+#ifdef HAVE_AFFLIB_AFFLIB_H
 #include <afflib/afflib.h>
 #endif
 
 
 /* These support Digital Forensics XML and require certain variables to be defined */
-void xml::add_DFXML_build_environment()
+void dfxml_writer::add_DFXML_build_environment()
 {
     /* __DATE__ formats as: Apr 30 2011 */
     struct tm tm;
@@ -784,7 +712,7 @@ void xml::add_DFXML_build_environment()
     xmlout("tre", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
 #ifdef HAVE_SECTORID
-    xmlout("library", "", std::string("name=\"sector_hash_client\" version=\"") + sector_hash_version() + "\"",false);
+    xmlout("library", "", std::string("name=\"sector_hash_query\" version=\"") + sector_hash_query_version() + "\"",false);
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.

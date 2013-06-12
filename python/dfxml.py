@@ -438,7 +438,7 @@ class registry_cell_object:
         self._full_path   = None
 
         """Keys have two types:  "root" (0x2c,0xac) and not-root.  Values have several more types."""
-        self.type        = None
+        self._type        = None
 
         """Keep handy a handle on the registry object"""
         self.registry_handle = None
@@ -460,6 +460,13 @@ class registry_cell_object:
         Unlike DFXML, registry paths are delimited with a backslash due to the forward slash being a legal and commonly observed character in cell names.
         """
         return self._full_path
+
+    def type(self):
+        """
+        This is the data type of the cell.  Keys can be root or not-root; values have several types, like UTF-8, binary, etc.
+        Presently, this exports as a string representation of the type, not the numeric type code.
+        """
+        return self._type
 
     def _myname(self):
         """This function is called by repr and str, due to (vague memories of) the possibility of an infinite loop if __repr__ calls __self__."""
@@ -489,6 +496,12 @@ class registry_cell_object:
         """
         return None
 
+    def md5(self):
+        """
+        Return None. Meant to be overwritten.
+        """
+        return None
+
 class registry_key_object(registry_cell_object):
     def __init__(self):
         registry_cell_object.__init__(self)
@@ -499,9 +512,9 @@ class registry_key_object(registry_cell_object):
     def mtime(self):
         return self._mtime
     def root(self):
-        if self.type == None:
+        if self.type() is None:
             return None
-        return self.type == "root"
+        return self.type() == "root"
 
 class registry_value_object(registry_cell_object):
     def __init__(self):
@@ -510,6 +523,9 @@ class registry_value_object(registry_cell_object):
 
         self._cell_type = "registry_value_object"
         
+        #TODO Replace to be in line with fileobjects: fileobject.hashdigest is a dictionary
+        self._hashcache = dict()
+
         """List for the string-list type of value."""
         self.strings = None
 
@@ -521,23 +537,41 @@ class registry_value_object(registry_cell_object):
     #    else:
     #        return None
 
-    def sha1(self):
+    def _hash(self, hashfunc):
         """
         Return cached hash, populating cache if necessary.
-        If self.value_data is None, this should return None.
+        hashfunc expected values: The functions hashlib.sha1, hashlib.md5.
+        If self.value_data is None, or there are no strings in a "string-list" type, this should return None.
+        Interpretation: Registry values of type "string-list" are hashed by feeding each element of the list into the hash .update() function. All other Registry values are fed in the same way, as a 1-element list.
+        For example, a string type value cell with data "a" fed into this function returns md5("a") (if hashlib.md5 were requested).  A string-list type value cell with data ["a","b"] returns md5("ab").
+        This is a simplification to deal with Registry string encodings, and may change in the future.
         """
-        if self._sha1 is None:
-            if self.value_data != None:
-                h = hashlib.sha1()
-                if type(self.value_data) == type(""):
+        if self._hashcache.get(repr(hashfunc)) is None:
+            feed_list = []
+            if self.type() == "string-list":
+                feed_list = self.strings
+            elif not self.value_data is None:
+                feed_list.append(self.value_data)
+            #Normalize to hash .update() required type
+            for (elemindex, elem) in enumerate(feed_list):
+                if type(elem) == type(""):
                     #String data take a little extra care:
                     #"The bytes in your ... file are being automatically decoded to Unicode by Python 3 as you read from the file"
                     #http://stackoverflow.com/a/7778340/1207160
-                    h.update(self.value_data.encode("utf-8"))
-                else:
-                    h.update(self.value_data)
-                self._sha1 = h.hexdigest()
-        return self._sha1
+                    feed_list[elemindex] = elem.encode("utf-8")
+            #Hash if there's data to hash
+            if len(feed_list) > 0:
+                h = hashfunc()
+                for elem in feed_list:
+                    h.update(elem)
+                self._hashcache[repr(hashfunc)] = h.hexdigest()
+        return self._hashcache.get(repr(hashfunc))
+
+    def sha1(self):
+        return self._hash(hashlib.sha1)
+
+    def md5(self):
+        return self._hash(hashlib.md5)
 
 class fileobject:
     """The base class for file objects created either through XML DOM or EXPAT"""
@@ -977,19 +1011,19 @@ class regxml_reader(xml_reader):
             
             #Note these two tests for root and parent _are_ supposed to be independent tests.
             if attrs.get("root",None) == "1":
-                new_object.type = "root"
+                new_object._type = "root"
             else:
-                new_object.type = ""
+                new_object._type = ""
 
             if len(self.objectstack) > 1:
                 new_object.parent_key = self.objectstack[-1]
 
             #Sanity check:  root key implies no parent
-            if new_object.type == "root":
+            if new_object.type() == "root":
                 assert new_object.parent_key == None
             #Sanity check:  no parent implies root key --OR-- recovered key
             if new_object.parent_key == None:
-                assert new_object.used == False or new_object.type == "root"
+                assert new_object.used == False or new_object.type() == "root"
 
             #Define new_object.name
             #Force a name for keys. If the key has no recorded name, apply artificial name prefix to nonce.
@@ -1013,9 +1047,9 @@ class regxml_reader(xml_reader):
         elif name in ["value"]:
             new_object = registry_value_object()
             new_object.parent_key = self.objectstack[-1]
-            new_object.type = attrs.get("type",None)
+            new_object._type = attrs.get("type",None)
 
-            if new_object.type == "string-list":
+            if new_object.type() == "string-list":
                 new_object.strings = []
             
             #Store decoded name
@@ -1061,7 +1095,6 @@ class regxml_reader(xml_reader):
             # TODO adjust hivexml to not use a plain "encoding" attribute
             value_encoding = attrs.get("encoding", attrs.get("value_encoding")) 
             if value_encoding == "base64":
-                import sys
                 if sys.version_info.major>2:
                     value_data = bytes(value_data,encoding='ascii')
                 return base64.b64decode(value_data)
@@ -1097,7 +1130,7 @@ class regxml_reader(xml_reader):
         elif name in ["string"]:
             value_object = self.objectstack[-1]
             if value_object.strings == None:
-                raise ValueError("regxml_reader._end_element:  parsing error, string found but parent's type can't support a string list.")
+                raise ValueError("regxml_reader._end_element:  parsing error, string element found, but parent's type can't support a string list.")
             value_object.strings.append(self.cdata)
             self.cdata = None
         elif name in ["byte_runs","byte_run"]:

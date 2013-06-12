@@ -5,8 +5,8 @@
  * Optimized for DFXML generation.
  */
 
-#ifndef _XML_H_
-#define _XML_H_
+#ifndef _DFXML_GENERATOR_H_
+#define _DFXML_GENERATOR_H_
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
@@ -63,7 +63,7 @@
 
 #ifdef __cplusplus
 #include "cppmutex.h"
-class xml {
+class dfxml_writer {
 private:
     /*** neither copying nor assignment is implemented ***
      *** We do this by making them private constructors that throw exceptions. ***/
@@ -72,18 +72,17 @@ private:
             return "copying feature_recorder objects is not implemented.";
         }
     };
-    xml(const xml &fr) __attribute__((__noreturn__)):
+    dfxml_writer(const dfxml_writer &fr) __attribute__((__noreturn__)):
         M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),
 	t0(),t_last_timestamp(),
         make_dtd(),outfilename(),oneline(){
         throw new not_impl();
     }
-    const xml &operator=(const xml &x){ throw new not_impl(); }
+    const dfxml_writer &operator=(const dfxml_writer &x){ throw new not_impl(); }
     /****************************************************************/
 
 public:
     typedef std::map<std::string,std::string> strstrmap_t;
-    typedef std::map<std::string,std::string> tagmap_t;
     typedef std::set<std::string> stringset;
     typedef std::set<std::string> tagid_set_t;
 private:
@@ -123,20 +122,9 @@ public:
     }
 
 
-    // this is for reading an existing file; it should be removed and replaced
-    // with an expat-based reader.
-    class existing {                    
-    public:;
-        tagmap_t    *tagmap;
-        std::string *tagid;
-        const std::string *attrib;
-        stringset *tagid_set;
-    };
-
-    xml();                                       // defaults to stdout
-    xml(const std::string &outfilename,bool makeDTD); // write to a file, optionally making a DTD
-    xml(const std::string &outfilename,class existing &e); // open an existing file, for appending
-    virtual ~xml(){};
+    dfxml_writer();                                       // defaults to stdout
+    dfxml_writer(const std::string &outfilename,bool makeDTD); // write to a file, optionally making a DTD
+    virtual ~dfxml_writer(){};
     void set_tempfile_template(const std::string &temp);
 
     static std::string xmlescape(const std::string &xml);
@@ -145,12 +133,6 @@ public:
     /** xmlmap turns a map into an XML block */
     static std::string xmlmap(const strstrmap_t &m,const std::string &outer,const std::string &attrs);
 
-    /**
-     * opens an existing XML file and jumps to the end.
-     * @param tagmap  - any keys that are tags capture the values.
-     * @param tagid   - if a tagid is provided, fill tagid_set with all of the tags seen.
-     */
-    void open_existing(tagmap_t *tagmap,std::string *tagid,const std::string *attrib,tagid_set_t *tagid_set);
     void close();                       // writes the output to the file
 
     void flush(){outf.flush();}
@@ -206,6 +188,9 @@ public:
     void xmlout( const std::string &tag,const uint32_t value){ xmlprintf(tag,"",xml_PRIu32.c_str(),value); }
     void xmlout( const std::string &tag,const int64_t value){ xmlprintf(tag,"",xml_PRId64.c_str(),value); }
     void xmlout( const std::string &tag,const uint64_t value){ xmlprintf(tag,"",xml_PRIu64.c_str(),value); }
+#ifdef __APPLE__
+    void xmlout( const std::string &tag,const size_t value){ xmlprintf(tag,"",xml_PRIu64.c_str(),value); }
+#endif
 #endif
     void xmlout( const std::string &tag,const double value){ xmlprintf(tag,"","%f",value); }
     void xmlout( const std::string &tag,const struct timeval &ts) {
