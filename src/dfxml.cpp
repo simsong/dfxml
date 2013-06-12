@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <expat.h>
 #include <time.h>
 #include <netinet/in.h>
 

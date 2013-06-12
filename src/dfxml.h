@@ -1,6 +1,7 @@
 #ifndef DFXML_H
 #define DFXML_H
 
+#include <expat.h>
 #include <stdio.h>
 #include <string>
 #include <vector>
