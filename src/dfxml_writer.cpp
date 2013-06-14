@@ -648,8 +648,8 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <exiv2/error.hpp>
 #endif
 
-#ifdef HAVE_SECTORID
-#include <sector_hash_query.hpp>
+#ifdef HAVE_HASHID
+#include <hashdb.hpp>
 #endif
 
 #ifdef HAVE_AFFLIB_AFFLIB_H
@@ -711,8 +711,8 @@ void dfxml_writer::add_DFXML_build_environment()
 #if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
     xmlout("tre", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
-#ifdef HAVE_SECTORID
-    xmlout("library", "", std::string("name=\"sector_hash_query\" version=\"") + sector_hash_query_version() + "\"",false);
+#ifdef HAVE_HASHID
+    xmlout("library", "", std::string("name=\"hashdb\" version=\"") + hashdb_version() + "\"",false);
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
