@@ -147,7 +147,7 @@ def hash_file(fn,x,partno=None):
     try:
         f = open(fn)
     except IOError,e:
-        sys.stderr.write("%s: %s" % (fn,str(e)))
+        sys.stderr.write("%s: %s\n" % (fn,str(e)))
         return
 
     x.push("fileobject")
