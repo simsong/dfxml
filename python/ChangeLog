@@ -1,3 +1,9 @@
+2013-06-21    <a.nelson@prometheuscomputing.com>
+
+	* dfxml_tool.py: Optionally include provenance information (similar to Fiwalk)
+	* dfxml_tool.py: Clean file-not-found error output (found on broken symlinks)
+	* Python: Add 'make check' invocation for unit tests
+
 2013-06-12    <a.nelson@prometheuscomputing.com>
 
 	* dfxml_tool.py: Report file creation and metadata-change time, when available
