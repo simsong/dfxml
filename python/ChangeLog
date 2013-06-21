@@ -1,5 +1,6 @@
 2013-06-21    <a.nelson@prometheuscomputing.com>
 
+	* dfxml_tool.py: Assign a version to this script (as it works pretty well now, I chose "1.0.0") - necessary for some provenance information
 	* dfxml_tool.py: Optionally include provenance information (similar to Fiwalk)
 	* dfxml_tool.py: Clean file-not-found error output (found on broken symlinks)
 	* Python: Add 'make check' invocation for unit tests
