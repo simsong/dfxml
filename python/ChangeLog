@@ -1,3 +1,7 @@
+2013-06-24    <a.nelson@prometheuscomputing.com>
+
+	* fiwalk.py: Give standalone usage slightly nicer error handling
+
 2013-06-21    <a.nelson@prometheuscomputing.com>
 
 	* dfxml_tool.py: Assign a version to this script (as it works pretty well now, I chose "1.0.0") - necessary for some provenance information
