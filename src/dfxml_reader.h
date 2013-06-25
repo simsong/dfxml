@@ -119,7 +119,8 @@ private:
 	    return "copying feature_recorder objects is not implemented.";
 	}
     };
-    file_object_reader(const file_object_reader&that):dfxml_reader(),volumeobject(),fileobject(),callback(),hashdigest_type(){
+    file_object_reader(const file_object_reader&that) __attribute__((__noreturn__))
+:dfxml_reader(),volumeobject(),fileobject(),callback(),hashdigest_type(){
 	throw new not_impl();
     }
     const file_object_reader &operator=(const file_object_reader&){ throw new not_impl();}
