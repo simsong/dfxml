@@ -1,8 +1,15 @@
 #ifndef _DFXML_READER_H_
 #define _DFXML_READER_H_
 
-#include <expat.h>
 #include <stdio.h>
+
+#ifdef HAVE_EXPAT_H
+#include <expat.h>
+#else
+#error dfxml_reader.h requires expat.h
+#endif
+
+
 #include <string>
 #include <vector>
 #include <stack>
