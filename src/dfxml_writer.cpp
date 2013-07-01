@@ -665,7 +665,8 @@ void dfxml_writer::add_DFXML_build_environment()
     memset(&tm,0,sizeof(tm));
     push("build_environment");
 #ifdef __GNUC__
-    xmlprintf("compiler","","GCC %d.%d",__GNUC__, __GNUC_MINOR__);
+    // See http://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
+    xmlprintf("compiler","","%d.%d.%d (%s)",__GNUC__, __GNUC_MINOR__,__GNUC_PATCHLEVEL__,__VERSION__);
 #endif
 #ifdef CPPFLAGS
     xmlout("CPPFLAGS",CPPFLAGS,"",true);
