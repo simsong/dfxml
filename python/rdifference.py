@@ -172,7 +172,7 @@ class HiveState:
     def process(self,fname):
         self.current_fname = fname
         if fname.endswith(".regxml"):
-            reader = dfxml.read_regxml(xmlfile=open(infile,'rb'), callback=self.process_cell)
+            reader = dfxml.read_regxml(xmlfile=open(fname,'rb'), callback=self.process_cell)
 
     def print_cells(self,title,cells):
         h2(title)
