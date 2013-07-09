@@ -719,7 +719,8 @@ void dfxml_writer::add_DFXML_build_environment()
     // gnuexif does not have a programmatically obtainable version.
 #endif
 #ifdef GIT_COMMIT
-    xmlout("git", "", std::string("commit=\"") + GIT_COMMIT + "\"",false);
+#define tostring(s) #s
+    xmlout("git", "", std::string("commit=\"") + tostring(GIT_COMMIT) + "\"",false);
 #endif
     pop();
 }
