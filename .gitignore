@@ -16,3 +16,4 @@ src/dfxml_demo
 src/install-sh
 src/missing
 
+.DS_Store
