@@ -180,7 +180,7 @@ std::string dfxml_writer::xmlmap(const dfxml_writer::strstrmap_t &m,const std::s
     if(attrs.size()>0) ss << " " << attrs;
     ss << ">";
     for(std::map<std::string,std::string>::const_iterator it=m.begin();it!=m.end();it++){
-        ss << "<" << (*it).first  << ">" << (*it).second << "</" << (*it).first << ">";
+        ss << "<" << (*it).first  << ">" << xmlescape((*it).second) << "</" << (*it).first << ">";
     }
     ss << "</" << outer << ">";
     return ss.str();
