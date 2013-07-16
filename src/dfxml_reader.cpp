@@ -1,14 +1,25 @@
+#include <config.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <expat.h>
 #include <time.h>
-#include <netinet/in.h>
+#include <stdint.h>
+/* We need netinet/in.h or windowsx.h */
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#ifdef WIN32
+#  include <winsock2.h>
+#  include <windows.h>
+#  include <windowsx.h>
+#endif
+#include <string.h>
+#include <algorithm>
 
-#include "dfxml.h"
+#include "dfxml_reader.h"
 
 std::ostream & operator <<(std::ostream &os,const byte_run &b) {
     os << "byte_run[";
@@ -29,7 +40,7 @@ std::ostream & operator <<(std::ostream &os,const saxobject::hashmap_t &h)
 }
 
 
-std::string XMLReader::getattrs(const char **attrs,const std::string &name)
+std::string dfxml_reader::getattrs(const char **attrs,const std::string &name)
 {
     for(int i=0;attrs[i];i+=2){
 	if(name==attrs[i]) return std::string(attrs[i+1]);
@@ -46,7 +57,7 @@ static uint64_t atoi64(const char *str)
     return val;
 }
 
-uint64_t XMLReader::getattri(const char **attrs,const std::string &name)
+uint64_t dfxml_reader::getattri(const char **attrs,const std::string &name)
 {
     std::stringstream ss;
     for(int i=0;attrs[i];i+=2){
@@ -184,22 +195,5 @@ void file_object_reader::read_dfxml(const std::string &fname,fileobject_callback
 	std::cout << "ERROR: " << e.what() << "\n";
     }
     XML_ParserFree(parser);
-}
-
-void process(file_object &fi)
-{
-    std::cout << "fi.filename: " << fi.filename() << " md5=" << fi.md5() << "\n";
-    std::cout << "  pieces: " << fi.byte_runs.size() << "\n";
-    for(file_object::byte_runs_t::const_iterator it = fi.byte_runs.begin(); it!=fi.byte_runs.end(); it++){
-	std::cout << "   " << *it  << "\n";
-    }
-}
-
-
-int main(int argc,char **argv)
-{
-
-    file_object_reader::read_dfxml(argv[1],process);
-    return 0;
 }
 

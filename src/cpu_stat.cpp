@@ -1,25 +1,25 @@
-    /** cpustat.h -- Header for cpustat.cpp.
-     * Copyright (c) 2004 Brad Fish (brad.fish@gmail.com).
-     */
+/** cpustat.h -- Header for cpustat.cpp.
+ * Copyright (c) 2004 Brad Fish (brad.fish@gmail.com).
+ */
 
-    #if !defined(MAIN_H)
-    #define MAIN_H
+#if !defined(MAIN_H)
+#define MAIN_H
 
-    #include <windows.h>
+#include <windows.h>
 
-    // missing Windows processor power information struct
-    typedef struct _PROCESSOR_POWER_INFORMATION {
-      ULONG  Number;
-      ULONG  MaxMhz;
-      ULONG  CurrentMhz;
-      ULONG  MhzLimit;
-      ULONG  MaxIdleState;
-      ULONG  CurrentIdleState;
-    } PROCESSOR_POWER_INFORMATION , *PPROCESSOR_POWER_INFORMATION;
+// missing Windows processor power information struct
+typedef struct _PROCESSOR_POWER_INFORMATION {
+    ULONG  Number;
+    ULONG  MaxMhz;
+    ULONG  CurrentMhz;
+    ULONG  MhzLimit;
+    ULONG  MaxIdleState;
+    ULONG  CurrentIdleState;
+} PROCESSOR_POWER_INFORMATION , *PPROCESSOR_POWER_INFORMATION;
 
-    int main (int argc, char *argv[]);
+int main (int argc, char *argv[]);
 
-    #endif  // MAIN_H
+#endif  // MAIN_H
 
 #include "cpustat.h"
 #include <cstdio>

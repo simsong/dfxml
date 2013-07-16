@@ -69,7 +69,7 @@ class version:
         
 def fiwalk_xml_version(filename=None):
     """Returns the fiwalk version that was used to create an XML file.
-    Uses the "quick and dirt" approach to getting to getting out the XML version."""
+    Uses the "quick and dirty" approach to getting to getting out the XML version."""
 
     p = version()
     return p.get_version(filename)
@@ -139,4 +139,7 @@ def fileobjects_using_dom(imagefile=None,xmlfile=None,fiwalk="fiwalk",flags=0,ca
 
 if __name__=="__main__":
     import sys
+    if len(sys.argv) < 2:
+        sys.stderr.write("%s: Fiwalk Python library.\nStandalone usage: fiwalk.py <fiout.xml>\nfiout.xml should be produced by the 'fiwalk' command-line utility\n" % (sys.argv[0],))
+        sys.exit(1)
     print(fiwalk_xml_version(sys.argv[1]))

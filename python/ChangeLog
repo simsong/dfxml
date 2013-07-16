@@ -1,3 +1,33 @@
+2013-06-24    <a.nelson@prometheuscomputing.com>
+
+	* fiwalk.py: Give standalone usage slightly nicer error handling
+
+2013-06-21    <a.nelson@prometheuscomputing.com>
+
+	* dfxml_tool.py: Assign a version to this script (as it works pretty well now, I chose "1.0.0") - necessary for some provenance information
+	* dfxml_tool.py: Optionally include provenance information (similar to Fiwalk)
+	* dfxml_tool.py: Clean file-not-found error output (found on broken symlinks)
+	* Python: Add 'make check' invocation for unit tests
+
+2013-06-12    <a.nelson@prometheuscomputing.com>
+
+	* dfxml_tool.py: Report file creation and metadata-change time, when available
+	* dfxml_tool.py: Optionally output file system timestamps in ISO-8601
+	* dfxml_tool.py: Optionally include directories in output listing
+	* dfxml_tool.py: Include additional file metadata (partition and inode numbers)
+	* dfxml_tool.py: Add alternative filename simplifier
+
+2013-06-11    <a.nelson@prometheuscomputing.com>
+
+	* dfxml_tool.py: Report file read failures
+
+2013-05-28    <a.nelson@prometheuscomputing.com>
+
+	* python: Integrated three changesets from end of 2012
+	* dfxml.py, rdifference.py: Change interface of RegXML cell type
+	* dfxml.py: Revise method of hashing data of Registry "value" cells
+	* dfxml.py: Trim superfluous code
+
 2013-04-23    <a.nelson@prometheuscomputing.com>
 
 	* idifference.py: Relax input name requirements; passing a ".dfxml" file silently failed.

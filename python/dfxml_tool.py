@@ -7,6 +7,10 @@
 # http://jedmodes.sourceforge.net/doc/DC-Metadata/dcmi-terms-for-jedmodes.html
 # http://www.ukoln.ac.uk/metadata/dcmi/mixing-matching-faq/
 
+__version__ = '1.0.0'
+
+import sys
+import os.path
 import hashlib
 from xml.sax.saxutils import escape
 
@@ -38,6 +42,24 @@ class xml:
         self.pop('metadata')
         self.write('\n')
         
+    def provenance(self):
+        global args
+        if args.allprovenance or \
+           args.commandline or \
+           args.pythonversion:
+            self.push('creator')
+            self.xmlout('program', os.path.basename(sys.argv[0]))
+            self.xmlout('version', __version__)
+            self.push('execution_environment')
+            if args.allprovenance or args.commandline:
+                self.xmlout('command_line', ' '.join(sys.argv))
+            
+            if args.allprovenance or args.pythonversion:
+                self.xmlout('python_version', sys.version)
+
+            self.pop('execution_environment')
+            self.pop('creator')
+            self.f.write('\n')
 
     def push(self,tag,attribs={},attrib_delim=' '):
         """Enter an XML block, with optional attributes on the tag"""
@@ -72,13 +94,60 @@ class xml:
         self.f.write(s)
 
 
-def hash_file(fn,x):
+def xmlout_times(fn,x,fistat):
+    global args
+    for (time_tag, time_field) in [
+      ("mtime",  "st_mtime"),
+      ("atime",  "st_atime"),
+      ("ctime",  "st_ctime"),
+      ("crtime", "st_birthtime")
+    ]:
+        if time_field in dir(fistat):
+            attrs_dict = dict()
+            time_data = getattr(fistat,time_field)
+            #Format timestamp data
+            if args.iso_8601:
+                import dfxml
+                text_out = str(dfxml.dftime(time_data))
+            else:
+                attrs_dict["format"] = "time_t"
+                text_out = str(time_data)
+            x.xmlout(time_tag, text_out, attrs_dict)
+
+def emit_directory(fn,x,partno=None):
+    x.push("fileobject")
+
+    if not args.nofilenames:
+        if args.stripprefix and fn.startswith(args.stripprefix):
+            x.xmlout("filename",fn[ len(args.stripprefix) : ])
+        elif args.stripleaddirs and args.stripleaddirs > 0:
+            x.xmlout("filename","/".join(fn.split("/")[args.stripleaddirs:]))
+        else:
+            x.xmlout("filename",fn)
+
+    if not args.nometadata:
+        fistat = os.stat(fn)
+        if partno:
+            x.xmlout("partition",partno)
+        x.xmlout("inode",fistat.st_ino)
+        x.xmlout("filesize",fistat.st_size)
+        xmlout_times(fn,x,fistat)
+    
+    x.xmlout("name_type", "d")
+
+    if args.addfixml:
+        x.write(args.addxml)
+
+    x.pop("fileobject")
+    x.write("\n")
+    
+def hash_file(fn,x,partno=None):
     import hashlib
     
     try:
         f = open(fn)
     except IOError,e:
-        sys.stderr.write("%s: %s" % (fn,str(e)))
+        sys.stderr.write("%s: %s\n" % (fn,str(e)))
         return
 
     x.push("fileobject")
@@ -86,15 +155,24 @@ def hash_file(fn,x):
     if not args.nofilenames:
         if args.stripprefix and fn.startswith(args.stripprefix):
             x.xmlout("filename",fn[ len(args.stripprefix) : ])
+        elif args.stripleaddirs and args.stripleaddirs > 0:
+            x.xmlout("filename","/".join(fn.split("/")[args.stripleaddirs:]))
         else:
             x.xmlout("filename",fn)
 
     if not args.nometadata:
-        x.xmlout("filesize",os.path.getsize(fn))
-        x.xmlout("mtime",os.path.getmtime(fn),{'format':'time_t'})
-        x.xmlout("ctime",os.path.getctime(fn),{'format':'time_t'})
-        x.xmlout("atime",os.path.getatime(fn),{'format':'time_t'})
-    
+        fistat = os.stat(fn)
+        if partno:
+            x.xmlout("partition",partno)
+        x.xmlout("inode",fistat.st_ino)
+        x.xmlout("filesize",fistat.st_size)
+
+        xmlout_times(fn,x,fistat)
+
+    #Distinguish regular files from directories, if directories are requested
+    if args.includedirs:
+        x.xmlout("name_type", "r")
+
     if args.addfixml:
         x.write(args.addxml)
 
@@ -109,8 +187,19 @@ def hash_file(fn,x):
     if args.piecewise:
         x.push("byte_runs")
     offset = 0
+    read_error = False
     while True:
-        buf = f.read(chunk_size)
+        buf = ""
+        try:
+            buf = f.read(chunk_size)
+        except:
+            warning = "Warning: read() failed.  Cannot produce hash."
+            read_error = True
+            x.write("<!--")
+            x.write(warning)
+            x.write("-->\n")
+            sys.stderr.write("%s  File: %r\n" % (warning, fn))
+            buf = ""
         if buf=="": break
 
         if args.md5:    md5_all.update(buf)
@@ -142,12 +231,13 @@ def hash_file(fn,x):
     if args.piecewise:
         x.pop("byte_runs")
 
-    if args.md5:
-        x.write("<hashdigest type='MD5'>%s</hashdigest>\n" % (md5_all.hexdigest()))
-    if args.sha1:
-        x.write("<hashdigest type='SHA1'>%s</hashdigest>\n" % (sha1_all.hexdigest()))
-    if args.sha256:
-        x.write("<hashdigest type='SHA256'>%s</hashdigest>\n" % (sha256_all.hexdigest()))
+    if not read_error:
+        if args.md5:
+            x.write("<hashdigest type='MD5'>%s</hashdigest>\n" % (md5_all.hexdigest()))
+        if args.sha1:
+            x.write("<hashdigest type='SHA1'>%s</hashdigest>\n" % (sha1_all.hexdigest()))
+        if args.sha256:
+            x.write("<hashdigest type='SHA256'>%s</hashdigest>\n" % (sha256_all.hexdigest()))
     x.pop("fileobject")
     x.write("\n")
     
@@ -189,7 +279,6 @@ def extract(fn):
     
 
 if(__name__=='__main__'):
-    import os.path,sys
     from argparse import ArgumentParser
     global args
 
@@ -211,9 +300,18 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
     parser.add_argument('--sha256',help='Generate sha256 hashes',action='store_true')
     parser.add_argument('--output',help='Specify output filename (default stdout)')
     parser.add_argument('--extract',help='Specify a DFXML to extract a hash set from')
+    parser.add_argument('--iso-8601',help='Format timestamps as ISO-8601 in metadata',action='store_true')
     parser.add_argument('--nometadata',help='Do not include file metadata (times & size) in XML',action='store_true')
     parser.add_argument('--nofilenames',help='Do not include filenames in XML',action='store_true')
     parser.add_argument('--stripprefix',help='Remove matching prefix string from filenames (e.g. "/mnt/diskname" would reduce "/mnt/diskname/foo" to "/foo", and would not affect "/run/mnt/diskname/foo")')
+    parser.add_argument('--stripleaddirs',help='Remove N leading directories from filenames (e.g. 1 would reduce "/mnt/diskname/foo" to "mnt/diskname/foo", 2 would reduce the same to "diskname/foo")',default=0,type=int)
+    parser.add_argument('--includedirs',help='Include directories alongside files in file system walk output',action='store_true')
+
+    provenance_group = parser.add_argument_group('provenance', 'Options to record execution environment details in the output.')
+    provenance_group.add_argument('--allprovenance',help='Include all provenance information requestable in this option group',action='store_true')
+    provenance_group.add_argument('--commandline', help='Record command line in output',action='store_true')
+    provenance_group.add_argument('--pythonversion', help='Record Python version in output',action='store_true')
+
     parser.add_argument('--title',help='HASHSET Title')
     parser.add_argument('--description',help='HASHSET Description')
     parser.add_argument('--publisher',help='HASHSET Publisher')
@@ -253,14 +351,18 @@ Note: MD5 output is assumed unless another hash algorithm is specified.
                    'contactIfFound':args.contact
                    }
                   )
+    x.provenance()
 
     # Generate the hashes
 
-    for fn in args.targets:
+    for (fn_no, fn) in enumerate(args.targets):
         if os.path.isdir(fn):
             for (dirpath,dirnames,filenames) in os.walk(fn):
+                if args.includedirs:
+                    for dn in dirnames:
+                        emit_directory(os.path.join(dirpath,dn),x, fn_no+1)
                 for fn in filenames:
-                    hash_file(os.path.join(dirpath,fn),x)
+                    hash_file(os.path.join(dirpath,fn),x, fn_no+1)
         else:
             hash_file(fn,x)
     x.pop("dfxml")
