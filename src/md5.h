@@ -1,6 +1,6 @@
-/* MD5DEEP - md5.h
+/* md5.h
  *
- * By Jesse Kornblum
+ * By Jesse Kornblum.
  *
  * This is a work of the US Government. In accordance with 17 USC 105,
  * copyright protection is not available for any work of the US Government.
@@ -20,19 +20,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-
-/* __BEGIN_DECLS should be used at the beginning of your declarations,
-   so that C++ compilers don't mangle their names.  Use __END_DECLS at
-   the end of C declarations. */
-#undef __BEGIN_DECLS
-#undef __END_DECLS
-#ifdef __cplusplus
-# define __BEGIN_DECLS extern "C" {
-# define __END_DECLS }
-#else
-# define __BEGIN_DECLS /* empty */
-# define __END_DECLS /* empty */
-#endif
+#include <sys/cdefs.h>
 
 // -------------------------------------------------------------- 
 // After this is the algorithm itself. You shouldn't change these

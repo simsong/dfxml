@@ -13,4 +13,3 @@ src/Makefile.in
 src/aclocal.m4
 *.o
 src/config.status
-
