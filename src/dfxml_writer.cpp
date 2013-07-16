@@ -724,7 +724,7 @@ void dfxml_writer::add_DFXML_build_environment()
     zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
     stringstream zmq_ss;
     zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
-    xmlout("library", "", std::string("name=\"ØMQ\" version=\"") + zmq_ss.str() + "\"",false);
+    xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
