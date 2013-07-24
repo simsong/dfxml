@@ -67,7 +67,7 @@ class redact_rule:
         self.complete = True               # by default, redacts everything
     def should_redact(self,fileobject):
         """Returns True if this fileobject should be redacted"""
-        raise ValueError,"redact method of redact_rule super class should not be called"
+        raise ValueError("redact method of redact_rule super class should not be called")
     def __str__(self):
         return "action<"+self.line+">"
     def runs_to_redact(self,fi):
@@ -98,7 +98,7 @@ class redact_rule_filepat(redact_rule):
         redact_rule.__init__(self,line)
         # convert fileglobbing to regular expression
         self.filepat_re = convert_fileglob_to_re(filepat)
-        print "adding rule to redact path %s" % self.filepat_re.pattern
+        print("adding rule to redact path "+self.filepat_re.pattern)
     def should_redact(self,fileobject):
         return self.filepat_re.search(fileobject.filename())
 
@@ -106,7 +106,7 @@ class redact_rule_filename(redact_rule):
     def __init__(self,line,filename):
         redact_rule.__init__(self,line)
         self.filename = filename
-        print "adding rule to redact filename %s" % self.filename
+        print("adding rule to redact filename "+self.filename)
     def should_redact(self,fileobject):
         was = os.path.sep
         os.path.sep = '/'                       # Force Unix filename conventions
@@ -142,7 +142,7 @@ class redact_rule_string(redact_rule):
         return self.text in fileobject.contents()
     def runs_to_redact(self,fi):
         """Overridden to return the byte runs of just the given text"""
-        print "byte runs:",fi.byte_runs()
+        print("byte runs:"+str(fi.byte_runs()))
         ret = []
         tlen = len(self.text)
         for run in fi.byte_runs():
@@ -151,7 +151,7 @@ class redact_rule_string(redact_rule):
             offset = 0
             # Now find all the places inside "run"
             # where the text "self.text" appears
-            print "looking for '%s' in '%s'" % (self.text,run)
+            print("looking for '{}' in '{}'".format(self.text,run))
             while offset>=0:
                 offset = run.find(self.text,offset)
                 if offset>=0:
@@ -186,17 +186,17 @@ class redact_action_fill(redact_action):
         self.fillvalue = val
     def redact(self,rule,fi,rc):
         for run in rule.runs_to_redact(fi):
-            print "   filling at offset %d, %d bytes with 0x%2x" % (run.img_offset,run.bytes,self.fillvalue)
+            print("   filling at offset {}, {} bytes with 0x{02:x}".format(run.img_offset,run.bytes,self.fillvalue))
             if rc.commit:
                 rc.imagefile.seek(run.img_offset)
                 rc.imagefile.write(chr(self.fillvalue) * run.bytes)
-                print "  >>COMMIT"
+                print("  >>COMMIT")
             
 class redact_action_encrypt(redact_action):
     """ Perform redaction by encrypting"""
     def redact(self,rule,fileobject,rc):
         for run in rule.runs_to_redact(fileobject):
-            print "   encrypting at offset %d, %d bytes with cipher" % (run.img_offset,run.bytes)
+            print("   encrypting at offset {}, {} bytes with cipher".format(run.img_offset,run.bytes))
             raise ValueError,"Whoops; Didn't write this yet"
             
 class redact_action_fuzz(redact_action):
