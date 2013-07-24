@@ -24,14 +24,14 @@ def ptime(t):
     global options
     if t is None:
         return None
-    elif options.timestamp:
+    elif "options" in globals() and options.timestamp:
         return str(t.timestamp())
     else:
         return str(t.iso8601())
 
 def dprint(x):
     global options
-    if options.debug: print(x)
+    if "options" in globals() and options.debug: print(x)
 
 def header():
     if options.html:
@@ -47,14 +47,14 @@ body  { font-family: Sans-serif;}
 
 def h1(title):
     global options
-    if options.html:
+    if "options" in globals() and options.html:
         print("<h1>%s</h1>" % title)
         return
     print("\n\n%s\n" % title)
 
 def h2(title):
     global options
-    if options.html:
+    if "options" in globals() and options.html:
         print("<h2>%s</h2>" % title)
         return
     print("\n\n%s\n%s" % (title,"="*len(title)))
@@ -75,7 +75,7 @@ def table(rows,styles=None,break_on_change=False):
             return "{0:>12}".format(x)
         return str(x)
             
-    if options.html:
+    if "options" in globals() and options.html:
         print("<table>")
         for row in rows:
             print("<tr>")
@@ -114,7 +114,6 @@ class HiveState:
         
     def next(self):
         """Called when the next image is processed."""
-        global options
         self.cnames = self.new_cnames
         self.new_cnames = dict()
         self.new_files          = set()     # set of file objects
@@ -126,7 +125,6 @@ class HiveState:
             self.timeline = set()
 
     def process_cell(self,cell):
-        global options
         dprint("processing %s" % str(cell))
         
         # See if the filename changed its hash code
@@ -172,7 +170,7 @@ class HiveState:
     def process(self,fname):
         self.current_fname = fname
         if fname.endswith(".regxml"):
-            reader = dfxml.read_regxml(xmlfile=open(infile,'rb'), callback=self.process_cell)
+            reader = dfxml.read_regxml(xmlfile=open(fname,'rb'), callback=self.process_cell)
 
     def print_cells(self,title,cells):
         h2(title)
@@ -297,7 +295,6 @@ class HiveState:
 if __name__=="__main__":
     from optparse import OptionParser
     from copy import deepcopy
-    global options
 
     parser = OptionParser()
     parser.usage = '%prog [options] file1 file2 [file3...]  (files can be xml or image files)'

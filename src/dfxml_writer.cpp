@@ -180,7 +180,7 @@ std::string dfxml_writer::xmlmap(const dfxml_writer::strstrmap_t &m,const std::s
     if(attrs.size()>0) ss << " " << attrs;
     ss << ">";
     for(std::map<std::string,std::string>::const_iterator it=m.begin();it!=m.end();it++){
-        ss << "<" << (*it).first  << ">" << (*it).second << "</" << (*it).first << ">";
+        ss << "<" << (*it).first  << ">" << xmlescape((*it).second) << "</" << (*it).first << ">";
     }
     ss << "</" << outer << ">";
     return ss.str();
@@ -648,8 +648,12 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <exiv2/error.hpp>
 #endif
 
-#ifdef HAVE_SECTORID
-#include <sector_hash_query.hpp>
+#ifdef HAVE_HASHID
+#include <hashdb.hpp>
+#endif
+
+#ifdef HAVE_ZMQ_H
+#include <zmq.h>
 #endif
 
 #ifdef HAVE_AFFLIB_AFFLIB_H
@@ -665,7 +669,8 @@ void dfxml_writer::add_DFXML_build_environment()
     memset(&tm,0,sizeof(tm));
     push("build_environment");
 #ifdef __GNUC__
-    xmlprintf("compiler","","GCC %d.%d",__GNUC__, __GNUC_MINOR__);
+    // See http://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
+    xmlprintf("compiler","","%d.%d.%d (%s)",__GNUC__, __GNUC_MINOR__,__GNUC_PATCHLEVEL__,__VERSION__);
 #endif
 #ifdef CPPFLAGS
     xmlout("CPPFLAGS",CPPFLAGS,"",true);
@@ -711,11 +716,22 @@ void dfxml_writer::add_DFXML_build_environment()
 #if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
     xmlout("tre", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
-#ifdef HAVE_SECTORID
-    xmlout("library", "", std::string("name=\"sector_hash_query\" version=\"") + sector_hash_query_version() + "\"",false);
+#ifdef HAVE_HASHID
+    xmlout("library", "", std::string("name=\"hashdb\" version=\"") + hashdb_version() + "\"",false);
+#endif
+#ifdef HAVE_ZMQ_VERSION
+    int zmq_major, zmq_minor, zmq_patch;
+    zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
+    stringstream zmq_ss;
+    zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
+    xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
+#endif
+#ifdef GIT_COMMIT
+#define tostring(s) #s
+    xmlout("git", "", std::string("commit=\"") + tostring(GIT_COMMIT) + "\"",false);
 #endif
     pop();
 }

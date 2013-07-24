@@ -75,7 +75,7 @@ class version:
         
 def fiwalk_xml_version(filename=None):
     """Returns the fiwalk version that was used to create an XML file.
-    Uses the "quick and dirt" approach to getting to getting out the XML version."""
+    Uses the "quick and dirty" approach to getting to getting out the XML version."""
 
     p = version()
     return p.get_version(filename)

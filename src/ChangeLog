@@ -1,3 +1,7 @@
+2013-07-15  Man Page  <simsong@mncrnpsedu.local>
+
+	* dfxml_writer.cpp (dfxml_writer::xmlmap): now escapes xmlmap
+
 2013-05-27  Basic  <simsong@Mucha.local>
 
 	* dfxml_generator.cpp: renamed to dfxml_writer

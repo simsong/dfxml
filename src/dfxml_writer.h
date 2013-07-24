@@ -5,8 +5,8 @@
  * Optimized for DFXML generation.
  */
 
-#ifndef _DFXML_GENERATOR_H_
-#define _DFXML_GENERATOR_H_
+#ifndef _DFXML_WRITER_H_
+#define _DFXML_WRITER_H_
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS

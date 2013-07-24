@@ -45,10 +45,15 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
 #include <iostream>
 #include <unistd.h>
+
+#if defined(HAVE_OPENSSL_HMAC_H) && defined(HAVE_OPENSSL_EVP_H)
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
+#else
+#error OpenSSL required for hash_t.h
+#endif
 
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>

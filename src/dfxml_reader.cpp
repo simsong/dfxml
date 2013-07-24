@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <expat.h>
 #include <time.h>
 #include <stdint.h>
 /* We need netinet/in.h or windowsx.h */
