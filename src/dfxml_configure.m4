@@ -1,5 +1,5 @@
 #
-# mix-ins for be13
+# mix-ins for dfxml
 #
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
