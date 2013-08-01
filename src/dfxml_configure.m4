@@ -1,5 +1,6 @@
 #
 # mix-ins for dfxml
+# Support for hash_t as well.
 #
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
@@ -38,4 +39,14 @@ AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wredundant-decls"],
     	       [],
 	       AC_DEFINE([DFXML_GNUC_HAS_DIAGNOSTIC_PRAGMA],[1],[GCC supports #pragma GCC diagnostic]),
 	       )
+
+
+################################################################
+## OpenSSL Support is now required (for hash_t)
+AC_CHECK_HEADERS([openssl/aes.h openssl/bio.h openssl/evp.h openssl/hmac.h openssl/md5.h openssl/pem.h openssl/rand.h openssl/rsa.h openssl/sha.h openssl/pem.h openssl/x509.h])
+# OpenSSL has been installed under at least two different names...
+AC_CHECK_LIB([crypto],[EVP_get_digestbyname])	
+AC_CHECK_LIB([ssl],[SSL_library_init])
+AC_CHECK_FUNCS([EVP_get_digestbyname],,
+	AC_MSG_ERROR([SSL/OpenSSL support required]))
 
