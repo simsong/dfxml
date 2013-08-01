@@ -30,8 +30,6 @@ have_expat=yes
 AC_CHECK_HEADER([expat.h])
 AC_CHECK_LIB([expat],[XML_ParserCreate],,[have_expat="no ";AC_MSG_WARN([expat not found; S3 and Digital Signatures not enabled])])
 
-
-
 ################################################################
 #
 # Enable all the compiler debugging we can find
