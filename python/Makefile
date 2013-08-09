@@ -1,4 +1,4 @@
-check: check-dfxml check-dfxml_tool
+check: check-dfxml check-dfxml_tool check-mac_timelines
 	@echo "Tests passed!"
 
 check-dfxml:
@@ -7,5 +7,8 @@ check-dfxml:
 check-dfxml_tool:
 	./test_dfxml_tool.sh
 
+check-mac_timelines:
+	./test_mac_timelines.sh
+	
 clean:
 	rm -f dfxml_tool_*xml

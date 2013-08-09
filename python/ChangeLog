@@ -1,3 +1,7 @@
+2013-08-15    <a.nelson@prometheuscomputing.com>
+
+	* Regression testing: Make demo_mac_timeline.py into regression check
+
 2013-08-13    <a.nelson@prometheuscomputing.com>
 
 	* idifference.py: Remove requirement for a fileobject's partition to be defined
