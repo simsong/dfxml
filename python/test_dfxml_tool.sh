@@ -1,11 +1,11 @@
 #!/bin/bash
 
+. _pick_pythons.sh
+
 #Halt on error
 set -e
 #Display all executed commands
 set -x
-
-. _pick_pythons.sh
 
 #Flags listed here in alphabetical order
 DT_OPTIONS[0]=
