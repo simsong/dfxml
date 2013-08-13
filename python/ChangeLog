@@ -1,3 +1,7 @@
+2013-08-13    <a.nelson@prometheuscomputing.com>
+
+	* idifference.py: Remove requirement for a fileobject's partition to be defined
+
 2013-06-24    <a.nelson@prometheuscomputing.com>
 
 	* fiwalk.py: Give standalone usage slightly nicer error handling

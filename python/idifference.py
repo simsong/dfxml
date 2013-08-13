@@ -116,7 +116,7 @@ class DiskState:
 
     def __init__(self,notimeline=False,summary=False,include_dotdirs=False):
         self.new_fnames = dict() # maps from fname -> fi
-        self.new_inodes = dict() # maps from inode_number -> fi
+        self.new_inodes = dict() # maps from (partition, inode_number) -> fi
         self.new_fi_tally = 0
         self.notimeline = notimeline
         self.summary = summary
@@ -155,7 +155,7 @@ class DiskState:
 
         # Remember the file for the next generation
         self.new_fnames[fi.filename()] = fi
-        self.new_inodes[fi.partition() + "/" + fi.inode()] = fi
+        self.new_inodes[(fi.partition(), fi.inode())] = fi
         self.new_fi_tally += 1
 
         # See if this filename changed or was resized
@@ -186,7 +186,7 @@ class DiskState:
             del self.fnames[fi.filename()]
 
         # Look for files that were renamed
-        ofi = self.inodes.get(fi.partition() + "/" + fi.inode(),None)
+        ofi = self.inodes.get((fi.partition(), fi.inode()),None)
         if ofi and ofi.filename() != fi.filename() and ofi.sha1()==fi.sha1():
             #Never consider current-directory or parent-directory for rename operations.  Because we match on partition+inode numbers, these trivially match.
             if not (fi.filename().endswith("/.") or fi.filename().endswith("/..") or ofi.filename().endswith("/.") or ofi.filename().endswith("/..")):
