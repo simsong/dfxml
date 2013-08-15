@@ -5,6 +5,7 @@
 	* Regression testing: Add iterative version of demo_mac_timeline.py
 	* Python: Add demo program for repeating fileobject with XML Python objects
 	* idifference.py: Have idifference.py --xml generate DFXML with differential annotations
+	* idifference.py: Add test for XML output of idifference
 
 2013-08-13    <a.nelson@prometheuscomputing.com>
 
