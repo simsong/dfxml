@@ -2,6 +2,7 @@
 
 	* Regression testing: Make demo_mac_timeline.py into regression check
 	* dfxml.py: Add iterative interface for fileobjects
+	* Regression testing: Add iterative version of demo_mac_timeline.py
 
 2013-08-13    <a.nelson@prometheuscomputing.com>
 

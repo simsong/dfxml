@@ -1,4 +1,7 @@
-check: check-dfxml check-dfxml_tool check-mac_timelines
+check: \
+  check-dfxml \
+  check-dfxml_tool \
+  check-mac_timelines
 	@echo "Tests passed!"
 
 check-dfxml:

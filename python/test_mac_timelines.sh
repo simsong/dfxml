@@ -9,3 +9,5 @@ set -x
 
 "$PYTHON2" demo_mac_timeline.py ../samples/simple.xml
 "$PYTHON3" demo_mac_timeline.py ../samples/simple.xml
+"$PYTHON2" demo_mac_timeline_iter.py ../samples/simple.xml
+"$PYTHON3" demo_mac_timeline_iter.py ../samples/simple.xml
