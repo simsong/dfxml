@@ -975,9 +975,11 @@ class xml_reader:
         if self.cdata != None:
             self.cdata += data
 
-    def process_xml_stream(self,xml_stream,callback):
+    def process_xml_stream(self,xml_stream,callback,preserve_fis=False):
         "Run the reader on a given XML input stream"
         self.callback = callback
+        self.preserve_fis = preserve_fis
+        self.fi_history = []
         import xml.parsers.expat
         p = xml.parsers.expat.ParserCreate()
         p.StartElementHandler  = self._start_element
@@ -1191,6 +1193,8 @@ class fileobject_reader(xml_reader):
             return
         if name=="fileobject":
             self.callback(self.fileobject)
+            if self.preserve_fis:
+                self.fi_history.append(self.fileobject)
             self.fileobject = None
             return
         if name=='hashdigest' and len(self.tagstack)>0:
@@ -1353,14 +1357,48 @@ class extentdb:
         return filter(lambda x:not self.intersects_sector(x),self.sectors_for_run(run))
 
 
-def read_dfxml(xmlfile=None,imagefile=None,flags=0,callback=None):
+def read_dfxml(xmlfile=None,imagefile=None,flags=0,callback=None,preserve_fis=False):
     """Processes an image using expat, calling a callback for every file object encountered.
     If xmlfile is provided, use that as the xmlfile, otherwise runs fiwalk."""
     if not callback:
         raise ValueError("callback must be specified")
     r = fileobject_reader(imagefile=imagefile,flags=flags)
-    r.process_xml_stream(xmlfile,callback)
+    r.process_xml_stream(xmlfile,callback,preserve_fis)
     return r
+
+def iter_dfxml(xmlfile, preserve_elements=False):
+    """Returns an interator that yields fileobjects from a DFXML file.
+    
+    @param preserve_elements
+    Yielded fileobjects can also retain the xml.etree.ElementTree.Element,
+    the fileobject's source XML as a manipulable object.
+    Pass preserve_elements=True to get fi.xml_element.
+    NOTE: Retaining Elements is quite memory-intensive.  Creating a MAC
+    timeline from DFXML of the "CFREDS Hacking" image (a 34MB XML file)
+    using demo_mac_timeline_iter.py maxed at 65MB of RAM without
+    preserve_elements, and about 650MB with.  
+    
+    This function might be extended in the future to call Fiwalk (and
+    thus become what fileobjects_iter was supposed to be)."""
+    import io
+    import xml.etree.ElementTree as ET
+    if not xmlfile:
+        raise ValueError("xmlfile must be specified")
+    for event, elem in ET.iterparse(xmlfile, ("start","end")):
+        if event == "end":
+            if elem.tag == "fileobject":
+                xmlstring = ET.tostring(elem)
+                pseudof = io.BytesIO()
+                pseudof.write(xmlstring)
+                pseudof.seek(0)
+                def temp_callback(fi):
+                    #TODO The volumeobject isn't populated this way; need to catch with iterparse.
+                    if preserve_elements:
+                        fi.xml_element = elem
+                reader = read_dfxml(pseudof, callback=temp_callback, preserve_fis=True)
+                yield reader.fi_history[0]
+                if not preserve_elements:
+                    elem.clear()
 
 def read_regxml(xmlfile=None,flags=0,callback=None):
     """Processes an image using expat, calling a callback for node encountered."""

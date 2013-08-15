@@ -1,6 +1,7 @@
 2013-08-15    <a.nelson@prometheuscomputing.com>
 
 	* Regression testing: Make demo_mac_timeline.py into regression check
+	* dfxml.py: Add iterative interface for fileobjects
 
 2013-08-13    <a.nelson@prometheuscomputing.com>
 
