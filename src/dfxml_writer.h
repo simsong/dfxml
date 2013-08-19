@@ -67,18 +67,8 @@ class dfxml_writer {
 private:
     /*** neither copying nor assignment is implemented ***
      *** We do this by making them private constructors that throw exceptions. ***/
-    class not_impl: public std::exception {
-        virtual const char *what() const throw() {
-            return "copying feature_recorder objects is not implemented.";
-        }
-    };
-    dfxml_writer(const dfxml_writer &fr) __attribute__((__noreturn__)):
-        M(),outf(),out(),tags(),tag_stack(),tempfilename(),tempfile_template(),
-	t0(),t_last_timestamp(),
-        make_dtd(),outfilename(),oneline(){
-        throw new not_impl();
-    }
-    const dfxml_writer &operator=(const dfxml_writer &x){ throw new not_impl(); }
+    dfxml_writer(const dfxml_writer &);
+    dfxml_writer &operator=(const dfxml_writer &);
     /****************************************************************/
 
 public:

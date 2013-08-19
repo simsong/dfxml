@@ -21,16 +21,13 @@
 #include <exception>
 
 class cppmutex {
-    class not_impl: public std::exception {
-        const char *what() const throw() {
-            return "copying feature_recorder objects is not implemented.";
-        }
-    };
+    // default copy construction and assignment are meaningless
+    // and not implemented
+    cppmutex(const cppmutex &c);
+    cppmutex &operator=(const cppmutex &cp);
 
 public:
     pthread_mutex_t M;
-    cppmutex(const cppmutex &c) __attribute__((__noreturn__)) :M(){throw new not_impl();}
-    const cppmutex &operator=(const cppmutex &cp){ throw new not_impl();}
 public:
     cppmutex():M(){
         if(pthread_mutex_init(&M,NULL)){

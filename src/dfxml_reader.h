@@ -121,16 +121,8 @@ class file_object_reader:public dfxml_reader{
 private:
     /*** neither copying nor assignment is implemented ***
      *** We do this by making them private constructors that throw exceptions. ***/
-    class not_impl: public std::exception {
-	virtual const char *what() const throw() {
-	    return "copying feature_recorder objects is not implemented.";
-	}
-    };
-    file_object_reader(const file_object_reader&that) __attribute__((__noreturn__))
-:dfxml_reader(),volumeobject(),fileobject(),callback(),hashdigest_type(){
-	throw new not_impl();
-    }
-    const file_object_reader &operator=(const file_object_reader&){ throw new not_impl();}
+    file_object_reader(const file_object_reader &);
+    file_object_reader &operator=(const file_object_reader&);
 public:;
 
     static void startElement(void *userData, const char *name_, const char **attrs);
