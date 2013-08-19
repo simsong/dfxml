@@ -940,6 +940,11 @@ register_sax_tag(imageobject_sax,'imagesize')
 register_sax_tag(imageobject_sax,'image_filename')
 
 
+class creatorobject_sax(saxobject):
+    """A class that represents the <creator> section of a DFXML file"""
+for tag in ['creator','program','version']:
+    register_sax_tag(creatorobject_sax,tag)
+
 ################################################################
 
 ################################################################
@@ -1109,7 +1114,7 @@ class regxml_reader(xml_reader):
         """
         The callback is invoked for each stack-popping operation, except the root.
         """
-        #TODO sanity-check the objectstack
+        # TODO sanity-check the objectstack
         if name in ["msregistry","hive"]:
             pass
         elif name in ["key","node"]:
@@ -1217,6 +1222,7 @@ class fileobject_reader(xml_reader):
             self.imageobject._tags['image_filename'] = self.cdata
 
 class volumeobject_reader(xml_reader):
+    """Reads just the <volume> section of a DFXML file"""
     def __init__(self):
         self.volumeobject = False
         xml_reader.__init__(self)
@@ -1253,6 +1259,37 @@ class volumeobject_reader(xml_reader):
         if name in ['image_filename','imagefile'] and self.tagstack[-1]=='source':
             self.imageobject._tags['image_filename'] = self.cdata
         return
+
+
+class FinishedReadingCreator(Exception):
+    """Class to indicate that creator object has been read"""
+
+class creatorobject_reader(xml_reader):
+    """Reads the <creator> section of a DFXML file"""
+    def __init__(self):
+        self.creatorobject = False
+        xml_reader.__init__(self)
+
+    def _start_element(self, name, attrs):
+        """ Handles the start of an element for the XPAT scanner"""
+        self.tagstack.append(name)
+        if name=="creator":
+            self.creatorobject = creatorobject_sax()
+            return
+        if self.creatorobject:
+            self.cdata = ""     # capture cdata for creatorobject
+
+    def _end_element(self, name):
+        """Handles the end of an eleement for the XPAT scanner"""
+        assert(self.tagstack.pop()==name)
+        if name=="creator":
+            self.callback(self.creatorobject)
+            self.creatorobject = None
+            raise FinishedReadingCreator("Done")
+        if self.tagstack[-1]=='creator' and self.creatorobject: # in the creator
+            self.creatorobject._tags[name] = self.cdata
+            self.cdata = None
+            return
 
 
 def combine_runs(runs):
@@ -1410,12 +1447,12 @@ def read_regxml(xmlfile=None,flags=0,callback=None):
     r = regxml_reader(flags=flags)
     try:
         r.process_xml_stream(xmlfile,callback)
-    except xml.parsers.expat.ExpatError:
+    except xml.parsers.expat.ExpatError as e:
         stderr.write("XML parsing error for file \"" + xmlfile.name + "\".  Object stack:\n")
         for x in r.objectstack:
             stderr.write(str(x) + "\n")
         stderr.write("(Done.)\n")
-        raise
+        raise e
     return r
 
 def fileobjects_sax(xmlfile=None,imagefile=None,flags=0):
@@ -1457,7 +1494,14 @@ def volumeobjects_sax(xmlfile=None,imagefile=None,flags=0):
     r.process_xml_stream(xmlfile,imagefile=None,callback=lambda vo:ret.append(vo))
     return ret
     
-        
+def creatorobjects_sax(xmlfile=None,flags=0):
+    r = creatorobject_reader()
+    ret = []
+    try:
+        r.process_xml_stream(xmlfile,callback=lambda vo:ret.append(vo))
+    except FinishedReadingCreator as e:
+        pass
+    return ret
         
 ################################################################
 if __name__=="__main__":
