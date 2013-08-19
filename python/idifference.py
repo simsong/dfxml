@@ -330,7 +330,7 @@ class DiskState:
 
         #List new files
         for fi in self.new_files:
-            xmlfile.write("  <!-- + %s -->\n" % fi.filename())
+            #xmlfile.write("  <!-- + %s -->\n" % fi.filename())
             xmlfile.write("  ")
             tmpel = fi.xml_element.copy()
             tmpel.attrib["delta:new_file"] = "1"
@@ -338,24 +338,24 @@ class DiskState:
             xmlfile.write("\n")
         #List deleted files
         for fi in self.fnames.values():
-            xmlfile.write("<!-- - %s -->\n" % fi.filename())
+            #xmlfile.write("<!-- - %s -->\n" % fi.filename())
             xmlfile.write("  ")
             tmpel = ET.Element("fileobject")
             tmpel.attrib["delta:deleted_file"] = "1"
             tmpchild = fi.xml_element.copy()
-            tmpchild.tag = "delta:old_fileobject"
+            tmpchild.tag = "delta:original_fileobject"
             tmpel.insert(-1, tmpchild)
             xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
             xmlfile.write("\n")
         #List renamed files
         for (ofi, fi) in self.renamed_files:
-            xmlfile.write("<!-- ! %s -> %s -->\n" % (ofi.filename(), fi.filename()))
+            #xmlfile.write("<!-- ! %s -> %s -->\n" % (ofi.filename(), fi.filename()))
             tmpel = fi.xml_element.copy()
             propertyel = tmpel.find("filename")
             propertyel.attrib["delta:changed_property"] = "1"
             annos = _annotate_changes(tmpel, ofi, fi)
             tmpoldel = ofi.xml_element.copy()
-            tmpoldel.tag = "delta:old_fileobject"
+            tmpoldel.tag = "delta:original_fileobject"
             tmpel.append(tmpoldel)
             tmpel.attrib["delta:renamed_file"] = "1"
             if annos > 1:
@@ -365,12 +365,12 @@ class DiskState:
         #List files with with modified data or metadata
         changed_files = set.union(set(self.changed_content), set(self.changed_properties))
         for (ofi, fi) in changed_files:
-            xmlfile.write("<!-- ~ %s -->\n" % fi.filename())
+            #xmlfile.write("<!-- ~ %s -->\n" % fi.filename())
             xmlfile.write("  ")
             tmpel = fi.xml_element.copy()
             _annotate_changes(tmpel, ofi, fi)
             tmpoldel = ofi.xml_element.copy()
-            tmpoldel.tag = "delta:old_fileobject"
+            tmpoldel.tag = "delta:original_fileobject"
             tmpel.append(tmpoldel)
             tmpel.attrib["delta:changed_file"] = "1"
             xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
