@@ -351,11 +351,11 @@ class DiskState:
         #List renamed files
         for (ofi, fi) in self.renamed_files:
             #xmlfile.write("<!-- ! %s -> %s -->\n" % (ofi.filename(), fi.filename()))
-            tmpel = fi.xml_element.copy()
+            tmpel = copy.copy(fi.xml_element)
             propertyel = tmpel.find("filename")
             propertyel.attrib["delta:changed_property"] = "1"
             annos = _annotate_changes(tmpel, ofi, fi)
-            tmpoldel = ofi.xml_element.copy()
+            tmpoldel = copy.copy(ofi.xml_element)
             tmpoldel.tag = "delta:original_fileobject"
             tmpel.append(tmpoldel)
             tmpel.attrib["delta:renamed_file"] = "1"
@@ -482,7 +482,6 @@ class DiskState:
 
 if __name__=="__main__":
     from optparse import OptionParser
-    from copy import deepcopy
     global options
 
     parser = OptionParser()
