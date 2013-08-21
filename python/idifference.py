@@ -17,6 +17,7 @@ Process:
 __version__ = "0.2.0rfc"
 
 import sys,fiwalk,dfxml,time
+import copy
 if sys.version_info < (3,1):
     raise RuntimeError("idifference.py now requires Python 3.1 or above")
 
@@ -332,7 +333,7 @@ class DiskState:
         for fi in self.new_files:
             #xmlfile.write("  <!-- + %s -->\n" % fi.filename())
             xmlfile.write("  ")
-            tmpel = fi.xml_element.copy()
+            tmpel = copy.copy(fi.xml_element)
             tmpel.attrib["delta:new_file"] = "1"
             xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
             xmlfile.write("\n")
@@ -342,7 +343,7 @@ class DiskState:
             xmlfile.write("  ")
             tmpel = ET.Element("fileobject")
             tmpel.attrib["delta:deleted_file"] = "1"
-            tmpchild = fi.xml_element.copy()
+            tmpchild = copy.copy(fi.xml_element)
             tmpchild.tag = "delta:original_fileobject"
             tmpel.insert(-1, tmpchild)
             xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
@@ -367,9 +368,9 @@ class DiskState:
         for (ofi, fi) in changed_files:
             #xmlfile.write("<!-- ~ %s -->\n" % fi.filename())
             xmlfile.write("  ")
-            tmpel = fi.xml_element.copy()
+            tmpel = copy.copy(fi.xml_element)
             _annotate_changes(tmpel, ofi, fi)
-            tmpoldel = ofi.xml_element.copy()
+            tmpoldel = copy.copy(ofi.xml_element)
             tmpoldel.tag = "delta:original_fileobject"
             tmpel.append(tmpoldel)
             tmpel.attrib["delta:changed_file"] = "1"
