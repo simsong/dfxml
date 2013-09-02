@@ -17,3 +17,4 @@ src/install-sh
 src/missing
 
 .DS_Store
+_deps
