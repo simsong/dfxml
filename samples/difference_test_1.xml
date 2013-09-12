@@ -1,18 +1,28 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<dfxml>
-  <creator version='1.0'>
+<dfxml
+  version="1.0"
+  xmlns='http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML'
+  xmlns:dc='http://purl.org/dc/elements/1.1/'
+  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <metadata>
+    <dc:type>Sample</dc:type>
+  </metadata>
+  <creator>
     <program>vi</program>
     <version>7.3</version>
-    <command_line>vi post.xml</command_line>
+    <execution_environment>
+      <command_line>vi post.xml</command_line>
+    </execution_environment>
   </creator>
+  <source/>
   <fileobject>
     <filename>i_am_new.txt</filename>
     <name_type>r</name_type>
-    <inode>123458</inode>
     <filesize>40</filesize>
+    <inode>123458</inode>
     <mtime>2013-05-16T21:00:00Z</mtime>
-    <atime>2013-05-16T21:00:00Z</atime>
     <ctime>2013-05-16T21:00:00Z</ctime>
+    <atime>2013-05-16T21:00:00Z</atime>
     <byte_runs>
       <byte_run file_offset='0' img_offset='34512' len='40'/>
     </byte_runs>
@@ -22,11 +32,11 @@
   <fileobject>
     <filename>password.txt</filename>
     <name_type>r</name_type>
-    <inode>123457</inode>
     <filesize>12</filesize>
+    <inode>123457</inode>
     <mtime>2013-01-01T00:00:00Z</mtime>
-    <atime>2013-05-16T21:00:00Z</atime>
     <ctime>2013-01-01T00:00:00Z</ctime>
+    <atime>2013-05-16T21:00:00Z</atime>
     <byte_runs>
       <byte_run file_offset='0' img_offset='234512' len='12'/>
     </byte_runs>
