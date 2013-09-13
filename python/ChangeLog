@@ -1,3 +1,7 @@
+2013-09-13    <a.nelson@prometheuscomputing.com>
+
+	* idifference.py: Switch XML namespace for differencing to forensicswiki page
+
 2013-09-12    <a.nelson@prometheuscomputing.com>
 
 	* idifference.py: Adjust XML output, along with sample data, to validate against DFXML schema (v1.1.0rfc0; at least, everything except the differential annotations not yet in the schema validates)
