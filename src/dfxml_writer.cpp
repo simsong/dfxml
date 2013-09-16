@@ -437,9 +437,9 @@ void dfxml_writer::add_cpuid()
     cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
     xmlout("L1_cache_size", (int64_t) BFIX(ecx, 16, 31) * 1024);
     pop();
+}
 #undef BFIX
 #endif
-}
 
 void dfxml_writer::add_DFXML_execution_environment(const std::string &command_line)
 {
