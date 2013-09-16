@@ -14,7 +14,7 @@ Process:
 4. Replace the old maps with the new maps
 """
 
-__version__ = "0.2.0rfc"
+__version__ = "0.2.0rfc1"
 
 import sys,fiwalk,dfxml,time
 import copy
@@ -271,19 +271,18 @@ class DiskState:
         metadict["currentf"] = self.current_fname
 
         xmlfile = open(options.xmlfilename, "w")
-#TODO Find that PDF address
         xmlfile.write("""\
 <?xml version="1.0" encoding="UTF-8"?>
 <dfxml
-  xmloutputversion="1.0"
-  xmlns:delta='http://dfrws.org/2012/proceedings/DFRWS2012-6.pdf'>
-  <metadata 
+  version="1.0"
   xmlns='http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML'
-  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' 
-  xmlns:dc='http://purl.org/dc/elements/1.1/'>
+  xmlns:dc='http://purl.org/dc/elements/1.1/'
+  xmlns:delta='http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing'
+  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  <metadata>
     <dc:type>Disk Image Difference Manifest</dc:type>
   </metadata>
-  <creator version="1.0">
+  <creator>
     <program>%(program)s</program>
     <version>%(version)s</version>
     <execution_environment>
