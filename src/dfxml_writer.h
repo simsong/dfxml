@@ -105,8 +105,17 @@ public:
     static std::string make_command_line(int argc,char * const *argv){
         std::string command_line;
         for(int i=0;i<argc;i++){
+            // append space separator between arguments
             if(i>0) command_line.push_back(' ');
-            command_line.append(argv[i]);
+            if (strchr(argv[i],' ') != NULL) {
+                // the argument has a space, so quote the argument
+                command_line.append("\"");
+                command_line.append(argv[i]);
+                command_line.append("\"");
+            } else {
+                // the argument has no space, so append as is
+                command_line.append(argv[i]);
+            }
         }
         return command_line;
     }
