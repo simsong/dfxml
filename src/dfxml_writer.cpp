@@ -382,10 +382,16 @@ void dfxml_writer::set_oneline(bool v)
     oneline = v;
 }
 
+#ifdef HAVE_ASM_CPUID
+#ifndef __WORDSIZE
+#define __WORDSIZE 32
+#endif
 
 void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                 unsigned long *ecx, unsigned long *edx) {
-#if defined(__i386__) && defined(__PIC__)
+#ifdef HAVE_ASM_CPUID
+#if defined(__i386__)
+#if defined(__PIC__)
     __asm__ __volatile__("pushl %%ebx      \n\t" /* save %ebx */
                          "cpuid            \n\t"
                          "movl %%ebx, %1   \n\t" /* save what cpuid just put in %ebx */
@@ -400,19 +406,17 @@ void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                          : "cc");
 
 #endif
+#endif
+#endif
 }
 
 
 
 void dfxml_writer::add_cpuid()
 {
-#ifdef HAVE_ASM_CPUID
-#ifndef __WORDSIZE
-#define __WORDSIZE 32
-#endif
-#define b(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))
+#define BFIX(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))
     char buf[256];
-    unsigned long eax, ebx, ecx, edx;
+    unsigned long eax=0, ebx=0, ecx=0, edx=0; // =0 avoids a compiler warning
     cpuid(0, &eax, &ebx, &ecx, &edx);
     
     snprintf(buf,sizeof(buf),"%.4s%.4s%.4s", (char *)&ebx, (char *)&edx, (char *)&ecx);
@@ -420,19 +424,20 @@ void dfxml_writer::add_cpuid()
     xmlout("identification",buf);
 
     cpuid(1, &eax, &ebx, &ecx, &edx);
-    xmlout("family", (int64_t) b(eax, 8, 11));
-    xmlout("model", (int64_t) b(eax, 4, 7));
-    xmlout("stepping", (int64_t) b(eax, 0, 3));
-    xmlout("efamily", (int64_t) b(eax, 20, 27));
-    xmlout("emodel", (int64_t) b(eax, 16, 19));
-    xmlout("brand", (int64_t) b(ebx, 0, 7));
-    xmlout("clflush_size", (int64_t) b(ebx, 8, 15) * 8);
-    xmlout("nproc", (int64_t) b(ebx, 16, 23));
-    xmlout("apicid", (int64_t) b(ebx, 24, 31));
+    xmlout("family", (int64_t) BFIX(eax, 8, 11));
+    xmlout("model", (int64_t) BFIX(eax, 4, 7));
+    xmlout("stepping", (int64_t) BFIX(eax, 0, 3));
+    xmlout("efamily", (int64_t) BFIX(eax, 20, 27));
+    xmlout("emodel", (int64_t) BFIX(eax, 16, 19));
+    xmlout("brand", (int64_t) BFIX(ebx, 0, 7));
+    xmlout("clflush_size", (int64_t) BFIX(ebx, 8, 15) * 8);
+    xmlout("nproc", (int64_t) BFIX(ebx, 16, 23));
+    xmlout("apicid", (int64_t) BFIX(ebx, 24, 31));
     
     cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
-    xmlout("L1_cache_size", (int64_t) b(ecx, 16, 31) * 1024);
+    xmlout("L1_cache_size", (int64_t) BFIX(ecx, 16, 31) * 1024);
     pop();
+#undef BFIX
 #endif
 }
 
