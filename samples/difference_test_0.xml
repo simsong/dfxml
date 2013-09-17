@@ -30,17 +30,31 @@
     <hashdigest type='sha1'>2a5630f9e70b4931f6b6fc3d9d7f483007012352</hashdigest>
   </fileobject>
   <fileobject>
-    <filename>password.txt</filename>
+    <filename>i_will_be_modified.txt</filename>
     <name_type>r</name_type>
-    <filesize>12</filesize>
+    <filesize>22</filesize>
     <inode>123457</inode>
     <mtime>2013-01-01T00:00:00Z</mtime>
     <ctime>2013-01-01T00:00:00Z</ctime>
     <atime>2013-01-01T00:00:00Z</atime>
     <byte_runs>
-      <byte_run file_offset='0' img_offset='234512' len='12'/>
+      <byte_run file_offset='0' img_offset='234512' len='22'/>
     </byte_runs>
-    <hashdigest type='md5'>3d90d31043ad6158de35eacc7ac39069</hashdigest>
-    <hashdigest type='sha1'>2a5630f9e70b4931f6b6fc3d9d7f483007012352</hashdigest>
+    <hashdigest type='md5'>7ac390693d90d31043ad6158de35eacc</hashdigest>
+    <hashdigest type='sha1'>f4830070123522a5630f9e70b4931f6b6fc3d9d7</hashdigest>
+  </fileobject>
+  <fileobject>
+    <filename>i_will_be_accessed.txt</filename>
+    <name_type>r</name_type>
+    <filesize>12</filesize>
+    <inode>123458</inode>
+    <mtime>2013-01-01T00:00:00Z</mtime>
+    <ctime>2013-01-01T00:00:00Z</ctime>
+    <atime>2013-01-01T00:00:00Z</atime>
+    <byte_runs>
+      <byte_run file_offset='0' img_offset='34512' len='12'/>
+    </byte_runs>
+    <hashdigest type='md5'>e35eacc7ac390693d90d31043ad6158d</hashdigest>
+    <hashdigest type='sha1'>31f6b6fc3d9d7f4830070123522a5630f9e70b49</hashdigest>
   </fileobject>
 </dfxml>
