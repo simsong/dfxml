@@ -1,5 +1,9 @@
 2013-09-17    <a.nelson@prometheuscomputing.com>
 
+	* dfxml: Add an ElementTree tostring() function wrapper that removes redundant namespace declarations, with unit tests for new regular expression
+	* idifference: Update unit tests to include vetted count of fileobjects generated
+	* idifference: Correct a fileobject counting bug (where a counter reset was forgotten)
+	* idifference, icat: Add some XML namespace handling logic, found necessary but missed until the last unit test updates
 	* cat_fileobjects.py: Add debug flag
 
 2013-09-13    <a.nelson@prometheuscomputing.com>

@@ -14,7 +14,7 @@ Process:
 4. Replace the old maps with the new maps
 """
 
-__version__ = "0.2.0rfc1"
+__version__ = "0.2.0rfc2"
 
 import sys,fiwalk,dfxml,time
 import copy
@@ -135,10 +135,13 @@ class DiskState:
         self.fi_tally = self.new_fi_tally
         self.new_fnames = dict()
         self.new_inodes = dict()
+        #Reset sets
         self.new_files          = set()     # set of file objects
         self.renamed_files      = set()     # set of (oldfile,newfile) file objects
         self.changed_content    = set()     # set of (oldfile,newfile) file objects
         self.changed_properties = set()     # list of (oldfile,newfile) file objects
+        #Reset counters
+        self.new_fi_tally = 0
         if self.notimeline:
             self.timeline = None
         else:
@@ -259,11 +262,17 @@ class DiskState:
 
     def to_xml(self):
         import xml.etree.ElementTree as ET
+        
+        XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
+        ET.register_namespace("delta", XMLNS_DELTA)
+        
         if not options.xmlfilename:
             sys.stderr.write("XML output filename not specified.\n")
             exit(1)
 
         metadict = dict()
+        metadict["XMLNS_DFXML"] = dfxml.XMLNS_DFXML
+        metadict["XMLNS_DELTA"] = XMLNS_DELTA
         metadict["program"] = sys.argv[0]
         metadict["version"] = __version__
         metadict["commandline"] = " ".join(sys.argv)
@@ -275,9 +284,9 @@ class DiskState:
 <?xml version="1.0" encoding="UTF-8"?>
 <dfxml
   version="1.0"
-  xmlns='http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML'
+  xmlns='%(XMLNS_DFXML)s'
   xmlns:dc='http://purl.org/dc/elements/1.1/'
-  xmlns:delta='http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing'
+  xmlns:delta='%(XMLNS_DELTA)s'
   xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
   <metadata>
     <dc:type>Disk Image Difference Manifest</dc:type>
@@ -298,19 +307,30 @@ class DiskState:
         def _annotate_changes(tmpel, ofi, fi):
             """
             Adds "delta:changed_property" attributes to elements that changed their values.
-            Returns number of annotations added.
+            Returns number of annotations needed.
             """
             retval = 0
-            # Triplets: Old value, new value, XPath to find element to annotate
-            for (oval, nval, xpath) in [
-              (ofi.filename(), fi.filename(), "./filename"),
-              (ofi.sha1(), fi.sha1(), "./hashdigest[@type='sha1']"),
-              (ofi.md5(), fi.md5(), "./hashdigest[@type='md5']"),
-              (ofi.mtime(), fi.mtime(), "./mtime"),
-              (ofi.atime(), fi.atime(), "./atime"),
-              (ofi.ctime(), fi.ctime(), "./ctime"),
-              (ofi.crtime(), fi.crtime(), "./crtime"),
-              (ofi.filesize(), fi.filesize(), "./filesize")
+            def _xpaths(xp):
+                """
+                Returns a list of xpaths: First, with an xmlns; second, as input.
+
+                @param xp
+                An xpath expression where all elements and attributes needing a namespace declaration are prefixed with "{0}" (for Python string formatting).
+                """
+                retval = []
+                for nsprefix in ["{" + dfxml.XMLNS_DFXML + "}", ""]:
+                    retval.append(xp.format(nsprefix))
+                return retval
+            # Triplets: Old value, new value, XPaths to find element to annotate
+            for (oval, nval, xpaths) in [
+              (ofi.filename(), fi.filename(), _xpaths("./{0}filename")),
+              (ofi.sha1(), fi.sha1(), _xpaths("./{0}hashdigest[@type='sha1']")),
+              (ofi.md5(), fi.md5(), _xpaths("./{0}hashdigest[@type='md5']")),
+              (ofi.mtime(), fi.mtime(), _xpaths("./{0}mtime")),
+              (ofi.atime(), fi.atime(), _xpaths("./{0}atime")),
+              (ofi.ctime(), fi.ctime(), _xpaths("./{0}ctime")),
+              (ofi.crtime(), fi.crtime(), _xpaths("./{0}crtime")),
+              (ofi.filesize(), fi.filesize(), _xpaths("./{0}filesize"))
             ]:
                 #Find and flag the changed properties
 
@@ -320,9 +340,13 @@ class DiskState:
 
                 if oval != nval:
                     retval += 1
-                    propertyel = tmpel.find(xpath)
+                    #Find first namespace match for the property element 
+                    for xp in xpaths:
+                        propertyel = tmpel.find(xp)
+                        if not propertyel is None:
+                            break
                     if propertyel is None:
-                        comment = ET.Comment("Tried to note a changed property with the XPath query %r; however, could not find the element." % xpath)
+                        comment = ET.Comment("Warning: Tried to note a changed property with the XPath queries %r; however, could not find the element." % xpaths)
                         tmpel.insert(0, comment)
                     else:
                         propertyel.attrib["delta:changed_property"] = "1"
@@ -334,7 +358,7 @@ class DiskState:
             xmlfile.write("  ")
             tmpel = copy.copy(fi.xml_element)
             tmpel.attrib["delta:new_file"] = "1"
-            xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
+            xmlfile.write(dfxml.ET_tostring(tmpel, encoding="unicode"))
             xmlfile.write("\n")
         #List deleted files
         for fi in self.fnames.values():
@@ -345,7 +369,7 @@ class DiskState:
             tmpchild = copy.copy(fi.xml_element)
             tmpchild.tag = "delta:original_fileobject"
             tmpel.insert(-1, tmpchild)
-            xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
+            xmlfile.write(dfxml.ET_tostring(tmpel, encoding="unicode"))
             xmlfile.write("\n")
         #List renamed files
         for (ofi, fi) in self.renamed_files:
@@ -360,7 +384,7 @@ class DiskState:
             tmpel.attrib["delta:renamed_file"] = "1"
             if annos > 1:
                 tmpel.attrib["delta:changed_file"] = "1"
-            xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
+            xmlfile.write(dfxml.ET_tostring(tmpel, encoding="unicode"))
             xmlfile.write("\n")
         #List files with with modified data or metadata
         changed_files = set.union(set(self.changed_content), set(self.changed_properties))
@@ -373,7 +397,7 @@ class DiskState:
             tmpoldel.tag = "delta:original_fileobject"
             tmpel.append(tmpoldel)
             tmpel.attrib["delta:changed_file"] = "1"
-            xmlfile.write(ET.tostring(tmpel, encoding="unicode"))
+            xmlfile.write(dfxml.ET_tostring(tmpel, encoding="unicode"))
             xmlfile.write("\n")
         xmlfile.write("</dfxml>\n")
         xmlfile.close()

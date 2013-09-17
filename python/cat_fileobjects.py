@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #Make a new DFXML file of all fileobjects in an input DFXML file.
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import sys
 import xml.etree.ElementTree as ET
@@ -36,11 +36,11 @@ def main():
             xs.append(fi.xml_element)
         else:
             logging.debug("Printing without cache: %s" % str(fi))
-            print(ET.tostring(fi.xml_element, encoding="unicode"))
+            print(dfxml.ET_tostring(fi.xml_element, encoding="unicode"))
     if args.cache:
         for x in xs:
             logging.debug("Printing with cache: %s" % str(fi))
-            print(ET.tostring(x, encoding="unicode"))
+            print(dfxml.ET_tostring(x, encoding="unicode"))
 
     print("""</dfxml>""")
 
