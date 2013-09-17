@@ -22,3 +22,6 @@ if [ -x "$XMLLINT" ]; then
 else
   echo "Warning: xmllint not found.  Skipped check for if generated DFXML is valid XML." >&2
 fi
+
+test $(grep '<fileobject' ../samples/simple.xml | wc -l) == $(grep '<fileobject' cat_test_nocache.dfxml | wc -l)
+test $(grep '<fileobject' ../samples/simple.xml | wc -l) == $(grep '<fileobject' cat_test_cache.dfxml | wc -l)
