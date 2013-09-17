@@ -1,3 +1,7 @@
+2013-09-17    <a.nelson@prometheuscomputing.com>
+
+	* cat_fileobjects.py: Add debug flag
+
 2013-09-13    <a.nelson@prometheuscomputing.com>
 
 	* idifference.py: Switch XML namespace for differencing to forensicswiki page

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 #Make a new DFXML file of all fileobjects in an input DFXML file.
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import sys
 import xml.etree.ElementTree as ET
 import dfxml
+import logging
 
 if sys.version < "3":
     sys.stderr.write("Due to Unicode issues with Python 2's ElementTree, Python 3 and up is required.\n")
@@ -30,12 +31,15 @@ def main():
 
     xs = []
     for fi in dfxml.iter_dfxml(xmlfile=open(args.filename, "rb"), preserve_elements=True):
+        logging.debug("Processing: %s" % str(fi))
         if args.cache:
             xs.append(fi.xml_element)
         else:
+            logging.debug("Printing without cache: %s" % str(fi))
             print(ET.tostring(fi.xml_element, encoding="unicode"))
     if args.cache:
         for x in xs:
+            logging.debug("Printing with cache: %s" % str(fi))
             print(ET.tostring(x, encoding="unicode"))
 
     print("""</dfxml>""")
@@ -45,5 +49,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
     parser.add_argument("--cache", action="store_true")
+    parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
+
     main()
