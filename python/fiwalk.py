@@ -108,7 +108,7 @@ def E01_glob(fn):
 
 def fiwalk_xml_stream(imagefile=None,flags=0,fiwalk="fiwalk",fiwalk_args=""):
     """ Returns an fiwalk XML stream given a disk image by running fiwalk."""
-    if flags & ALLOC_ONLY: fiwalk_args += "O"
+    if flags & ALLOC_ONLY: fiwalk_args += "-O"
     from subprocess import call,Popen,PIPE
     # Make sure we have a valid fiwalk
     try:

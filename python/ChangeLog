@@ -1,6 +1,7 @@
 2013-09-18    <a.nelson@prometheuscomputing.com>
 
 	* Python: Run timeline test on differencing input XML; add hand-validated line count check
+	* fiwalk.py: Correct Fiwalk fallback call
 
 2013-09-17    <a.nelson@prometheuscomputing.com>
 
