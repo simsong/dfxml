@@ -1,3 +1,7 @@
+2013-09-18    <a.nelson@prometheuscomputing.com>
+
+	* Python: Run timeline test on differencing input XML; add hand-validated line count check
+
 2013-09-17    <a.nelson@prometheuscomputing.com>
 
 	* dfxml: Add an ElementTree tostring() function wrapper that removes redundant namespace declarations, with unit tests for new regular expression

@@ -26,3 +26,4 @@ clean:
 	rm -f cat_test_{,no}cache.dfxml
 	rm -f idifference_test.txt
 	rm -f idifference_test{,_formatted}.dfxml
+	rm -f demo_mac_timeline*.txt
