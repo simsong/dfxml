@@ -14,7 +14,7 @@ Process:
 4. Replace the old maps with the new maps
 """
 
-__version__ = "0.2.0rfc2"
+__version__ = "0.2.0rfc3"
 
 import sys,fiwalk,dfxml,time
 import copy
@@ -375,8 +375,6 @@ class DiskState:
         for (ofi, fi) in self.renamed_files:
             #xmlfile.write("<!-- ! %s -> %s -->\n" % (ofi.filename(), fi.filename()))
             tmpel = copy.copy(fi.xml_element)
-            propertyel = tmpel.find("filename")
-            propertyel.attrib["delta:changed_property"] = "1"
             annos = _annotate_changes(tmpel, ofi, fi)
             tmpoldel = copy.copy(ofi.xml_element)
             tmpoldel.tag = "delta:original_fileobject"
