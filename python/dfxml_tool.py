@@ -34,12 +34,12 @@ class xml:
             self.f = open(f,'w')
         self.write("<?xml version='1.0' encoding='UTF-8'?>\n")
         
-    def dublin_core(self,dc_record):
-        self.push('metadata',dfxml_ns,attrib_delim='\n  ')
+    def dublin_core(self,dc_record,indent=0):
+        self.push('metadata',dfxml_ns,attrib_delim='\n  ',indent=indent)
         for (n,v) in dc_record.iteritems():
             if v!=None:
-                self.xmlout(n,v)
-        self.pop('metadata')
+                self.xmlout(n,v,indent=indent+2)
+        self.pop('metadata', indent)
         self.write('\n')
         
     def provenance(self):
@@ -61,18 +61,20 @@ class xml:
             self.pop('creator')
             self.f.write('\n')
 
-    def push(self,tag,attribs={},attrib_delim=' '):
+    def push(self,tag,attribs={},attrib_delim=' ',indent=0):
         """Enter an XML block, with optional attributes on the tag"""
-        self.tagout(tag,attribs=attribs,attrib_delim=attrib_delim,newline=True)
+        self.tagout(tag,attribs=attribs,attrib_delim=attrib_delim,newline=True,indent=indent)
         self.stack.append(tag)
 
-    def pop(self,v=None):
+    def pop(self,v=None,indent=0):
         """Leave an XML block"""
         if v: assert v==self.stack[-1]
-        self.tagout("/"+self.stack.pop(),newline=True)
+        self.tagout("/"+self.stack.pop(),newline=True,indent=indent)
 
-    def tagout(self,tag,attribs={},attrib_delim=' ',newline=None):
+    def tagout(self,tag,attribs={},attrib_delim=' ',newline=None,indent=0):
         """Outputs a plain XML tag and optional attributes"""
+        for i in range(indent):
+          self.f.write(" ")
         self.f.write("<%s" % tag)
         if attribs:
             self.f.write(" ")
@@ -84,9 +86,9 @@ class xml:
         self.f.write(">")
         if newline: self.f.write("\n")
 
-    def xmlout(self,tag,value,attribs={}):
+    def xmlout(self,tag,value,attribs={},indent=0):
         """Output an XML tag and its value"""
-        self.tagout(tag,attribs,newline=False)
+        self.tagout(tag,attribs,newline=False,indent=indent)
         self.write(escape(str(value)))
         self.write("</%s>\n" % tag)
 
