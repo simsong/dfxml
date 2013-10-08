@@ -18,7 +18,7 @@ Each command has an "condition" and an "action"
 
 Conditions:
   FILENAME <afilename> - a file with the given name
-  FILEPAT  <a file pattern> - any give with a given pattern
+  FILEPAT  <a file pattern> - any file with a given pattern
   DIRNAME  <a directory> - any file in the directory 
   MD5 <a md5> - any file with the given md5
   SHA1 <a sha1> - any file with the given sha1 
@@ -142,11 +142,11 @@ class redact_rule_string(redact_rule):
         return self.text in fileobject.contents()
     def runs_to_redact(self,fi):
         """Overridden to return the byte runs of just the given text"""
-        print("byte runs:"+str(fi.byte_runs()))
         ret = []
         tlen = len(self.text)
         for run in fi.byte_runs():
             (file_offset,run_len,img_offset) = run
+
             run_content = fi.content_for_run(run)
             offset = 0
             # Now find all the places inside "run"
@@ -186,11 +186,16 @@ class redact_action_fill(redact_action):
         self.fillvalue = val
     def redact(self,rule,fi,rc):
         for run in rule.runs_to_redact(fi):
-            print("   filling at offset {}, {} bytes with 0x{02:x}".format(run.img_offset,run.bytes,self.fillvalue))
+            print("   Current run %s " % run)
+            rc.imagefile.seek(run.img_offset)
+            runlen = run.len
+            print "\tFile info - \n\t\tname: %s  \n\t\tclosed: %s \n\t\tposition: %d \n\t\tmode: %s" % \
+            (rc.imagefile.name, rc.imagefile.closed, rc.imagefile.tell(), rc.imagefile.mode)
+            print("   Filling at offset {}, {} bytes with pattern {}".format(run.img_offset,runlen,hex(self.fillvalue)))
             if rc.commit:
                 rc.imagefile.seek(run.img_offset)
-                rc.imagefile.write(chr(self.fillvalue) * run.bytes)
-                print("  >>COMMIT")
+                rc.imagefile.write(chr(self.fillvalue) * run.len)
+                print("   >>COMMIT\n")
             
 class redact_action_encrypt(redact_action):
     """ Perform redaction by encrypting"""
@@ -217,21 +222,24 @@ class redact_action_fuzz(redact_action):
         print "Redacting with FUZZ: ",fileobject
         for run in rule.runs_to_redact(fileobject):
             try:
-                print "   fuzzing at offset %d, %d bytes " % (run.img_offset,run.bytes)
+                print "   Fuzzing at offset: %d, can fuzz up to %d bytes " % (run.img_offset,run.len)
                 rc.imagefile.seek(run.img_offset)
-                bytes = rc.imagefile.read(10)
-                #bytes = rc.imagefile.read(run.bytes)
-                print "\tfile info - \n\t\tname: %s  \n\t\tclosed: %s \n\t\tposition: %d \n\t\tmode: %s" % \
+
+                # Previously redacted only first 10 bytes, now redacts entire sequence
+                #first_ten_bytes = rc.imagefile.read(10)
+                run_bytes = rc.imagefile.read(run.len)
+
+                print "\tFile info - \n\t\tname: %s  \n\t\tclosed: %s \n\t\tposition: %d \n\t\tmode: %s" % \
                     (rc.imagefile.name, rc.imagefile.closed, rc.imagefile.tell(), rc.imagefile.mode)
-                print "    starting with %d bytes - should be %d" % (len(bytes), run.bytes)
-                newbytes = "".join([fuzz(x) for x in bytes])
+                print "    Fuzzing %d bytes - should be %d" % (len(run_bytes), run.len)
+                newbytes = "".join([fuzz(x) for x in run_bytes])
                 #debug
-                print "new: %i old: %i" % (len(newbytes), run.bytes)
-                assert(len(newbytes)==run.bytes)
+                print "new: %i old: %i" % (len(newbytes), run.len)
+                assert(len(newbytes)==run.len)
                 if rc.commit:
                     rc.imagefile.seek(run.img_offset)
                     rc.imagefile.write(newbytes)
-                    print "  >>COMMIT"
+                    print "\n   >>COMMIT"
             except AttributeError:
                 print "!AttributeError: no byte run?"
 
@@ -328,10 +336,10 @@ class RedactConfig:
     def process_file(self,fileinfo):
         for (rule,action) in self.cmds:
             if rule.should_redact(fileinfo):
-                print "processing file %s" % fileinfo.filename()
+                print "Processing file: %s" % fileinfo.filename()
 
                 if self.ignore_rule.should_ignore(fileinfo):
-                    print "ignoring %s" % fileinfo.filename()
+                    print "(Ignoring %s)" % fileinfo.filename()
                     return
 
                 print ""
@@ -343,12 +351,12 @@ class RedactConfig:
                     return                  # only need to redact once!
 
     def close_files(self):
-        if self.image_file and self.image_file.closed == False:
-            print "closing file %s" % self.image_file.name
-            self.image_file.close()
-        if self.xml_file and self.xml_file.closed == False:
-            print "closing file %s" % self.xml_file.name
-            self.xml_file.close()
+        if self.imagefile and self.imagefile.closed == False:
+            print "Closing file: %s" % self.imagefile.name
+            self.imagefile.close()
+        if self.xmlfile and self.xmlfile.closed == False:
+            print "Closing file: %s" % self.xmlfile.name
+            self.xmlfile.close()
 
 if __name__=="__main__":
     import sys,time
