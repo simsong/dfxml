@@ -1,8 +1,8 @@
 #
 # Paths to the disk image and fiwalk XML output
 #
-IMAGEFILE /PATH-TO-FILE-LOCATION/image.raw
-XMLFILE /PATH-TO-FILE-LOCATION/image.xml
+IMAGEFILE /corp/images/nps/nps-2009-domexusers/nps-2009-realistic.redacted.raw
+XMLFILE /corp/images/nps/nps-2009-domexusers/nps-2009-realistic.xml
 
 #
 # Redaction patterns
