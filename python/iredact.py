@@ -18,7 +18,7 @@ Each command has an "condition" and an "action"
 
 Conditions:
   FILENAME <afilename> - a file with the given name
-  FILEPAT  <a file pattern> - any give with a given pattern
+  FILEPAT  <a file pattern> - any file with a given pattern
   DIRNAME  <a directory> - any file in the directory 
   MD5 <a md5> - any file with the given md5
   SHA1 <a sha1> - any file with the given sha1 
@@ -343,12 +343,12 @@ class RedactConfig:
                     return                  # only need to redact once!
 
     def close_files(self):
-        if self.image_file and self.image_file.closed == False:
-            print "closing file %s" % self.image_file.name
-            self.image_file.close()
-        if self.xml_file and self.xml_file.closed == False:
-            print "closing file %s" % self.xml_file.name
-            self.xml_file.close()
+        if self.imagefile and self.imagefile.closed == False:
+            print "closing file %s" % self.imagefile.name
+            self.imagefile.close()
+        if self.xmlfile and self.xmlfile.closed == False:
+            print "closing file %s" % self.xmlfile.name
+            self.xmlfile.close()
 
 if __name__=="__main__":
     import sys,time
