@@ -4,7 +4,7 @@
 #
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
-AC_CHECK_HEADERS([afflib/afflib.h err.h expat.h libewf.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h openssl/hmac.h openssl/evp.h])
+AC_CHECK_HEADERS([afflib/afflib.h err.h expat.h libewf.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h ])
 AC_CHECK_FUNCS([fork localtime_r getuid gethostname getwpuid getrusage mkstemp vasprintf regcomp ])
 
 AC_LANG_PUSH(C++)
