@@ -14,7 +14,7 @@ Process:
 4. Replace the old maps with the new maps
 """
 
-__version__ = "0.2.0rfc3"
+__version__ = "0.2.0rfc4"
 
 import sys,fiwalk,dfxml,time
 import copy
@@ -263,8 +263,7 @@ class DiskState:
     def to_xml(self):
         import xml.etree.ElementTree as ET
         
-        XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
-        ET.register_namespace("delta", XMLNS_DELTA)
+        ET.register_namespace("delta", dfxml.XMLNS_DELTA)
         
         if not options.xmlfilename:
             sys.stderr.write("XML output filename not specified.\n")
@@ -272,7 +271,7 @@ class DiskState:
 
         metadict = dict()
         metadict["XMLNS_DFXML"] = dfxml.XMLNS_DFXML
-        metadict["XMLNS_DELTA"] = XMLNS_DELTA
+        metadict["XMLNS_DELTA"] = dfxml.XMLNS_DELTA
         metadict["program"] = sys.argv[0]
         metadict["version"] = __version__
         metadict["commandline"] = " ".join(sys.argv)

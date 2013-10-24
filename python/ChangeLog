@@ -2,6 +2,7 @@
 
 	* dfxml.py: Add null-argument test on content_for_run
 	* dfxml.py: Add image reference to iterative reader
+	* idifference.py: Promote delta namespace to DFXML library
 
 2013-09-19    <a.nelson@prometheuscomputing.com>
 

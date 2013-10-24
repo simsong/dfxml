@@ -42,6 +42,7 @@ __version__ = "1.0.1"
 tsk_virtual_filenames = set(['$FAT1','$FAT2'])
 
 XMLNS_DFXML = "http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML"
+XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
 
 def isone(x):
     """Return true if something is one (number or string)"""
