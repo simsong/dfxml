@@ -749,8 +749,10 @@ class fileobject:
     def content_for_run(self,run=None,imagefile=None):
         """ Returns the content for a specific run. This is a convenience feature
         which does not touch the file object if an imagefile is provided."""
-        if imagefile==None: imagefile=self.imagefile
-        if run.len== -1:
+        if imagefile is None: imagefile=self.imagefile
+        if run is None: raise ValueError("content_for_run called without a 'run' argument.")
+
+        if run.len == -1:
             return chr(0) * run.len
         elif hasattr(run,'fill'):
             return chr(run.fill) * run.len
