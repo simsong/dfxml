@@ -1,6 +1,7 @@
 2013-10-24    <a.nelson@prometheuscomputing.com>
 
 	* dfxml.py: Add null-argument test on content_for_run
+	* dfxml.py: Add image reference to iterative reader
 
 2013-09-19    <a.nelson@prometheuscomputing.com>
 
