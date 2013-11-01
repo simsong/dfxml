@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #Make a new DFXML file of all fileobjects in an input DFXML file.
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 import sys
 import xml.etree.ElementTree as ET
@@ -9,15 +9,18 @@ import dfxml
 import logging
 
 if sys.version < "3":
-    sys.stderr.write("Due to Unicode issues with Python 2's ElementTree, Python 3 and up is required.\n")
+    logging.error("Due to Unicode issues with Python 2's ElementTree, Python 3 and up is required.\n")
     exit(1)
 
 def main():
 
     print("""\
 <?xml version="1.0" encoding="UTF-8"?>
-<dfxml xmloutputversion="1.0">
-  <creator version="1.0">
+<dfxml
+  xmlns="%s"
+  xmlns:delta="%s"
+  version="1.1.0">
+  <creator>
     <program>%s</program>
     <version>%s</version>
     <execution_environment>
@@ -27,7 +30,9 @@ def main():
   <source>
     <image_filename>%s</image_filename>
   </source>\
-""" % (sys.argv[0], __version__, " ".join(sys.argv), args.filename))
+""" % (dfxml.XMLNS_DFXML, dfxml.XMLNS_DELTA, sys.argv[0], __version__, " ".join(sys.argv), args.filename))
+
+    ET.register_namespace("delta", dfxml.XMLNS_DELTA)
 
     xs = []
     for fi in dfxml.iter_dfxml(xmlfile=open(args.filename, "rb"), preserve_elements=True):

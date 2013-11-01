@@ -23,7 +23,7 @@ check-mac_timelines:
 	
 clean:
 	rm -f dfxml_tool_*xml
-	rm -f cat_test_{,no}cache.dfxml
+	rm -f cat_test_*.dfxml
 	rm -f idifference_test.txt
-	rm -f idifference_test{,_formatted}.dfxml
+	rm -f idifference_test*.dfxml
 	rm -f demo_mac_timeline*.txt

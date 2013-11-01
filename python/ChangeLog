@@ -1,3 +1,8 @@
+2013-11-01    <a.nelson@prometheuscomputing.com>
+
+	* cat_fileobjects.py: Allow for differential DFXML repeating
+	* Unit tests: Adjusted cleanup, and tested differential DFXML repeating
+
 2013-10-24    <a.nelson@prometheuscomputing.com>
 
 	* dfxml.py: Add null-argument test on content_for_run
