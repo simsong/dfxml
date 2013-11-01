@@ -37,6 +37,8 @@ import hashlib
 
 import datetime
 
+import logging
+
 __version__ = "1.0.1"
 
 tsk_virtual_filenames = set(['$FAT1','$FAT2'])
@@ -1162,10 +1164,28 @@ class fileobject_reader(xml_reader):
         self.imageobject  = imageobject_sax()
         self.imagefile    = imagefile
         self.flags        = flags
+        self._sax_fi_pointer = None
         xml_reader.__init__(self)
+
+    @property
+    def _sax_fi_pointer(self):
+        """
+        This internal field of a fileobject_reader is a simple state machine.  A DFXML stream can contain fileobjects which contain original_fileobjects, which require the same parsing mechanisms.  This pointer saves on duplicating code with the SAX parser.
+
+        Type: None, or dfxml.fileobject.  Type enforced by the setter method.
+        """
+        return self._sax_fi_pointer_ 
+    @_sax_fi_pointer.setter
+    def _sax_fi_pointer(self, val):
+        if val is None:
+            self._sax_fi_pointer_ = None
+        else:
+            assert isinstance(val, fileobject)
+            self._sax_fi_pointer_ = val
         
     def _start_element(self, name, attrs):
         """ Handles the start of an element for the XPAT scanner"""
+        logging.debug("fileobject_reader._start_element: name = %r" % name)
         self.tagstack.append(name)
         self.cdata = ""          # new element, so reset the data
         if name=="volume":
@@ -1180,6 +1200,12 @@ class fileobject_reader(xml_reader):
         if name=="fileobject":
             self.fileobject = fileobject_sax(imagefile=self.imagefile)
             self.fileobject.volume = self.volumeobject
+            self._sax_fi_pointer = self.fileobject
+            return
+        if name=="original_fileobject":
+            self.fileobject.original_fileobject = fileobject_sax(imagefile=self.imagefile)
+            #self.original_fileobject.volume = self.volumeobject #TODO
+            self._sax_fi_pointer = self.fileobject.original_fileobject
             return
         if name=='hashdigest':
             self.hashdigest_type = attrs['type'] 
@@ -1207,18 +1233,22 @@ class fileobject_reader(xml_reader):
                 self.fi_history.append(self.fileobject)
             self.fileobject = None
             return
+        if name=="original_fileobject":
+            self._sax_fi_pointer = self.fileobject
+            return
         if name=='hashdigest' and len(self.tagstack)>0:
             top = self.tagstack[-1]            # what the hash was for
             alg = self.hashdigest_type.lower() # name of the hash algorithm used
             if top=='byte_run':
-                self.fileobject._byte_runs[-1].hashdigest[alg] = self.cdata
-            if top=="fileobject":
-                self.fileobject._tags[alg] = self.cdata # legacy
-                self.fileobject.hashdigest[alg] = self.cdata
+                self._sax_fi_pointer._byte_runs[-1].hashdigest[alg] = self.cdata
+            if top in ["fileobject", "original_fileobject"]:
+                self._sax_fi_pointer._tags[alg] = self.cdata # legacy
+                self._sax_fi_pointer.hashdigest[alg] = self.cdata
             self.cdata = None
             return
-        if self.fileobject:             # in a file object, all tags are remembered
-            self.fileobject._tags[name] = self.cdata
+
+        if self._sax_fi_pointer:             # in file objects, all tags are remembered
+            self._sax_fi_pointer._tags[name] = self.cdata
             self.cdata = None
             return
         # Special case: <source><image_filename>fn</image_filename></source>

@@ -18,6 +18,7 @@ __version__ = "0.2.0rfc4"
 
 import sys,fiwalk,dfxml,time
 import copy
+import logging
 if sys.version_info < (3,1):
     raise RuntimeError("idifference.py now requires Python 3.1 or above")
 
@@ -518,6 +519,8 @@ if __name__=="__main__":
     parser.add_option("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
 
     (options,args) = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG if options.debug else logging.INFO)
 
     if len(args)<1:
         parser.print_help()
