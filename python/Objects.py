@@ -5,19 +5,68 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 import logging
 import re
 import dfxml
 import xml.etree.ElementTree as ET
 
+#TODO memoize for speed
+def _qsplit(tagname):
+    """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
+    assert isinstance(tagname, str)
+    if tagname[0] == "{":
+        i = tagname.rfind("}")
+        return ( tagname[1:i], tagname[i+1:] )
+    else:
+        return (None, tagname)
+
+#TODO memoize for speed
+def _boolcast(val):
+    """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
+    if val is None:
+        return None
+    if val in [True, False]:
+        return val
+
+    _val = val
+    if val in ["0", "1"]:
+        _val = int(val)
+    if _val in [0, 1]:
+        return _val == 1
+
+    logging.debug(val)
+    raise ValueError("Received a not-straightforwardly-Boolean value.  Expected some form of 0, 1, True, or False.")
+
+def _intcast(val):
+    """Casts input integer or string to integer.  Preserves nulls.  Balks at everything else."""
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+
+    if isinstance(val, str) and val.isdigit():
+        return int(val)
+
+    logging.debug(val)
+    raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
+
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
-        self.version = kwargs.get("version")
+        self.metadata = kwargs.get("metadata")
         self.creator = kwargs.get("creator")
+        self.source = kwargs.get("source")
+        self.version = kwargs.get("version")
         self._hives = []
         self._cells = []
+        self._namespaces = dict()
+        input_hives = kwargs.get("hives") or [] # In case kwargs["hives"] = None.
+        input_cells = kwargs.get("cells") or []
+        for hive in input_hives:
+            self.append(hive)
+        for cell in input_cells:
+            self.append(cells)
 
     def append(self, value):
         if isinstance(value, HiveObject):
@@ -53,7 +102,7 @@ class RegXMLObject(object):
         return outel
 
     def to_regxml(self):
-        """(RAM-intensive.)"""
+        """Serializes the entire RegXML document tree into a string.  Then prints.  RAM-intensive."""
         print(ET.tostring(self.to_Element()))
 
     def print_regxml(self):
@@ -107,15 +156,24 @@ class ByteRun(object):
             outel.attrib["len"] = str(self.len)
         return outel
 
+    def populate_from_Element(self, e):
+        assert isinstance(e, ET.Element) or isinstance(e, ET.Tree)
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn == "byte_run"
+
+        #Populate run properties from element attributes
+        self.file_offset = e.attrib.get("file_offset")
+        self.len = e.attrib.get("len")
+
     @property
     def file_offset(self):
         return self._file_offset
 
     @file_offset.setter
     def file_offset(self, val):
-        if not val is None:
-            assert isinstance(val, int)
-        self._file_offset = val
+        self._file_offset = _intcast(val)
 
     @property
     def len(self):
@@ -123,9 +181,7 @@ class ByteRun(object):
 
     @len.setter
     def len(self, val):
-        if not val is None:
-            assert isinstance(val, int)
-        self._len = val
+        self._len = _intcast(val)
 
 class ByteRuns(list):
     """
@@ -181,6 +237,21 @@ class ByteRuns(list):
             tmpel = run.to_Element()
             outel.append(tmpel)
         return outel
+
+    def populate_from_Element(self, e):
+        assert isinstance(e, ET.Element) or isinstance(e, ET.Tree)
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn == "byte_runs"
+ 
+        #Look through direct-child elements to populate run array
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "byte_run":
+                nbr = ByteRun()
+                nbr.populate_from_Element(ce)
+                self.append(nbr)
 
     def contents(self, raw_image):
         """Generator.  Yields contents, given a backing raw image path."""
@@ -309,6 +380,7 @@ class CellObject(object):
         self.cellpath = kwargs.get("cellpath")
         self.mtime = kwargs.get("mtime")
         self.name = kwargs.get("name")
+        self.name_type = kwargs.get("name_type")
         self.root = kwargs.get("root")
         self.original_cellobject = kwargs.get("original_cellobject")
 
@@ -333,6 +405,41 @@ class CellObject(object):
             parts.append("root=%r" % self.root)
 
         return "CellObject(" + ", ".join(parts) + ")"
+
+    def populate_from_Element(self, e):
+        """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
+        assert isinstance(e, ET.Element) or isinstance(e, ET.Tree)
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn in ["cellobject", "original_cellobject"]
+
+        if e.attrib.get("root"):
+            self.root = e.attrib["root"]
+
+        #Look through direct-child elements for other properties
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "alloc":
+                self.alloc = ce.text
+            elif ctn == "byte_runs":
+                self.byte_runs = ByteRuns()
+                self.byte_runs.populate_from_Element(ce)
+            elif ctn == "cellpath":
+                self.cellpath = ce.text
+            elif ctn == "mtime":
+                self.mtime = ce.text
+            elif ctn == "name":
+                self.name = ce.text
+            elif ctn == "name_type":
+                self.name_type = ce.text
+            elif ctn == "original_cellobject":
+                self.original_cellobject = CellObject()
+                self.original_cellobject.populate_from_Element(ce)
+            else:
+                raise ValueError("Uncertain what to do with this element: %r" % ce)
+
+        self.sanity_check()
 
     def to_Element(self):
         self.sanity_check()
@@ -394,9 +501,7 @@ class CellObject(object):
 
     @alloc.setter
     def alloc(self, val):
-        if not val is None:
-            assert val in [0,1]
-        self._alloc = val
+        self._alloc = _boolcast(val)
 
     @property
     def byte_runs(self):
@@ -463,9 +568,7 @@ class CellObject(object):
 
     @root.setter
     def root(self, val):
-        if not val is None:
-            assert val == 1
-        self._root = val
+        self._root = _boolcast(val)
 
 if __name__ == "__main__":
     import argparse
@@ -473,6 +576,10 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.DEBUG)
     #Run unit tests
+
+    assert _qsplit("{http://www.w3.org/2001/XMLSchema}all") == ("http://www.w3.org/2001/XMLSchema","all")
+    assert _qsplit("http://www.w3.org/2001/XMLSchema}all") == (None, "http://www.w3.org/2001/XMLSchema}all")
+
     fi = FileObject()
 
     #Check property setting
@@ -521,8 +628,17 @@ if __name__ == "__main__":
     logging.debug("co = %r" % co)
     print(co.to_regxml())
 
+    coe = co.to_Element()
+    nco = CellObject()
+    nco.populate_from_Element(coe)
+    nco.name = "(Doubled)"
+    nco.root = False
+    nco.byte_runs[0].file_offset += 133
+    print(nco.to_regxml())
+
     ro = RegXMLObject(version="2.0")
     ho = HiveObject()
     ho.append(co)
+    ho.append(nco)
     ro.append(ho)
     print(ro.to_regxml())
