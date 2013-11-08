@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 import logging
 import re
@@ -21,6 +21,14 @@ def _qsplit(tagname):
         return ( tagname[1:i], tagname[i+1:] )
     else:
         return (None, tagname)
+
+def _typecheck(obj, classinfo):
+    if not isinstance(obj, classinfo):
+        logging.info("obj = " + repr(obj))
+        if isinstance(classinfo, tuple):
+            raise TypeError("Expecting object to be one of the types %r." % (classinfo,))
+        else:
+            raise TypeError("Expecting object to be of type %r." % classinfo)
 
 #TODO memoize for speed
 def _boolcast(val):
@@ -51,6 +59,92 @@ def _intcast(val):
 
     logging.debug(val)
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
+
+
+class DFXMLBaseObject(object):
+    "Coming soon."
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+class DFXMLObject(object):
+    def __init__(self, *args, **kwargs):
+        self.command_line = kwargs.get("command_line")
+
+        self._namespaces = dict()
+        self._volumes = []
+        self._files = []
+        input_volumes = kwargs.get("volumes") or []
+        input_files = kwargs.get("files") or []
+        for v in input_volumes:
+            self.append(v)
+        for f in input_files:
+            self.append(f)
+
+    def add_namespace(self, prefix, url):
+        self._namespaces[prefix] = url
+        ET.register_namespace(prefix, url)
+
+    def append(self, value):
+        if isinstance(value, VolumeObject):
+            self._volumes.append(value)
+        elif isinstance(value, FileObject):
+            self._files.append(value)
+        else:
+            logging.debug("value = %r" % value)
+            raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
+
+    def to_partial_Element(self):
+        outel = ET.Element("dfxml")
+        if self.command_line:
+            tmpel = ET.Element("command_line")
+            tmpel.text = self.command_line
+            outel.append(tmpel)
+        return outel
+
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        for v in self._volumes:
+            tmpel = v.to_Element()
+            outel.append(tmpel)
+        for f in self._files:
+            tmpel = f.to_Element()
+            outel.append(tmpel)
+        return outel
+
+    def print_dfxml(self):
+        """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
+        pe = self.to_partial_Element()
+        dfxml_wrapper = ET.tostring(pe)
+
+        #If there are no children, this (trivial) document needs only a simpler printing.
+        if len(pe) == 0 and len(self._volumes) == 0 and len(self._files) == 0:
+            print(dfxml_wrapper)
+            return
+
+        dfxml_foot = b"</dfxml>"
+        dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+
+        print(dfxml_head)
+        for v in self._volumes:
+            v.print_dfxml()
+        for f in self._files:
+            f.print_dfxml()
+        print(dfxml_foot)
+
+    def to_dfxml(self):
+        """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive."""
+        return ET.tostring(self.to_Element())
+
+    @property
+    def command_line(self):
+        return self._command_line
+
+    @command_line.setter
+    def command_line(self, value):
+        if not value is None:
+            assert isinstance(value, str)
+        self._command_line = value
 
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
@@ -108,13 +202,56 @@ class RegXMLObject(object):
     def print_regxml(self):
         """Serializes and prints the entire object, without constructing the whole tree."""
         regxml_wrapper = ET.tostring(self.to_partial_Element())
-        regxml_head = regxml_wrapper.strip()[:-len("</regxml>")]
-        regxml_foot = "</regxml>"
+        regxml_foot = b"</regxml>"
+        regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
 
         print(regxml_head)
-        for hive in _hives:
+        for hive in self._hives:
             hive.print_regxml()
         print(regxml_foot)
+
+class VolumeObject(object):
+    def __init__(self, *args, **kwargs):
+        self._files = []
+
+    def append(self, value):
+        assert isinstance(value, FileObject)
+        self._files.append(value)
+
+    def to_partial_Element(self):
+        """Returns the volume element with its properties, except for the child fileobjects."""
+        outel = ET.Element("volume")
+        return outel
+
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        for f in self._files:
+            tmpel = f.to_Element()
+            outel.append(tmpel)
+        return outel
+
+    def print_dfxml(self):
+        pe = self.to_partial_Element()
+        dfxml_wrapper = ET.tostring(pe)
+
+        if len(pe) == 0 and len(self._files) == 0:
+            print(dfxml_wrapper)
+            return
+
+        dfxml_foot = b"</volume>"
+
+        #Deal with an empty element being printed as <elem/>
+        if len(pe) == 0:
+            replaced_dfxml_wrapper = dfxml_wrapper.replace(b" />", b">")
+            dfxml_head = replaced_dfxml_wrapper
+        else:
+            dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+
+        print(dfxml_head)
+        for f in self._files:
+            e = f.to_Element()
+            print(ET.tostring(e))
+        print(dfxml_foot)
 
 class HiveObject(object):
     def __init__(self, *args, **kwargs):
@@ -132,11 +269,13 @@ class HiveObject(object):
         return outel
 
     def print_regxml(self):
-        for cell in _cells:
-            print(cell.to_regxml)
+        for cell in self._cells:
+            print(cell.to_regxml())
 
 class ByteRun(object):
     def __init__(self, *args, **kwargs):
+        self.img_offset = kwargs.get("img_offset")
+        self.fs_offset = kwargs.get("fs_offset")
         self.file_offset = kwargs.get("file_offset")
         self.len = kwargs.get("len")
 
@@ -148,8 +287,20 @@ class ByteRun(object):
             parts.append("len=%r" % self.len)
         return "ByteRun(" + ", ".join(parts) + ")"
 
+    def __eq__(self, other):
+        assert isinstance(other, ByteRun)
+        return \
+          self.img_offset == other.img_offset and \
+          self.fs_offset == other.fs_offset and \
+          self.file_offset == other.file_offset and \
+          self.len == other.len
+
     def to_Element(self):
         outel = ET.Element("byte_run")
+        if self.img_offset:
+            outel.attrib["img_offset"] = str(self.img_offset)
+        if self.fs_offset:
+            outel.attrib["fs_offset"] = str(self.fs_offset)
         if self.file_offset:
             outel.attrib["file_offset"] = str(self.file_offset)
         if self.len:
@@ -157,7 +308,7 @@ class ByteRun(object):
         return outel
 
     def populate_from_Element(self, e):
-        assert isinstance(e, ET.Element) or isinstance(e, ET.Tree)
+        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -174,6 +325,22 @@ class ByteRun(object):
     @file_offset.setter
     def file_offset(self, val):
         self._file_offset = _intcast(val)
+
+    @property
+    def fs_offset(self):
+        return self._fs_offset
+
+    @fs_offset.setter
+    def fs_offset(self, val):
+        self._fs_offset = _intcast(val)
+
+    @property
+    def img_offset(self):
+        return self._img_offset
+
+    @file_offset.setter
+    def img_offset(self, val):
+        self._img_offset = _intcast(val)
 
     @property
     def len(self):
@@ -227,6 +394,25 @@ class ByteRuns(list):
     def __iter__(self):
         return iter(self._listdata)
 
+    def __eq__(self, other):
+        """Compares the byte run lists."""
+        assert isinstance(other, ByteRuns)
+        if len(self) != len(other):
+            logging.debug("len(self) = %d" % len(self))
+            logging.debug("len(other) = %d" % len(other))
+            return False
+        for (sbr_index, sbr) in enumerate(self):
+            obr = other[sbr_index]
+            logging.debug("sbr_index = %d" % sbr_index)
+            logging.debug("sbr = %r" % sbr)
+            logging.debug("obr = %r" % obr)
+            if sbr != obr:
+                return False
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def append(self, value):
         assert isinstance(value, ByteRun)
         self._listdata.append(value)
@@ -239,7 +425,7 @@ class ByteRuns(list):
         return outel
 
     def populate_from_Element(self, e):
-        assert isinstance(e, ET.Element) or isinstance(e, ET.Tree)
+        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -347,15 +533,200 @@ class FileObject(object):
     """
 
     def __init__(self, *args, **kwargs):
+        self.atime = kwargs.get("atime")
+        self.bkup_time = kwargs.get("bkup_time")
+        self.byte_runs = kwargs.get("byte_runs")
+        self.ctime = kwargs.get("ctime")
+        self.crtime = kwargs.get("crtime")
+        self.dtime = kwargs.get("dtime")
+        self.filename = kwargs.get("filename")
+        self.filesize = kwargs.get("filesize")
+        self.inode = kwargs.get("inode")
+        self.md5 = kwargs.get("md5")
         self.mtime = kwargs.get("mtime")
+        self.name_type = kwargs.get("name_type")
+        self.sha1 = kwargs.get("sha1")
 
     def __repr__(self):
         parts = []
 
+        if self.filename:
+            parts.append("filename=%r" % str(self.filename))
+
+        if self.filesize:
+            parts.append("filesize=%r" % str(self.filesize))
+
+        if self.sha1:
+            parts.append("sha1=%r" % str(self.sha1))
+
+        if self.md5:
+            parts.append("md5=%r" % str(self.md5))
+
+        if self.name_type:
+            parts.append("name_type=%r" % str(self.name_type))
+
+        if self.inode:
+            parts.append("inode=%r" % str(self.inode))
+
+        if self.byte_runs:
+            parts.append("byte_runs=%r" % str(self.byte_runs))
+
         if self.mtime:
             parts.append("mtime=%r" % str(self.mtime))
 
+        if self.ctime:
+            parts.append("ctime=%r" % str(self.ctime))
+
+        if self.atime:
+            parts.append("atime=%r" % str(self.atime))
+
+        if self.crtime:
+            parts.append("crtime=%r" % str(self.crtime))
+
+        if self.dtime:
+            parts.append("dtime=%r" % str(self.dtime))
+
+        if self.bkup_time:
+            parts.append("bkup_time=%r" % str(self.bkup_time))
+
         return "FileObject(" + ", ".join(parts) + ")"
+
+    def populate_from_Element(self, e):
+        """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
+        _typecheck(e, (ET.Element, ET.ElementTree))
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn in ["fileobject", "original_fileobject"]
+
+        #Look through direct-child elements for other properties
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "alloc":
+                self.alloc = ce.text
+            elif ctn == "atime":
+                self.atime = ce.text
+            elif ctn == "byte_runs":
+                self.byte_runs = ByteRuns()
+                self.byte_runs.populate_from_Element(ce)
+            elif ctn == "ctime":
+                self.ctime = ce.text
+            elif ctn == "filename":
+                self.filename = ce.text
+            elif ctn == "filesize":
+                self.filesize = ce.text
+            elif ctn == "hashdigest":
+                if ce.attrib["type"] == "md5":
+                    self.md5 = ce.text
+                elif ce.attrib["type"] == "sha1":
+                    self.sha1 = ce.text
+            elif ctn == "inode":
+                self.inode = ce.text
+            elif ctn == "mtime":
+                self.mtime = ce.text
+            elif ctn == "name_type":
+                self.name_type = ce.text
+            elif ctn == "original_fileobject":
+                self.original_fileobject = FileObject()
+                self.original_fileobject.populate_from_Element(ce)
+            else:
+                raise ValueError("Uncertain what to do with this element: %r" % ce)
+
+    def to_Element(self):
+        """Creates an ElementTree Element with elements in DFXML schema order."""
+        outel = ET.Element("fileobject")
+
+        def _append_ez(name, value):
+            #TODO Need lookup support for diff annos
+            if value:
+                tmpel = ET.Element(name)
+                tmpel.text = str(value)
+                outel.append(tmpel)
+
+        _append_ez("filename", self.filename)
+        _append_ez("name_type", self.name_type)
+        _append_ez("inode", self.inode)
+        _append_ez("mtime", self.mtime) #TODO Needs handling for prec
+        _append_ez("ctime", self.ctime) #TODO Needs handling for prec
+        _append_ez("atime", self.atime) #TODO Needs handling for prec
+
+        if self.byte_runs:
+            tmpel = self.byte_runs.to_Element()
+            outel.append(tmpel)
+
+        if self.md5:
+            tmpel = ET.Element("hashdigest")
+            tmpel.attrib["type"] = "md5"
+            tmpel.text = self.md5
+            outel.append(tmpel)
+
+        if self.sha1:
+            tmpel = ET.Element("hashdigest")
+            tmpel.attrib["type"] = "sha1"
+            tmpel.text = self.sha1
+            outel.append(tmpel)
+
+        return outel
+
+    @property
+    def atime(self):
+        return self._atime
+
+    @atime.setter
+    def atime(self, val):
+        if val is None:
+            self._atime = None
+        else:
+            checked_val = dfxml.dftime(val)
+            self._atime = checked_val
+
+    @property
+    def bkup_time(self):
+        return self._bkup_time
+
+    @bkup_time.setter
+    def bkup_time(self, val):
+        if val is None:
+            self._bkup_time = None
+        else:
+            checked_val = dfxml.dftime(val)
+            self._bkup_time = checked_val
+
+    @property
+    def ctime(self):
+        return self._ctime
+
+    @ctime.setter
+    def ctime(self, val):
+        if val is None:
+            self._ctime = None
+        else:
+            checked_val = dfxml.dftime(val)
+            self._ctime = checked_val
+
+    @property
+    def crtime(self):
+        return self._crtime
+
+    @crtime.setter
+    def crtime(self, val):
+        if val is None:
+            self._crtime = None
+        else:
+            checked_val = dfxml.dftime(val)
+            self._crtime = checked_val
+
+    @property
+    def dtime(self):
+        return self._dtime
+
+    @dtime.setter
+    def dtime(self, val):
+        if val is None:
+            self._dtime = None
+        else:
+            checked_val = dfxml.dftime(val)
+            self._dtime = checked_val
 
     @property
     def mtime(self):
@@ -367,7 +738,6 @@ class FileObject(object):
             self._mtime = None
         else:
             checked_val = dfxml.dftime(val)
-            logging.debug("checked_val.timestamp() = %r" % checked_val.timestamp())
             self._mtime = checked_val
 
 class CellObject(object):
@@ -383,6 +753,13 @@ class CellObject(object):
         self.name_type = kwargs.get("name_type")
         self.root = kwargs.get("root")
         self.original_cellobject = kwargs.get("original_cellobject")
+
+    def __eq__(self, other):
+        """Equality is a difficult question on CellObjects.  Use compare()."""
+        raise NotImplementedError
+
+    def __ne__(self, other):
+        return not self.__eq__(other) #(sic)
 
     def __repr__(self):
         parts = []
@@ -408,7 +785,7 @@ class CellObject(object):
 
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
-        assert isinstance(e, ET.Element) or isinstance(e, ET.Tree)
+        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -631,9 +1008,24 @@ if __name__ == "__main__":
     coe = co.to_Element()
     nco = CellObject()
     nco.populate_from_Element(coe)
+
+    assert co.byte_runs == nco.byte_runs
+
     nco.name = "(Doubled)"
     nco.root = False
     nco.byte_runs[0].file_offset += 133
+
+    logging.debug("co.byte_runs = %r" % co.byte_runs)
+    logging.debug("nco.byte_runs = %r" % nco.byte_runs)
+    assert co.byte_runs != nco.byte_runs
+
+    failed = None
+    try:
+        co == nco
+    except NotImplementedError:
+        failed = True
+    assert failed
+
     print(nco.to_regxml())
 
     ro = RegXMLObject(version="2.0")
