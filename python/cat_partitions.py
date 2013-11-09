@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 import dfxml
 import Objects
@@ -9,15 +9,16 @@ import sys
 import xml.etree.ElementTree as ET
 
 def main():
-    d = Objects.DFXMLObject()
+    d = Objects.DFXMLObject(version="1.1.0")
 
     d.command_line = " ".join(sys.argv)
 
     #TODO These samples will do for development.
-    for sample_path in [
+    for (sample_path_index, sample_path) in enumerate([
       "../samples/difference_test_0.xml",
       "../samples/difference_test_1.xml"
-    ]:
+    ]):
+      logging.debug("Running on path %r" % sample_path)
       with open(sample_path, "rb") as fh:
         v = Objects.VolumeObject()
         for (event, elem) in ET.iterparse(fh, events=("start-ns", "end")):
@@ -29,6 +30,7 @@ def main():
                 if qn[1] in ["fileobject", "original_fileobject"]:
                     nfi = Objects.FileObject()
                     nfi.populate_from_Element(elem)
+                    nfi.partition = sample_path_index + 1
                     v.append(nfi)
         d.append(v)
     d.print_dfxml()

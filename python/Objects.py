@@ -5,14 +5,17 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 import logging
 import re
 import dfxml
 import xml.etree.ElementTree as ET
 
-#TODO memoize for speed
+#For memoization
+import functools
+
+@functools.lru_cache(maxsize=None)
 def _qsplit(tagname):
     """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
     assert isinstance(tagname, str)
@@ -30,7 +33,7 @@ def _typecheck(obj, classinfo):
         else:
             raise TypeError("Expecting object to be of type %r." % classinfo)
 
-#TODO memoize for speed
+@functools.lru_cache(maxsize=None)
 def _boolcast(val):
     """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
     if val is None:
@@ -60,6 +63,36 @@ def _intcast(val):
     logging.debug(val)
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
 
+@functools.lru_cache(maxsize=128)
+def _octcast(val):
+    if val is None:
+        return None
+
+    #Use _intcast to deal with nulls and bad strings
+    i = _intcast(val)
+    if not isinstance(i, int):
+        logging.debug(val)
+        raise ValueError("(Unforeseen revisions since last tested.)")
+
+    s = "0o" + str(i)
+    try:
+        retval = int(s, 8)
+        return retval
+    except ValueError:
+        logging.debug(val)
+        logging.warning("Failed interpreting an octal mode.")
+        return None
+
+def _strcast(val):
+    """This function isn't so much a cast, as a null-passer and typecheck for a string."""
+    if val is None:
+        return None
+
+    if isinstance(val, str):
+        return val
+
+    logging.debug(val)
+    raise ValueError("Received a non-string.  Expected a string.")
 
 class DFXMLBaseObject(object):
     "Coming soon."
@@ -70,6 +103,7 @@ class DFXMLBaseObject(object):
 class DFXMLObject(object):
     def __init__(self, *args, **kwargs):
         self.command_line = kwargs.get("command_line")
+        self.version = kwargs.get("version")
 
         self._namespaces = dict()
         self._volumes = []
@@ -96,10 +130,32 @@ class DFXMLObject(object):
 
     def to_partial_Element(self):
         outel = ET.Element("dfxml")
+
+        tmpel0 = ET.Element("metadata")
+        tmpel1 = ET.Element("dc:type")
+        tmpel1.text = "(Placeholder)"
+        tmpel0.append(tmpel1)
+        outel.append(tmpel0)
+
         if self.command_line:
-            tmpel = ET.Element("command_line")
-            tmpel.text = self.command_line
-            outel.append(tmpel)
+            tmpel0 = ET.Element("creator")
+            tmpel1 = ET.Element("execution_environment")
+            tmpel2 = ET.Element("command_line")
+            tmpel2.text = self.command_line
+            tmpel1.append(tmpel2)
+            tmpel0.append(tmpel1)
+            outel.append(tmpel0)
+        if self.version:
+            outel.attrib["version"] = self.version
+
+        #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of DFXML.
+        #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
+        for prefix in self._namespaces:
+            attrib_name = "xmlns"
+            if prefix != "":
+                attrib_name += ":" + prefix
+            outel.attrib[attrib_name] = self._namespaces[prefix]
+
         return outel
 
     def to_Element(self):
@@ -115,16 +171,17 @@ class DFXMLObject(object):
     def print_dfxml(self):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
         pe = self.to_partial_Element()
-        dfxml_wrapper = ET.tostring(pe)
+        dfxml_wrapper = ET.tostring(pe, encoding="unicode")
 
         #If there are no children, this (trivial) document needs only a simpler printing.
         if len(pe) == 0 and len(self._volumes) == 0 and len(self._files) == 0:
             print(dfxml_wrapper)
             return
 
-        dfxml_foot = b"</dfxml>"
+        dfxml_foot = "</dfxml>"
         dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
 
+        print("""<?xml version="1.0"?>""")
         print(dfxml_head)
         for v in self._volumes:
             v.print_dfxml()
@@ -134,7 +191,7 @@ class DFXMLObject(object):
 
     def to_dfxml(self):
         """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive."""
-        return ET.tostring(self.to_Element())
+        return ET.tostring(self.to_Element(), encoding="unicode")
 
     @property
     def command_line(self):
@@ -145,6 +202,14 @@ class DFXMLObject(object):
         if not value is None:
             assert isinstance(value, str)
         self._command_line = value
+
+    @property
+    def version(self):
+        return self._version
+
+    @version.setter
+    def version(self, value):
+        self._version = _strcast(value)
 
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
@@ -196,13 +261,13 @@ class RegXMLObject(object):
         return outel
 
     def to_regxml(self):
-        """Serializes the entire RegXML document tree into a string.  Then prints.  RAM-intensive."""
-        print(ET.tostring(self.to_Element()))
+        """Serializes the entire RegXML document tree into a string.  Returns that string.  RAM-intensive.  You probably want print_regxml()."""
+        return ET.tostring(self.to_Element(), encoding="unicode")
 
     def print_regxml(self):
         """Serializes and prints the entire object, without constructing the whole tree."""
-        regxml_wrapper = ET.tostring(self.to_partial_Element())
-        regxml_foot = b"</regxml>"
+        regxml_wrapper = ET.tostring(self.to_partial_Element(), encoding="unicode")
+        regxml_foot = "</regxml>"
         regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
 
         print(regxml_head)
@@ -232,17 +297,17 @@ class VolumeObject(object):
 
     def print_dfxml(self):
         pe = self.to_partial_Element()
-        dfxml_wrapper = ET.tostring(pe)
+        dfxml_wrapper = ET.tostring(pe, encoding="unicode")
 
         if len(pe) == 0 and len(self._files) == 0:
             print(dfxml_wrapper)
             return
 
-        dfxml_foot = b"</volume>"
+        dfxml_foot = "</volume>"
 
         #Deal with an empty element being printed as <elem/>
         if len(pe) == 0:
-            replaced_dfxml_wrapper = dfxml_wrapper.replace(b" />", b">")
+            replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
             dfxml_head = replaced_dfxml_wrapper
         else:
             dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
@@ -250,7 +315,7 @@ class VolumeObject(object):
         print(dfxml_head)
         for f in self._files:
             e = f.to_Element()
-            print(ET.tostring(e))
+            print(ET.tostring(e, encoding="unicode"))
         print(dfxml_foot)
 
 class HiveObject(object):
@@ -456,13 +521,23 @@ class TimestampObject(object):
         self.name = kwargs.get("name")
         self.prec = kwargs.get("prec")
         #logging.debug("type(args) = %r" % type(args))
-        logging.debug("args = %r" % (args,))
+        #logging.debug("args = %r" % (args,))
         if len(args) == 0:
-            pass
+            self.time = None
         elif len(args) == 1:
             self.time = args[0]
         else:
             raise ValueError("Unexpected arguments.  Whole args tuple: %r." % (args,))
+
+    def __repr__(self):
+        parts = []
+        if self.time:
+            parts.append("%r" % self.time)
+        if self.name:
+            parts.append("name=%r" % self.name)
+        if self.prec:
+            parts.append("prec=%r" % (self.prec,))
+        return "TimestampObject(" + ", ".join(parts) + ")"
 
     def to_Element(self):
         assert self.name
@@ -496,6 +571,13 @@ class TimestampObject(object):
         if value is None:
             self._prec = None
             return self._prec
+        elif isinstance(value, tuple) and \
+          len(value) == 2 and \
+          isinstance(value[0], int) and \
+          isinstance(value[1], str):
+            self._prec = value
+            return self._prec
+        
         m = re_precision.match(value)
         md = m.groupdict()
         tup = (int(md["num"]), md.get("unit") or "s")
@@ -515,7 +597,7 @@ class TimestampObject(object):
             self._time = None
         else:
             checked_value = dfxml.dftime(value)
-            logging.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
+            #logging.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
             self._time = checked_value
 
 class FileObject(object):
@@ -533,61 +615,68 @@ class FileObject(object):
     """
 
     def __init__(self, *args, **kwargs):
+        self.alloc = kwargs.get("alloc")
         self.atime = kwargs.get("atime")
         self.bkup_time = kwargs.get("bkup_time")
         self.byte_runs = kwargs.get("byte_runs")
-        self.ctime = kwargs.get("ctime")
+        self.compressed = kwargs.get("compressed")
         self.crtime = kwargs.get("crtime")
+        self.ctime = kwargs.get("ctime")
         self.dtime = kwargs.get("dtime")
         self.filename = kwargs.get("filename")
         self.filesize = kwargs.get("filesize")
+        self.gid = kwargs.get("gid")
+        self.id = kwargs.get("id")
         self.inode = kwargs.get("inode")
         self.md5 = kwargs.get("md5")
+        self.meta_type = kwargs.get("meta_type")
+        self.mode = kwargs.get("mode")
         self.mtime = kwargs.get("mtime")
         self.name_type = kwargs.get("name_type")
+        self.nlink = kwargs.get("nlink")
+        self.parent_object = kwargs.get("parent_object")
+        self.partition= kwargs.get("partition")
+        self.seq = kwargs.get("seq")
         self.sha1 = kwargs.get("sha1")
+        self.uid = kwargs.get("uid")
+        self.unalloc = kwargs.get("unalloc")
+        self.used = kwargs.get("used")
 
     def __repr__(self):
         parts = []
 
-        if self.filename:
-            parts.append("filename=%r" % str(self.filename))
+        def _append_str(name, value):
+            if value:
+                parts.append("%s=%r" % (name, str(value)))
 
-        if self.filesize:
-            parts.append("filesize=%r" % str(self.filesize))
-
-        if self.sha1:
-            parts.append("sha1=%r" % str(self.sha1))
-
-        if self.md5:
-            parts.append("md5=%r" % str(self.md5))
-
-        if self.name_type:
-            parts.append("name_type=%r" % str(self.name_type))
-
-        if self.inode:
-            parts.append("inode=%r" % str(self.inode))
+        _append_str("alloc", self.alloc)
+        _append_str("atime", self.atime)
+        _append_str("bkup_time", self.bkup_time)
+        _append_str("compressed", self.compressed)
+        _append_str("crtime", self.crtime)
+        _append_str("ctime", self.ctime)
+        _append_str("dtime", self.dtime)
+        _append_str("filename", self.filename)
+        _append_str("filesize", self.filesize)
+        _append_str("gid", self.gid)
+        _append_str("id", self.id)
+        _append_str("inode", self.inode)
+        _append_str("md5", self.md5)
+        _append_str("meta_type", self.meta_type)
+        _append_str("mode", self.mode)
+        _append_str("mtime", self.mtime)
+        _append_str("name_type", self.name_type)
+        _append_str("nlink", self.nlink)
+        _append_str("parent_object", self.parent_object)
+        _append_str("partition", self.partition)
+        _append_str("seq", self.seq)
+        _append_str("sha1", self.sha1)
+        _append_str("uid", self.uid)
+        _append_str("unalloc", self.unalloc)
+        _append_str("used", self.used)
 
         if self.byte_runs:
-            parts.append("byte_runs=%r" % str(self.byte_runs))
-
-        if self.mtime:
-            parts.append("mtime=%r" % str(self.mtime))
-
-        if self.ctime:
-            parts.append("ctime=%r" % str(self.ctime))
-
-        if self.atime:
-            parts.append("atime=%r" % str(self.atime))
-
-        if self.crtime:
-            parts.append("crtime=%r" % str(self.crtime))
-
-        if self.dtime:
-            parts.append("dtime=%r" % str(self.dtime))
-
-        if self.bkup_time:
-            parts.append("bkup_time=%r" % str(self.bkup_time))
+            parts.append("byte_runs=%r" % self.byte_runs)
 
         return "FileObject(" + ", ".join(parts) + ")"
 
@@ -597,7 +686,7 @@ class FileObject(object):
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
-        assert tn in ["fileobject", "original_fileobject"]
+        assert tn in ["fileobject", "original_fileobject", "parent_object"]
 
         #Look through direct-child elements for other properties
         for ce in e.findall("./*"):
@@ -606,11 +695,19 @@ class FileObject(object):
                 self.alloc = ce.text
             elif ctn == "atime":
                 self.atime = ce.text
+            elif ctn == "bkup_time":
+                self.bkup_time= ce.text
             elif ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
+            elif ctn == "compressed":
+                self.compressed = ce.text
+            elif ctn == "crtime":
+                self.crtime = ce.text
             elif ctn == "ctime":
                 self.ctime = ce.text
+            elif ctn == "dtime":
+                self.dtime = ce.text
             elif ctn == "filename":
                 self.filename = ce.text
             elif ctn == "filesize":
@@ -620,15 +717,38 @@ class FileObject(object):
                     self.md5 = ce.text
                 elif ce.attrib["type"] == "sha1":
                     self.sha1 = ce.text
+            elif ctn == "gid":
+                self.gid = ce.text
+            elif ctn == "id":
+                self.id = ce.text
             elif ctn == "inode":
                 self.inode = ce.text
+            elif ctn == "meta_type":
+                self.meta_type = ce.text
+            elif ctn == "mode":
+                self.mode = ce.text
             elif ctn == "mtime":
                 self.mtime = ce.text
             elif ctn == "name_type":
                 self.name_type = ce.text
+            elif ctn == "nlink":
+                self.nlink = ce.text
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
+            elif ctn == "parent_object":
+                self.parent_object = FileObject()
+                self.parent_object.populate_from_Element(ce)
+            elif ctn == "partition":
+                self.partition = ce.text
+            elif ctn == "seq":
+                self.seq = ce.text
+            elif ctn == "uid":
+                self.uid = ce.text
+            elif ctn == "unalloc":
+                self.unalloc = ce.text
+            elif ctn == "used":
+                self.used = ce.text
             else:
                 raise ValueError("Uncertain what to do with this element: %r" % ce)
 
@@ -636,19 +756,46 @@ class FileObject(object):
         """Creates an ElementTree Element with elements in DFXML schema order."""
         outel = ET.Element("fileobject")
 
-        def _append_ez(name, value):
+        #Recall that Element text must be a string
+        def _append_str(name, value):
             #TODO Need lookup support for diff annos
             if value:
                 tmpel = ET.Element(name)
                 tmpel.text = str(value)
                 outel.append(tmpel)
 
-        _append_ez("filename", self.filename)
-        _append_ez("name_type", self.name_type)
-        _append_ez("inode", self.inode)
-        _append_ez("mtime", self.mtime) #TODO Needs handling for prec
-        _append_ez("ctime", self.ctime) #TODO Needs handling for prec
-        _append_ez("atime", self.atime) #TODO Needs handling for prec
+        def _append_time(name, value):
+            if value and value.time:
+                tmpel = value.to_Element()
+                outel.append(tmpel)
+
+        def _append_bool(name, value):
+            if value:
+                tmpel = ET.Element(name)
+                tmpel.text = str(1 if value else 0)
+                outel.append(tmpel)
+
+        _append_str("filename", self.filename)
+        _append_str("partition", self.partition)
+        _append_str("id", self.id)
+        _append_str("name_type", self.name_type)
+        _append_str("filesize", self.filesize)
+        _append_bool("unalloc", self.unalloc)
+        _append_bool("alloc", self.alloc)
+        _append_bool("used", self.used)
+        _append_str("inode", self.inode)
+        _append_str("meta_type", self.meta_type)
+        _append_str("mode", self.mode)
+        _append_str("nlink", self.nlink)
+        _append_str("uid", self.uid)
+        _append_str("gid", self.gid)
+        _append_time("mtime", self.mtime) #TODO Needs handling for prec (maybe not anymore)
+        _append_time("ctime", self.ctime) #TODO Needs handling for prec
+        _append_time("atime", self.atime) #TODO Needs handling for prec
+        _append_time("crtime", self.crtime) #TODO Needs handling for prec
+        _append_str("seq", self.seq)
+        _append_time("dtime", self.dtime) #TODO Needs handling for prec
+        _append_time("bkup_time", self.bkup_time) #TODO Needs handling for prec
 
         if self.byte_runs:
             tmpel = self.byte_runs.to_Element()
@@ -668,6 +815,17 @@ class FileObject(object):
 
         return outel
 
+    def to_dfxml(self):
+        return ET.tostring(self.to_Element(), encoding="unicode")
+
+    @property
+    def alloc(self):
+        return self._alloc
+
+    @alloc.setter
+    def alloc(self, val):
+        self._alloc = _boolcast(val)
+
     @property
     def atime(self):
         return self._atime
@@ -677,7 +835,7 @@ class FileObject(object):
         if val is None:
             self._atime = None
         else:
-            checked_val = dfxml.dftime(val)
+            checked_val = TimestampObject(val, name="atime")
             self._atime = checked_val
 
     @property
@@ -689,8 +847,16 @@ class FileObject(object):
         if val is None:
             self._bkup_time = None
         else:
-            checked_val = dfxml.dftime(val)
+            checked_val = TimestampObject(val, name="bkup_time")
             self._bkup_time = checked_val
+
+    @property
+    def compressed(self):
+        return self._compressed
+
+    @compressed.setter
+    def compressed(self, val):
+        self._compressed = _boolcast(val)
 
     @property
     def ctime(self):
@@ -701,7 +867,7 @@ class FileObject(object):
         if val is None:
             self._ctime = None
         else:
-            checked_val = dfxml.dftime(val)
+            checked_val = TimestampObject(val, name="ctime")
             self._ctime = checked_val
 
     @property
@@ -713,7 +879,7 @@ class FileObject(object):
         if val is None:
             self._crtime = None
         else:
-            checked_val = dfxml.dftime(val)
+            checked_val = TimestampObject(val, name="crtime")
             self._crtime = checked_val
 
     @property
@@ -725,8 +891,42 @@ class FileObject(object):
         if val is None:
             self._dtime = None
         else:
-            checked_val = dfxml.dftime(val)
+            checked_val = TimestampObject(val, name="dtime")
             self._dtime = checked_val
+
+    @property
+    def gid(self):
+        return self._gid
+
+    @gid.setter
+    def gid(self, val):
+        self._gid = _strcast(val)
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, val):
+        self._id = _intcast(val)
+
+    @property
+    def meta_type(self):
+        return self._meta_type
+
+    @meta_type.setter
+    def meta_type(self, val):
+        self._meta_type = _intcast(val)
+
+    @property
+    def mode(self):
+        """The security mode is represented in the FileObject as a base-10 integer.  It is serialized as an octal integer as most people expect a Posix permission definition (e.g. 0755)."""
+        #TODO This decimal-octal business is worth a unit test.
+        return self._mode
+
+    @mode.setter
+    def mode(self, val):
+        self._mode = _octcast(val)
 
     @property
     def mtime(self):
@@ -737,8 +937,76 @@ class FileObject(object):
         if val is None:
             self._mtime = None
         else:
-            checked_val = dfxml.dftime(val)
+            checked_val = TimestampObject(val, name="mtime")
             self._mtime = checked_val
+
+    @property
+    def name_type(self):
+        return self._name_type
+
+    @name_type.setter
+    def name_type(self, val):
+        self._name_type = _strcast(val)
+
+    @property
+    def nlink(self):
+        return self._nlink
+
+    @nlink.setter
+    def nlink(self, val):
+        self._nlink = _intcast(val)
+
+    @property
+    def partition(self):
+        return self._partition
+
+    @partition.setter
+    def partition(self, val):
+        self._partition = _intcast(val)
+
+    @property
+    def parent_object(self):
+        """This object is an extremely sparse FileObject, containing just identifying information.  Alternately, it can be an entire object reference to the parent Object, though uniqueness should be checked."""
+        return self._parent_object
+
+    @parent_object.setter
+    def parent_object(self, val):
+        if not val is None:
+            assert isinstance(val, FileObject)
+        self._parent_object = val
+
+    @property
+    def seq(self):
+        return self._seq
+
+    @seq.setter
+    def seq(self, val):
+        self._seq = _intcast(val)
+
+    @property
+    def uid(self):
+        return self._uid
+
+    @uid.setter
+    def uid(self, val):
+        self._uid = _strcast(val)
+
+    @property
+    def unalloc(self):
+        return self._unalloc
+
+    @unalloc.setter
+    def unalloc(self, val):
+        self._unalloc = _boolcast(val)
+
+    @property
+    def used(self):
+        return self._used
+
+    @used.setter
+    def used(self, val):
+        self._used = _intcast(val)
+
 
 class CellObject(object):
     def __init__(self, *args, **kwargs):
@@ -789,7 +1057,7 @@ class CellObject(object):
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
-        assert tn in ["cellobject", "original_cellobject"]
+        assert tn in ["cellobject", "original_cellobject", "parent_object"]
 
         if e.attrib.get("root"):
             self.root = e.attrib["root"]
@@ -813,6 +1081,9 @@ class CellObject(object):
             elif ctn == "original_cellobject":
                 self.original_cellobject = CellObject()
                 self.original_cellobject.populate_from_Element(ce)
+            elif ctn == "parent_object":
+                self.parent_object = CellObject()
+                self.parent_object.populate_from_Element(ce)
             else:
                 raise ValueError("Uncertain what to do with this element: %r" % ce)
 
@@ -823,28 +1094,21 @@ class CellObject(object):
 
         outel = ET.Element("cellobject")
 
+        #Recall that Element text must be a string
+        def _append_str(name, value):
+            #TODO Need lookup support for diff annos
+            if value:
+                tmpel = ET.Element(name)
+                tmpel.text = str(value)
+                outel.append(tmpel)
+
         if self.root:
             outel.attrib["root"] = str(self.root)
 
-        if self.cellpath:
-            tmpel = ET.Element("cellpath")
-            tmpel.text = self.cellpath
-            outel.append(tmpel)
-
-        if self.name:
-            tmpel = ET.Element("name")
-            tmpel.text = self.name
-            outel.append(tmpel)
-
-        if self.name_type:
-            tmpel = ET.Element("name_type")
-            tmpel.text = self.name_type
-            outel.append(tmpel)
-
-        if self.alloc:
-            tmpel = ET.Element("alloc")
-            tmpel.text = str(self.alloc)
-            outel.append(tmpel)
+        _append_str("cellpath", self.cellpath)
+        _append_str("name", self.name)
+        _append_str("name_type", self.name_type)
+        _append_str("alloc", self.alloc)
 
         if self.mtime:
             tmpel = self.mtime.to_Element()
@@ -861,7 +1125,7 @@ class CellObject(object):
         return outel
 
     def to_regxml(self):
-        return ET.tostring(self.to_Element())
+        return ET.tostring(self.to_Element(), encoding="unicode")
 
     def sanity_check(self):
         if self.name_type and self.name_type != "k":
@@ -928,6 +1192,17 @@ class CellObject(object):
         if not val is None:
             assert val in ["k", "v"]
         self._name_type = val
+
+    @property
+    def parent_object(self):
+        """This object is an extremely sparse CellObject, containing just identifying information.  Alternately, it can be an entire object reference to the parent Object, though uniqueness should be checked."""
+        return self._parent_object
+
+    @parent_object.setter
+    def parent_object(self, val):
+        if not val is None:
+            assert isinstance(val, CellObject)
+        self._parent_object = val
 
     @property
     def original_cellobject(self):
@@ -1033,4 +1308,48 @@ if __name__ == "__main__":
     ho.append(co)
     ho.append(nco)
     ro.append(ho)
-    print(ro.to_regxml())
+    ro.print_regxml()
+
+    ofo = FileObject()
+    parent = FileObject()
+    parent.inode = 234
+    ofo.parent_object = parent
+    ofo.filename = "test file"
+    ofo.error = "Neither a real file, nor real error"
+    ofo.partition = 2
+    ofo.id = 235
+    ofo.name_type = "r"
+    ofo.filesize = 1234
+    ofo.unalloc = 0
+    ofo.unused = 0
+    ofo.orphan = 0
+    ofo.compressed = 1
+    ofo.inode = 6543
+    ofo.meta_type = 8
+    ofo.mode = 755
+    ofo.nlink = 1
+    ofo.uid = "S-1-234-etc"
+    ofo.gid = "S-2-234-etc"
+    ofo.mtime = "1999-12-31T12:34:56Z"
+    ofo.ctime = "1998-12-31T12:34:56Z"
+    ofo.atime = "1997-12-31T12:34:56Z"
+    ofo.crtime = "1996-12-31T12:34:56Z"
+    ofo.seq = 3
+    ofo.dtime = "1995-12-31T12:34:56Z"
+    ofo.bkup_time = "1994-12-31T12:34:56Z"
+    ofo.link_target = "Nonexistent file"
+    ofo.libmagic = "Some kind of compressed"
+    ofo.sha1 = "7d97e98f8af710c7e7fe703abc8f639e0ee507c4"   
+    ofo.md5 = "2b00042f7481c7b056c4b410d28f33cf"
+    ofo.brs = brs
+
+    ofoe = ofo.to_Element()
+    nfo = FileObject()
+    nfo.populate_from_Element(ofoe)
+    nfo.mtime = "2013-12-31T12:34:56Z"
+    nfo.sha1 = "447d306060631570b7713ea48e74103c68eab0a3"
+    nfo.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
+    nfo.id += 1
+    nfo.original_fileobject = ofo
+    print(nfo.to_dfxml())
+    print("Unit tests passed.")
