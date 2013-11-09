@@ -358,7 +358,7 @@ class dftime(ComparableMixin):
     def __str__(self):
         return self.iso8601() or ""
     def __repr__(self):
-        return self.iso8601() or "None"
+        return repr(self.iso8601()) or "None"
     def __le__(self,b):
         if b is None: return None
         return self.iso8601().__le__(b.iso8601())
