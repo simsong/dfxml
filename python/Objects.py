@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 import logging
 import re
@@ -84,15 +84,9 @@ def _octcast(val):
         return None
 
 def _strcast(val):
-    """This function isn't so much a cast, as a null-passer and typecheck for a string."""
     if val is None:
         return None
-
-    if isinstance(val, str):
-        return val
-
-    logging.debug(val)
-    raise ValueError("Received a non-string.  Expected a string.")
+    return str(val)
 
 class DFXMLBaseObject(object):
     "Coming soon."
@@ -529,6 +523,19 @@ class TimestampObject(object):
         else:
             raise ValueError("Unexpected arguments.  Whole args tuple: %r." % (args,))
 
+    def __eq__(self, other):
+        _typecheck(other, TimestampObject)
+        if self.name != other.name:
+            return False
+        if self.prec != other.prec:
+            return False
+        if self.time != other.time:
+            return False
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__(self):
         parts = []
         if self.time:
@@ -634,6 +641,7 @@ class FileObject(object):
         self.mtime = kwargs.get("mtime")
         self.name_type = kwargs.get("name_type")
         self.nlink = kwargs.get("nlink")
+        self.orphan = kwargs.get("orphan")
         self.parent_object = kwargs.get("parent_object")
         self.partition= kwargs.get("partition")
         self.seq = kwargs.get("seq")
@@ -667,6 +675,7 @@ class FileObject(object):
         _append_str("mtime", self.mtime)
         _append_str("name_type", self.name_type)
         _append_str("nlink", self.nlink)
+        _append_str("orphan", self.orphan)
         _append_str("parent_object", self.parent_object)
         _append_str("partition", self.partition)
         _append_str("seq", self.seq)
@@ -679,6 +688,31 @@ class FileObject(object):
             parts.append("byte_runs=%r" % self.byte_runs)
 
         return "FileObject(" + ", ".join(parts) + ")"
+
+    def populate_from_stat(self, s):
+        """Populates FileObject fields from a stat() call."""
+        import os
+        _typecheck(s, os.stat_result)
+
+        self.mode = s.st_mode
+        self.inode = s.st_ino
+        self.nlink = s.st_nlink
+        self.uid = s.st_uid
+        self.gid = s.st_gid
+        self.filesize = s.st_size
+        #s.st_dev is ignored for now.
+
+        if "st_mtime" in dir(s):
+            self.mtime = s.st_mtime
+
+        if "st_atime" in dir(s):
+            self.atime = s.st_atime
+
+        if "st_ctime" in dir(s):
+            self.ctime = s.st_ctime
+
+        if "st_birthtime" in dir(s):
+            self.crtime = s.st_birthtime
 
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
@@ -736,6 +770,8 @@ class FileObject(object):
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
+            elif ctn == "orphan":
+                self.orphan = ce.text 
             elif ctn == "parent_object":
                 self.parent_object = FileObject()
                 self.parent_object.populate_from_Element(ce)
@@ -759,18 +795,18 @@ class FileObject(object):
         #Recall that Element text must be a string
         def _append_str(name, value):
             #TODO Need lookup support for diff annos
-            if value:
+            if not value is None:
                 tmpel = ET.Element(name)
                 tmpel.text = str(value)
                 outel.append(tmpel)
 
         def _append_time(name, value):
-            if value and value.time:
+            if not value is None and value.time:
                 tmpel = value.to_Element()
                 outel.append(tmpel)
 
         def _append_bool(name, value):
-            if value:
+            if not value is None:
                 tmpel = ET.Element(name)
                 tmpel.text = str(1 if value else 0)
                 outel.append(tmpel)
@@ -783,6 +819,8 @@ class FileObject(object):
         _append_bool("unalloc", self.unalloc)
         _append_bool("alloc", self.alloc)
         _append_bool("used", self.used)
+        _append_bool("orphan", self.orphan)
+        _append_str("compressed", self.compressed)
         _append_str("inode", self.inode)
         _append_str("meta_type", self.meta_type)
         _append_str("mode", self.mode)
@@ -817,6 +855,46 @@ class FileObject(object):
 
     def to_dfxml(self):
         return ET.tostring(self.to_Element(), encoding="unicode")
+
+    _comparable_properties = set([
+      "alloc",
+      "atime",
+      "bkup_time",
+      "byte_runs",
+      "compressed",
+      "crtime",
+      "dtime",
+      "filename",
+      "filesize",
+      "gid",
+      "inode",
+      "md5",
+      "meta_type",
+      "mode",
+      "mtime",
+      "name_type",
+      "nlink",
+      "orphan",
+      "parent_object",
+      "seq",
+      "sha1",
+      "uid",
+      "unalloc",
+      "used"
+    ])
+
+    def compare_to_original(self):
+        self._diffs = set()
+        assert self.original_fileobject
+
+        for propname in FileObject._comparable_properties:
+            oval = getattr(self.original_fileobject, propname)
+            nval = getattr(self, propname)
+            if oval is None and nval is None:
+                continue
+            if oval != nval:
+                logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                self._diffs.add(propname)
 
     @property
     def alloc(self):
@@ -883,6 +961,11 @@ class FileObject(object):
             self._crtime = checked_val
 
     @property
+    def diffs(self):
+        """This property intentionally has no setter.  To populate, call compare_to_original() after assigning an original_fileobject."""
+        return self._diffs
+
+    @property
     def dtime(self):
         return self._dtime
 
@@ -893,6 +976,14 @@ class FileObject(object):
         else:
             checked_val = TimestampObject(val, name="dtime")
             self._dtime = checked_val
+
+    @property
+    def filesize(self):
+        return self._filesize
+
+    @filesize.setter
+    def filesize(self, val):
+        self._filesize = _intcast(val)
 
     @property
     def gid(self):
@@ -909,6 +1000,14 @@ class FileObject(object):
     @id.setter
     def id(self, val):
         self._id = _intcast(val)
+
+    @property
+    def inode(self):
+        return self._inode
+
+    @inode.setter
+    def inode(self, val):
+        self._inode = _intcast(val)
 
     @property
     def meta_type(self):
@@ -955,6 +1054,23 @@ class FileObject(object):
     @nlink.setter
     def nlink(self, val):
         self._nlink = _intcast(val)
+
+    @property
+    def orphan(self):
+        return self._orphan
+
+    @orphan.setter
+    def orphan(self, val):
+        self._orphan = _boolcast(val)
+
+    @property
+    def original_fileobject(self):
+        return self._original_fileobject
+
+    @original_fileobject.setter
+    def original_fileobject(self, val):
+        _typecheck(val, FileObject)
+        self._original_fileobject = val
 
     @property
     def partition(self):
@@ -1136,6 +1252,28 @@ class CellObject(object):
                 logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
                 raise ValueError("A Registry Key (node) is the only kind of CellObject that can have the 'root' attribute.")
 
+    _comparable_properties = set([
+      "cellpath",
+      "name",
+      "name_type",
+      "alloc",
+      "mtime"
+    ])
+
+    def compare_to_original(self):
+        assert self.original_cellobject
+
+        self._diffs = set()
+
+        for propname in CellObject._comparable_properties:
+            oval = getattr(self.original_cellobject, propname)
+            nval = getattr(self, propname)
+            if oval is None and nval is None:
+                continue
+            if oval != nval:
+                logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                self._diffs.add(propname)
+
     @property
     def alloc(self):
         return self._alloc
@@ -1163,6 +1301,10 @@ class CellObject(object):
         if not val is None:
             assert isinstance(val, str)
         self._cellpath = val
+
+    @property
+    def diffs(self):
+        return self._diffs
 
     @property
     def mtime(self):
@@ -1303,6 +1445,10 @@ if __name__ == "__main__":
 
     print(nco.to_regxml())
 
+    nco.original_cellobject = co
+    nco.compare_to_original()
+    print(nco.diffs)
+
     ro = RegXMLObject(version="2.0")
     ho = HiveObject()
     ho.append(co)
@@ -1342,6 +1488,7 @@ if __name__ == "__main__":
     ofo.sha1 = "7d97e98f8af710c7e7fe703abc8f639e0ee507c4"   
     ofo.md5 = "2b00042f7481c7b056c4b410d28f33cf"
     ofo.brs = brs
+    print(ofo.to_dfxml())
 
     ofoe = ofo.to_Element()
     nfo = FileObject()
@@ -1351,5 +1498,16 @@ if __name__ == "__main__":
     nfo.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
     nfo.id += 1
     nfo.original_fileobject = ofo
+    #nfo.byte_runs = nco.byte_runs #TODO
     print(nfo.to_dfxml())
+
+    nfo.compare_to_original()
+    print(nfo.diffs)
+
+    import os
+    s = os.stat(__file__)
+    sfo = FileObject()
+    sfo.populate_from_stat(s)
+    print(sfo.to_dfxml())
+
     print("Unit tests passed.")
