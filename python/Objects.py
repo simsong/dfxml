@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 import logging
 import re
@@ -652,6 +652,12 @@ class TimestampObject(object):
             parts.append("prec=%r" % (self.prec,))
         return "TimestampObject(" + ", ".join(parts) + ")"
 
+    def __str__(self):
+        if self.time:
+            return str(self.time)
+        else:
+            return self.__repr__()
+
     def to_Element(self):
         assert self.name
         outel = ET.Element(self.name)
@@ -815,12 +821,15 @@ class FileObject(object):
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["fileobject", "original_fileobject", "parent_object"]
 
-        #Map "delta:" attributes into the special self.diffs members
+        #Map "delta:" attributes of <fileobject>s into the special self.diffs members
         #Start with inverting the dictionary
-        _d = { FileObject._diff_attr_names[k]:k for k in FileObject._diff_attr_names }
+        _d = { FileObject._diff_attr_names[k].replace("delta:",""):k for k in FileObject._diff_attr_names }
+        logging.debug("Inverted dictionary: _d = %r" % _d)
         for attr in e.attrib:
+            logging.debug("Looking for differential annotations: %r" % e.attrib)
             (ns, an) = _qsplit(attr)
             if an in _d and ns == dfxml.XMLNS_DELTA:
+                logging.debug("Found; adding _d[an]=%r." % _d[an])
                 self.diffs.add(_d[an])
 
         #Look through direct-child elements for other properties
