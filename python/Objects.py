@@ -9,8 +9,9 @@ __version__ = "0.0.7"
 
 import logging
 import re
-import dfxml
+import copy
 import xml.etree.ElementTree as ET
+import dfxml
 
 #For memoization
 import functools
@@ -47,7 +48,7 @@ def _boolcast(val):
     if _val in [0, 1]:
         return _val == 1
 
-    logging.debug(val)
+    logging.debug("val = " + repr(val))
     raise ValueError("Received a not-straightforwardly-Boolean value.  Expected some form of 0, 1, True, or False.")
 
 def _intcast(val):
@@ -57,10 +58,15 @@ def _intcast(val):
     if isinstance(val, int):
         return val
 
-    if isinstance(val, str) and val.isdigit():
-        return int(val)
+    if isinstance(val, str):
+        if val[0] == "-":
+            if val[1:].isdigit():
+                return (-1) * int(val)
+        else:
+            if val.isdigit():
+                return int(val)
 
-    logging.debug(val)
+    logging.debug("val = " + repr(val))
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
 
 @functools.lru_cache(maxsize=128)
@@ -71,7 +77,7 @@ def _octcast(val):
     #Use _intcast to deal with nulls and bad strings
     i = _intcast(val)
     if not isinstance(i, int):
-        logging.debug(val)
+        logging.debug("val = " + repr(val))
         raise ValueError("(Unforeseen revisions since last tested.)")
 
     s = "0o" + str(i)
@@ -79,7 +85,7 @@ def _octcast(val):
         retval = int(s, 8)
         return retval
     except ValueError:
-        logging.debug(val)
+        logging.debug("val = " + repr(val))
         logging.warning("Failed interpreting an octal mode.")
         return None
 
@@ -98,10 +104,12 @@ class DFXMLObject(object):
     def __init__(self, *args, **kwargs):
         self.command_line = kwargs.get("command_line")
         self.version = kwargs.get("version")
+        self.sources = kwargs.get("sources", [])
 
         self._namespaces = dict()
         self._volumes = []
         self._files = []
+
         input_volumes = kwargs.get("volumes") or []
         input_files = kwargs.get("files") or []
         for v in input_volumes:
@@ -130,6 +138,14 @@ class DFXMLObject(object):
         tmpel1.text = "(Placeholder)"
         tmpel0.append(tmpel1)
         outel.append(tmpel0)
+
+        if len(self.sources) > 0:
+            tmpel0 = ET.Element("source")
+            for source in self.sources:
+                tmpel1 = ET.Element("image_filename")
+                tmpel1.text = source
+                tmpel0.append(tmpel1)
+            outel.append(tmpel0)
 
         if self.command_line:
             tmpel0 = ET.Element("creator")
@@ -196,6 +212,16 @@ class DFXMLObject(object):
         if not value is None:
             assert isinstance(value, str)
         self._command_line = value
+
+    @property
+    def sources(self):
+        return self._sources
+
+    @sources.setter
+    def sources(self, value):
+        if not value is None:
+            _typecheck(value, list)
+        self._sources = value
 
     @property
     def version(self):
@@ -311,7 +337,8 @@ class VolumeObject(object):
             else:
                 raise ValueError("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
-    _all_properties = set(["byte_runs",
+    _all_properties = set([
+      "byte_runs",
       "partition_offset",
       "sector_size",
       "block_size",
@@ -323,7 +350,8 @@ class VolumeObject(object):
       "allocated_only"
     ])
 
-    _comparable_properties = set(["byte_runs",
+    _comparable_properties = set([
+      "byte_runs",
       "partition_offset",
       "sector_size",
       "block_size",
@@ -390,38 +418,48 @@ class HiveObject(object):
             print(cell.to_regxml())
 
 class ByteRun(object):
+
+    _all_properties = set([
+      "img_offset",
+      "fs_offset",
+      "file_offset",
+      "len"
+    ])
+
     def __init__(self, *args, **kwargs):
-        self.img_offset = kwargs.get("img_offset")
-        self.fs_offset = kwargs.get("fs_offset")
-        self.file_offset = kwargs.get("file_offset")
-        self.len = kwargs.get("len")
+        for prop in ByteRun._all_properties:
+            setattr(self, prop, kwargs.get(prop))
 
     def __repr__(self):
         parts = []
-        if self.file_offset:
-            parts.append("file_offset=%r" % self.file_offset)
-        if self.len:
-            parts.append("len=%r" % self.len)
+        for prop in ByteRun._all_properties:
+            val = getattr(self, prop)
+            if not val is None:
+                parts.append("%s=%r" % (prop, val))
         return "ByteRun(" + ", ".join(parts) + ")"
 
     def __eq__(self, other):
+        #Check type
+        if other is None:
+            return False
         assert isinstance(other, ByteRun)
+
+        #Check values
         return \
           self.img_offset == other.img_offset and \
           self.fs_offset == other.fs_offset and \
           self.file_offset == other.file_offset and \
           self.len == other.len
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def to_Element(self):
         outel = ET.Element("byte_run")
-        if self.img_offset:
-            outel.attrib["img_offset"] = str(self.img_offset)
-        if self.fs_offset:
-            outel.attrib["fs_offset"] = str(self.fs_offset)
-        if self.file_offset:
-            outel.attrib["file_offset"] = str(self.file_offset)
-        if self.len:
-            outel.attrib["len"] = str(self.len)
+        for prop in ByteRun._all_properties:
+            val = getattr(self, prop)
+            if not val is None:
+                outel.attrib[prop] = str(val)
         return outel
 
     def populate_from_Element(self, e):
@@ -432,8 +470,10 @@ class ByteRun(object):
         assert tn == "byte_run"
 
         #Populate run properties from element attributes
-        self.file_offset = e.attrib.get("file_offset")
-        self.len = e.attrib.get("len")
+        for prop in ByteRun._all_properties:
+            val = e.attrib.get(prop)
+            if not val is None:
+                setattr(self, prop, val)
 
     @property
     def file_offset(self):
@@ -455,7 +495,7 @@ class ByteRun(object):
     def img_offset(self):
         return self._img_offset
 
-    @file_offset.setter
+    @img_offset.setter
     def img_offset(self, val):
         self._img_offset = _intcast(val)
 
@@ -513,16 +553,20 @@ class ByteRuns(list):
 
     def __eq__(self, other):
         """Compares the byte run lists."""
+        #Check type
+        if other is None:
+            return False
         assert isinstance(other, ByteRuns)
+
         if len(self) != len(other):
-            logging.debug("len(self) = %d" % len(self))
-            logging.debug("len(other) = %d" % len(other))
+            #logging.debug("len(self) = %d" % len(self))
+            #logging.debug("len(other) = %d" % len(other))
             return False
         for (sbr_index, sbr) in enumerate(self):
             obr = other[sbr_index]
-            logging.debug("sbr_index = %d" % sbr_index)
-            logging.debug("sbr = %r" % sbr)
-            logging.debug("obr = %r" % obr)
+            #logging.debug("sbr_index = %d" % sbr_index)
+            #logging.debug("sbr = %r" % sbr)
+            #logging.debug("obr = %r" % obr)
             if sbr != obr:
                 return False
         return True
@@ -582,7 +626,11 @@ class TimestampObject(object):
             raise ValueError("Unexpected arguments.  Whole args tuple: %r." % (args,))
 
     def __eq__(self, other):
+        #Check type
+        if other is None:
+            return False
         _typecheck(other, TimestampObject)
+
         if self.name != other.name:
             return False
         if self.prec != other.prec:
@@ -646,7 +694,7 @@ class TimestampObject(object):
         m = re_precision.match(value)
         md = m.groupdict()
         tup = (int(md["num"]), md.get("unit") or "s")
-        logging.debug("tup = %r" % (tup,))
+        #logging.debug("tup = %r" % (tup,))
         self._prec = tup
 
     @property
@@ -700,6 +748,7 @@ class FileObject(object):
       "mtime",
       "name_type",
       "nlink",
+      "original_fileobject",
       "orphan",
       "parent_object",
       "partition",
@@ -714,6 +763,7 @@ class FileObject(object):
         #Prime all the properties
         for prop in FileObject._all_properties:
             setattr(self, prop, kwargs.get(prop))
+        self._diffs = set()
 
     def __repr__(self):
         parts = []
@@ -759,15 +809,29 @@ class FileObject(object):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        logging.debug("FileObject.populated_from_Element(%r)" % e)
+        #logging.debug("FileObject.populated_from_Element(%r)" % e)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["fileobject", "original_fileobject", "parent_object"]
 
+        #Map "delta:" attributes into the special self.diffs members
+        #Start with inverting the dictionary
+        _d = { FileObject._diff_attr_names[k]:k for k in FileObject._diff_attr_names }
+        for attr in e.attrib:
+            (ns, an) = _qsplit(attr)
+            if an in _d and ns == dfxml.XMLNS_DELTA:
+                self.diffs.add(_d[an])
+
         #Look through direct-child elements for other properties
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
+
+            #Inherit any marked changes
+            for attr in e.attrib:
+                (ns, an) = _qsplit(attr)
+                if an == "changed_property" and ns == dfxml.XMLNS_DELTA:
+                    self.diffs.add(ctn)
 
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
@@ -788,27 +852,51 @@ class FileObject(object):
             else:
                 raise ValueError("Uncertain what to do with this element: %r" % ce)
 
+    _diff_attr_names = {
+      "_new":"delta:new_file",
+      "_deleted":"delta:deleted_file",
+      "_renamed":"delta:renamed_file",
+      "_changed":"delta:changed_file",
+      "_modified":"delta:modified_file"
+    }
+
     def to_Element(self):
         """Creates an ElementTree Element with elements in DFXML schema order."""
         outel = ET.Element("fileobject")
 
+        diffs_whittle_set = copy.copy(self.diffs)
+
+        for annodiff in FileObject._diff_attr_names:
+            if annodiff in diffs_whittle_set:
+                outel.attrib[FileObject._diff_attr_names[annodiff]] = "1"
+                diffs_whittle_set.remove(annodiff)
+
+        def _anno_change(el):
+            if el.tag in self.diffs:
+                el.attrib["delta:changed_property"] = "1"
+                diffs_whittle_set.remove(el.tag)
+
         #Recall that Element text must be a string
         def _append_str(name, value):
             #TODO Need lookup support for diff annos
+            #TODO Need to also output empty elements (still in schema order) if a change was recorded.
             if not value is None:
                 tmpel = ET.Element(name)
                 tmpel.text = str(value)
+                _anno_change(tmpel)
                 outel.append(tmpel)
 
         def _append_time(name, value):
             if not value is None and value.time:
                 tmpel = value.to_Element()
+                _anno_change(tmpel)
                 outel.append(tmpel)
 
         def _append_bool(name, value):
             if not value is None:
                 tmpel = ET.Element(name)
                 tmpel.text = str(1 if value else 0)
+                _anno_change(tmpel)
                 outel.append(tmpel)
 
         _append_str("filename", self.filename)
@@ -837,18 +925,26 @@ class FileObject(object):
 
         if self.byte_runs:
             tmpel = self.byte_runs.to_Element()
+            _anno_change(tmpel)
             outel.append(tmpel)
 
         if self.md5:
             tmpel = ET.Element("hashdigest")
             tmpel.attrib["type"] = "md5"
             tmpel.text = self.md5
+            _anno_change(tmpel)
             outel.append(tmpel)
 
         if self.sha1:
             tmpel = ET.Element("hashdigest")
             tmpel.attrib["type"] = "sha1"
             tmpel.text = self.sha1
+            _anno_change(tmpel)
+            outel.append(tmpel)
+
+        if self.original_fileobject:
+            tmpel = self.original_fileobject.to_Element()
+            tmpel.tag = "delta:original_fileobject"
             outel.append(tmpel)
 
         return outel
@@ -885,7 +981,6 @@ class FileObject(object):
     ])
 
     def compare_to_original(self):
-        self._diffs = set()
         assert self.original_fileobject
 
         for propname in FileObject._comparable_properties:
@@ -894,7 +989,7 @@ class FileObject(object):
             if oval is None and nval is None:
                 continue
             if oval != nval:
-                logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
                 self._diffs.add(propname)
 
     @property
@@ -963,7 +1058,7 @@ class FileObject(object):
 
     @property
     def diffs(self):
-        """This property intentionally has no setter.  To populate, call compare_to_original() after assigning an original_fileobject."""
+        """This property intentionally has no setter.  To populate, call compare_to_original() after assigning an original_fileobject.  You can manually populate this with the special diffs "_new", "_deleted", and "_renamed", and these will appear as differential annotations with to_Element()."""
         return self._diffs
 
     @property
@@ -1078,7 +1173,8 @@ class FileObject(object):
 
     @original_fileobject.setter
     def original_fileobject(self, val):
-        _typecheck(val, FileObject)
+        if not val is None:
+            _typecheck(val, FileObject)
         self._original_fileobject = val
 
     @property
@@ -1132,6 +1228,16 @@ class FileObject(object):
     def used(self, val):
         self._used = _intcast(val)
 
+    @property
+    def volume_object(self):
+        """Reference to the containing volume object.  Not meant to be propagated with __repr__ or to_Element()."""
+        return self._volume_object
+
+    @volume_object.setter
+    def volume_object(self, val):
+        if not val is None:
+            _typecheck(val, VolumeObject)
+        self._volume_object = val
 
 class CellObject(object):
     def __init__(self, *args, **kwargs):
@@ -1280,7 +1386,7 @@ class CellObject(object):
             if oval is None and nval is None:
                 continue
             if oval != nval:
-                logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
                 self._diffs.add(propname)
 
     @property
@@ -1374,17 +1480,22 @@ class CellObject(object):
         self._root = _boolcast(val)
 
 
-def objects_from_file(filename):
+def objects_from_file(filename, dfxmlobject=None):
     """
     Generator.  Yields a stream of populated VolumeObjects and FileObjects.
 
     Currently only accepts filenames ending in "xml".  Will accept disk image files in the future.
+
+    @param dfxmlobject: A DFXMLObject document.  Use this to track namespaces encountered in the input file.
     """
 
     if not filename.endswith("xml"):
         raise NotImplementedError("This only works on DFXML files at the moment.")
 
     fh = open(filename, "rb")
+
+    #The only way to efficiently populated VolumeObjects is to populate the object when the stream has hit its first FileObject.
+    vo = None
 
     #It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first fileobject is hit.
     volume_proxy = None
@@ -1395,9 +1506,14 @@ def objects_from_file(filename):
     READING_FILES = 2
     _state = READING_OTHER
 
-    for (event, elem) in ET.iterparse(fh, events=("start", "end")):
-        #The only way to efficiently populated VolumeObjects is to populate the object when the stream has hit its first FileObject.
+    for (event, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
         #logging.debug("(event, elem) = (%r, %r)" % (event, elem))
+
+        #Track namespaces
+        if event == "start-ns":
+            if not dfxmlobject is None:
+                dfxmlobject.add_namespace(*elem)
+                continue
 
         #Split tag name into namespace and local name
         (ns, ln) = _qsplit(elem.tag)
@@ -1421,9 +1537,14 @@ def objects_from_file(filename):
                     _state = READING_FILES
         elif event == "end":
             if ln == "fileobject":
+                if _state == READING_OTHER:
+                    #This particular branch can be reached if there are trailing fileobject elements after the volume element.  This would happen if a tool needed to represent files (likely reassembled fragments) found outside all the partitions.
+                    #More frequently, we hit this point when there are no volume groupings.
+                    vo = None
                 fi = FileObject()
                 fi.populate_from_Element(elem)
-                logging.debug("fi = %r" % fi)
+                fi.volume_object = vo
+                #logging.debug("fi = %r" % fi)
                 yield fi
                 #Reset
                 elem.clear()
