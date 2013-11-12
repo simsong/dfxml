@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 import logging
 import re
@@ -272,6 +272,22 @@ class RegXMLObject(object):
 class VolumeObject(object):
     def __init__(self, *args, **kwargs):
         self._files = []
+
+        for prop in VolumeObject._all_properties:
+            if prop == "files":
+                continue
+            setattr(self, prop, kwargs.get(prop))
+
+    def __repr__(self):
+        parts = []
+        for prop in VolumeObject._all_properties:
+            #Skip outputting the files list.
+            if prop == "files":
+                continue
+            val = getattr(self, prop)
+            if not val is None:
+                parts.append("%s=%r" % (prop, val))
+        return "VolumeObject(" + ", ".join(parts) + ")"
 
     def append(self, value):
         assert isinstance(value, FileObject)
@@ -664,35 +680,35 @@ class FileObject(object):
     """
 
     _all_properties = set([
-        "alloc",
-        "atime",
-        "bkup_time",
-        "byte_runs",
-        "compressed",
-        "crtime",
-        "ctime",
-        "dtime",
-        "filename",
-        "filesize",
-        "gid",
-        "id",
-        "inode",
-        "libmagic",
-        "md5",
-        "meta_type",
-        "mode",
-        "mtime",
-        "name_type",
-        "nlink",
-        "orphan",
-        "parent_object",
-        "partition",
-        "seq",
-        "sha1",
-        "uid",
-        "unalloc",
-        "used"
-])
+      "alloc",
+      "atime",
+      "bkup_time",
+      "byte_runs",
+      "compressed",
+      "crtime",
+      "ctime",
+      "dtime",
+      "filename",
+      "filesize",
+      "gid",
+      "id",
+      "inode",
+      "libmagic",
+      "md5",
+      "meta_type",
+      "mode",
+      "mtime",
+      "name_type",
+      "nlink",
+      "orphan",
+      "parent_object",
+      "partition",
+      "seq",
+      "sha1",
+      "uid",
+      "unalloc",
+      "used"
+    ])
 
     def __init__(self, *args, **kwargs):
         #Prime all the properties
@@ -702,16 +718,15 @@ class FileObject(object):
     def __repr__(self):
         parts = []
 
-        def _append_str(name, value):
-            if value:
-                parts.append("%s=%r" % (name, str(value)))
-
         for prop in FileObject._all_properties:
+            #Save byte runs for the end
             if prop != "byte_runs":
-                _append_str(prop, getattr(self, prop))
-            else:
-                if self.byte_runs:
-                    parts.append("byte_runs=%r" % self.byte_runs)
+                value = getattr(self, prop)
+                if not value is None:
+                    parts.append("%s=%r" % (prop, value))
+
+        if self.byte_runs:
+            parts.append("byte_runs=%r" % self.byte_runs)
 
         return "FileObject(" + ", ".join(parts) + ")"
 
@@ -743,6 +758,8 @@ class FileObject(object):
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
         _typecheck(e, (ET.Element, ET.ElementTree))
+
+        logging.debug("FileObject.populated_from_Element(%r)" % e)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -851,6 +868,7 @@ class FileObject(object):
       "filesize",
       "gid",
       "inode",
+      "libmagic",
       "md5",
       "meta_type",
       "mode",
@@ -1355,6 +1373,67 @@ class CellObject(object):
     def root(self, val):
         self._root = _boolcast(val)
 
+
+def objects_from_file(filename):
+    """
+    Generator.  Yields a stream of populated VolumeObjects and FileObjects.
+
+    Currently only accepts filenames ending in "xml".  Will accept disk image files in the future.
+    """
+
+    if not filename.endswith("xml"):
+        raise NotImplementedError("This only works on DFXML files at the moment.")
+
+    fh = open(filename, "rb")
+
+    #It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first fileobject is hit.
+    volume_proxy = None
+
+    #State machine, used to track when the first fileobject of a volume is encountered.
+    READING_OTHER = 0
+    READING_VOLUMES = 1
+    READING_FILES = 2
+    _state = READING_OTHER
+
+    for (event, elem) in ET.iterparse(fh, events=("start", "end")):
+        #The only way to efficiently populated VolumeObjects is to populate the object when the stream has hit its first FileObject.
+        #logging.debug("(event, elem) = (%r, %r)" % (event, elem))
+
+        #Split tag name into namespace and local name
+        (ns, ln) = _qsplit(elem.tag)
+
+        if event == "start":
+            if ln == "volume":
+                volume_proxy = ET.Element(elem.tag)
+                for k in elem.attrib:
+                    volume_proxy.attrib[k] = elem.attrib[k] 
+                _state = READING_VOLUMES
+            if ln == "fileobject":
+                if _state == READING_VOLUMES:
+                    #Cut; populate VolumeObject now.
+                    if volume_proxy is not None:
+                        vo = VolumeObject()
+                        vo.populate_from_Element(volume_proxy)
+                        yield vo
+                        #Reset
+                        volume_proxy = None
+                        elem.clear()
+                    _state = READING_FILES
+        elif event == "end":
+            if ln == "fileobject":
+                fi = FileObject()
+                fi.populate_from_Element(elem)
+                logging.debug("fi = %r" % fi)
+                yield fi
+                #Reset
+                elem.clear()
+            elif elem.tag == "volume":
+                _state = READING_OTHER
+            elif _state == READING_VOLUMES:
+                #This is a volume property; glom onto the proxy.
+                if volume_proxy is not None:
+                    volume_proxy.append(elem)
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
@@ -1462,6 +1541,7 @@ if __name__ == "__main__":
     ofo.orphan = 0
     ofo.compressed = 1
     ofo.inode = 6543
+    ofo.libmagic = "data"
     ofo.meta_type = 8
     ofo.mode = 755
     ofo.nlink = 1
