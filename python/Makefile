@@ -2,6 +2,7 @@ check: \
   check-dfxml \
   check-cat_fileobjects \
   check-dfxml_tool \
+  check-differential_dfxml \
   check-idifference-dfxml \
   check-mac_timelines
 	@echo "Tests passed!"
@@ -11,6 +12,9 @@ check-dfxml:
 
 check-cat_fileobjects:
 	./test_cat_fileobjects.sh
+
+check-differential_dfxml:
+	./test_differential_dfxml.sh
 
 check-dfxml_tool:
 	./test_dfxml_tool.sh
@@ -27,3 +31,4 @@ clean:
 	rm -f idifference_test.txt
 	rm -f idifference_test*.dfxml
 	rm -f demo_mac_timeline*.txt
+	rm -f differential_dfxml_test.*

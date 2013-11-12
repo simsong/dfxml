@@ -130,4 +130,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
+    if len(args.infiles) != 2:
+        raise ValueError("This script requires exactly two DFXML files as input.")
+
     main()

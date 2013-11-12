@@ -1486,6 +1486,7 @@ def objects_from_file(filename, dfxmlobject=None):
 
     Currently only accepts filenames ending in "xml".  Will accept disk image files in the future.
 
+    @param filename: A string
     @param dfxmlobject: A DFXMLObject document.  Use this to track namespaces encountered in the input file.
     """
 
@@ -1513,7 +1514,7 @@ def objects_from_file(filename, dfxmlobject=None):
         if event == "start-ns":
             if not dfxmlobject is None:
                 dfxmlobject.add_namespace(*elem)
-                continue
+            continue
 
         #Split tag name into namespace and local name
         (ns, ln) = _qsplit(elem.tag)
