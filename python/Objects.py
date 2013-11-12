@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 import logging
 import re
@@ -276,6 +276,48 @@ class VolumeObject(object):
     def append(self, value):
         assert isinstance(value, FileObject)
         self._files.append(value)
+
+    def populate_from_Element(self, e):
+        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn == "volume"
+
+        #Look through direct-child elements to populate run array
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "byte_runs":
+                self.byte_runs = ByteRuns()
+                self.byte_runs.populate_from_Element(ce)
+            elif ctn in VolumeObject._all_properties:
+                setattr(self, ctn, ce.text)
+            else:
+                raise ValueError("Unsure what to do with this element in a VolumeObject: %r" % ce)
+
+    _all_properties = set(["byte_runs",
+      "partition_offset",
+      "sector_size",
+      "block_size",
+      "ftype",
+      "ftype_str",
+      "block_count",
+      "first_block",
+      "last_block",
+      "allocated_only"
+    ])
+
+    _comparable_properties = set(["byte_runs",
+      "partition_offset",
+      "sector_size",
+      "block_size",
+      "ftype",
+      "ftype_str",
+      "block_count",
+      "first_block",
+      "last_block",
+      "allocated_only"
+    ])
 
     def to_partial_Element(self):
         """Returns the volume element with its properties, except for the child fileobjects."""
@@ -621,34 +663,41 @@ class FileObject(object):
         fi.mtime
     """
 
+    _all_properties = set([
+        "alloc",
+        "atime",
+        "bkup_time",
+        "byte_runs",
+        "compressed",
+        "crtime",
+        "ctime",
+        "dtime",
+        "filename",
+        "filesize",
+        "gid",
+        "id",
+        "inode",
+        "libmagic",
+        "md5",
+        "meta_type",
+        "mode",
+        "mtime",
+        "name_type",
+        "nlink",
+        "orphan",
+        "parent_object",
+        "partition",
+        "seq",
+        "sha1",
+        "uid",
+        "unalloc",
+        "used"
+])
+
     def __init__(self, *args, **kwargs):
-        self.alloc = kwargs.get("alloc")
-        self.atime = kwargs.get("atime")
-        self.bkup_time = kwargs.get("bkup_time")
-        self.byte_runs = kwargs.get("byte_runs")
-        self.compressed = kwargs.get("compressed")
-        self.crtime = kwargs.get("crtime")
-        self.ctime = kwargs.get("ctime")
-        self.dtime = kwargs.get("dtime")
-        self.filename = kwargs.get("filename")
-        self.filesize = kwargs.get("filesize")
-        self.gid = kwargs.get("gid")
-        self.id = kwargs.get("id")
-        self.inode = kwargs.get("inode")
-        self.md5 = kwargs.get("md5")
-        self.meta_type = kwargs.get("meta_type")
-        self.mode = kwargs.get("mode")
-        self.mtime = kwargs.get("mtime")
-        self.name_type = kwargs.get("name_type")
-        self.nlink = kwargs.get("nlink")
-        self.orphan = kwargs.get("orphan")
-        self.parent_object = kwargs.get("parent_object")
-        self.partition= kwargs.get("partition")
-        self.seq = kwargs.get("seq")
-        self.sha1 = kwargs.get("sha1")
-        self.uid = kwargs.get("uid")
-        self.unalloc = kwargs.get("unalloc")
-        self.used = kwargs.get("used")
+        #Prime all the properties
+        for prop in FileObject._all_properties:
+            setattr(self, prop, kwargs.get(prop))
 
     def __repr__(self):
         parts = []
@@ -657,35 +706,12 @@ class FileObject(object):
             if value:
                 parts.append("%s=%r" % (name, str(value)))
 
-        _append_str("alloc", self.alloc)
-        _append_str("atime", self.atime)
-        _append_str("bkup_time", self.bkup_time)
-        _append_str("compressed", self.compressed)
-        _append_str("crtime", self.crtime)
-        _append_str("ctime", self.ctime)
-        _append_str("dtime", self.dtime)
-        _append_str("filename", self.filename)
-        _append_str("filesize", self.filesize)
-        _append_str("gid", self.gid)
-        _append_str("id", self.id)
-        _append_str("inode", self.inode)
-        _append_str("md5", self.md5)
-        _append_str("meta_type", self.meta_type)
-        _append_str("mode", self.mode)
-        _append_str("mtime", self.mtime)
-        _append_str("name_type", self.name_type)
-        _append_str("nlink", self.nlink)
-        _append_str("orphan", self.orphan)
-        _append_str("parent_object", self.parent_object)
-        _append_str("partition", self.partition)
-        _append_str("seq", self.seq)
-        _append_str("sha1", self.sha1)
-        _append_str("uid", self.uid)
-        _append_str("unalloc", self.unalloc)
-        _append_str("used", self.used)
-
-        if self.byte_runs:
-            parts.append("byte_runs=%r" % self.byte_runs)
+        for prop in FileObject._all_properties:
+            if prop != "byte_runs":
+                _append_str(prop, getattr(self, prop))
+            else:
+                if self.byte_runs:
+                    parts.append("byte_runs=%r" % self.byte_runs)
 
         return "FileObject(" + ", ".join(parts) + ")"
 
@@ -725,66 +751,23 @@ class FileObject(object):
         #Look through direct-child elements for other properties
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
-            if ctn == "alloc":
-                self.alloc = ce.text
-            elif ctn == "atime":
-                self.atime = ce.text
-            elif ctn == "bkup_time":
-                self.bkup_time= ce.text
-            elif ctn == "byte_runs":
+
+            if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
-            elif ctn == "compressed":
-                self.compressed = ce.text
-            elif ctn == "crtime":
-                self.crtime = ce.text
-            elif ctn == "ctime":
-                self.ctime = ce.text
-            elif ctn == "dtime":
-                self.dtime = ce.text
-            elif ctn == "filename":
-                self.filename = ce.text
-            elif ctn == "filesize":
-                self.filesize = ce.text
             elif ctn == "hashdigest":
                 if ce.attrib["type"] == "md5":
                     self.md5 = ce.text
                 elif ce.attrib["type"] == "sha1":
                     self.sha1 = ce.text
-            elif ctn == "gid":
-                self.gid = ce.text
-            elif ctn == "id":
-                self.id = ce.text
-            elif ctn == "inode":
-                self.inode = ce.text
-            elif ctn == "meta_type":
-                self.meta_type = ce.text
-            elif ctn == "mode":
-                self.mode = ce.text
-            elif ctn == "mtime":
-                self.mtime = ce.text
-            elif ctn == "name_type":
-                self.name_type = ce.text
-            elif ctn == "nlink":
-                self.nlink = ce.text
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
-            elif ctn == "orphan":
-                self.orphan = ce.text 
             elif ctn == "parent_object":
                 self.parent_object = FileObject()
                 self.parent_object.populate_from_Element(ce)
-            elif ctn == "partition":
-                self.partition = ce.text
-            elif ctn == "seq":
-                self.seq = ce.text
-            elif ctn == "uid":
-                self.uid = ce.text
-            elif ctn == "unalloc":
-                self.unalloc = ce.text
-            elif ctn == "used":
-                self.used = ce.text
+            elif ctn in FileObject._all_properties:
+                setattr(self, ctn, ce.text)
             else:
                 raise ValueError("Uncertain what to do with this element: %r" % ce)
 
@@ -1008,6 +991,14 @@ class FileObject(object):
     @inode.setter
     def inode(self, val):
         self._inode = _intcast(val)
+
+    @property
+    def libmagic(self):
+        return self._libmagic
+
+    @libmagic.setter
+    def libmagic(self, val):
+        self._libmagic = _strcast(val)
 
     @property
     def meta_type(self):
