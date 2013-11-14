@@ -33,6 +33,7 @@
 #endif
 
 #ifdef HAVE_PTHREAD
+#define MUTEX_INIT(M)   pthread_mutex_init(M,NULL);
 #define MUTEX_LOCK(M)   pthread_mutex_lock(M)
 #define MUTEX_UNLOCK(M) pthread_mutex_unlock(M)
 #else
@@ -205,9 +206,7 @@ dfxml_writer::dfxml_writer(const std::string &outfilename_,bool makeDTD):
     out(),tags(),tag_stack(),tempfilename(),tempfile_template(outfilename_+"_tmp_XXXXXXXX"),
     t0(),t_last_timestamp(),make_dtd(false),outfilename(outfilename_),oneline()
 {
-#ifdef HAVE_PTHREAD
-    pthread_mutex_init(&M,NULL);
-#endif
+    MUTEX_INIT(&M);
     gettimeofday(&t0,0);
     gettimeofday(&t_last_timestamp,0);
     if(!outf.is_open()){
@@ -382,15 +381,9 @@ void dfxml_writer::set_oneline(bool v)
     oneline = v;
 }
 
-#ifdef HAVE_ASM_CPUID
-#ifndef __WORDSIZE
-#define __WORDSIZE 32
-#endif
-
 void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                 unsigned long *ecx, unsigned long *edx) {
-#ifdef HAVE_ASM_CPUID
-#if defined(__i386__)
+#if defined(HAVE_ASM_CPUID) && defined(__i386__) 
 #if defined(__PIC__)
     __asm__ __volatile__("pushl %%ebx      \n\t" /* save %ebx */
                          "cpuid            \n\t"
@@ -404,16 +397,16 @@ void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                          : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
                          : "a"(op)
                          : "cc");
-
-#endif
 #endif
 #endif
 }
 
-
-
 void dfxml_writer::add_cpuid()
 {
+#if defined(__i386__)
+#ifndef __WORDSIZE
+#define __WORDSIZE 32
+#endif
 #define BFIX(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))
     char buf[256];
     unsigned long eax=0, ebx=0, ecx=0, edx=0; // =0 avoids a compiler warning
@@ -437,9 +430,9 @@ void dfxml_writer::add_cpuid()
     cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
     xmlout("L1_cache_size", (int64_t) BFIX(ecx, 16, 31) * 1024);
     pop();
-}
 #undef BFIX
 #endif
+}
 
 void dfxml_writer::add_DFXML_execution_environment(const std::string &command_line)
 {
@@ -448,7 +441,6 @@ void dfxml_writer::add_DFXML_execution_environment(const std::string &command_li
 #if defined(HAVE_ASM_CPUID) && defined(__i386__)
     add_cpuid();
 #endif
-
 
 #ifdef HAVE_SYS_UTSNAME_H
     struct utsname name;
