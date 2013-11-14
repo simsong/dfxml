@@ -732,7 +732,7 @@ class FileObject(object):
 
     is now replaced with:
 
-        assert isinstance(fi, dfxml.FileObject)
+        assert isinstance(fi, Objects.FileObject)
         fi.mtime
     """
 
