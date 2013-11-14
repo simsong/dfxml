@@ -17,24 +17,6 @@ import dfxml
 import functools
 
 @functools.lru_cache(maxsize=None)
-def _qsplit(tagname):
-    """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
-    assert isinstance(tagname, str)
-    if tagname[0] == "{":
-        i = tagname.rfind("}")
-        return ( tagname[1:i], tagname[i+1:] )
-    else:
-        return (None, tagname)
-
-def _typecheck(obj, classinfo):
-    if not isinstance(obj, classinfo):
-        logging.info("obj = " + repr(obj))
-        if isinstance(classinfo, tuple):
-            raise TypeError("Expecting object to be one of the types %r." % (classinfo,))
-        else:
-            raise TypeError("Expecting object to be of type %r." % classinfo)
-
-@functools.lru_cache(maxsize=None)
 def _boolcast(val):
     """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
     if val is None:
@@ -89,10 +71,28 @@ def _octcast(val):
         logging.warning("Failed interpreting an octal mode.")
         return None
 
+@functools.lru_cache(maxsize=None)
+def _qsplit(tagname):
+    """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
+    assert isinstance(tagname, str)
+    if tagname[0] == "{":
+        i = tagname.rfind("}")
+        return ( tagname[1:i], tagname[i+1:] )
+    else:
+        return (None, tagname)
+
 def _strcast(val):
     if val is None:
         return None
     return str(val)
+
+def _typecheck(obj, classinfo):
+    if not isinstance(obj, classinfo):
+        logging.info("obj = " + repr(obj))
+        if isinstance(classinfo, tuple):
+            raise TypeError("Expecting object to be one of the types %r." % (classinfo,))
+        else:
+            raise TypeError("Expecting object to be of type %r." % classinfo)
 
 class DFXMLBaseObject(object):
     "Coming soon."
@@ -129,6 +129,41 @@ class DFXMLObject(object):
         else:
             logging.debug("value = %r" % value)
             raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
+
+    def print_dfxml(self):
+        """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
+        pe = self.to_partial_Element()
+        dfxml_wrapper = ET.tostring(pe, encoding="unicode")
+
+        #If there are no children, this (trivial) document needs only a simpler printing.
+        if len(pe) == 0 and len(self._volumes) == 0 and len(self._files) == 0:
+            print(dfxml_wrapper)
+            return
+
+        dfxml_foot = "</dfxml>"
+        dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+
+        print("""<?xml version="1.0"?>""")
+        print(dfxml_head)
+        for v in self._volumes:
+            v.print_dfxml()
+        for f in self._files:
+            f.print_dfxml()
+        print(dfxml_foot)
+
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        for v in self._volumes:
+            tmpel = v.to_Element()
+            outel.append(tmpel)
+        for f in self._files:
+            tmpel = f.to_Element()
+            outel.append(tmpel)
+        return outel
+
+    def to_dfxml(self):
+        """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive."""
+        return ET.tostring(self.to_Element(), encoding="unicode")
 
     def to_partial_Element(self):
         outel = ET.Element("dfxml")
@@ -168,41 +203,6 @@ class DFXMLObject(object):
 
         return outel
 
-    def to_Element(self):
-        outel = self.to_partial_Element()
-        for v in self._volumes:
-            tmpel = v.to_Element()
-            outel.append(tmpel)
-        for f in self._files:
-            tmpel = f.to_Element()
-            outel.append(tmpel)
-        return outel
-
-    def print_dfxml(self):
-        """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
-        pe = self.to_partial_Element()
-        dfxml_wrapper = ET.tostring(pe, encoding="unicode")
-
-        #If there are no children, this (trivial) document needs only a simpler printing.
-        if len(pe) == 0 and len(self._volumes) == 0 and len(self._files) == 0:
-            print(dfxml_wrapper)
-            return
-
-        dfxml_foot = "</dfxml>"
-        dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
-
-        print("""<?xml version="1.0"?>""")
-        print(dfxml_head)
-        for v in self._volumes:
-            v.print_dfxml()
-        for f in self._files:
-            f.print_dfxml()
-        print(dfxml_foot)
-
-    def to_dfxml(self):
-        """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive."""
-        return ET.tostring(self.to_Element(), encoding="unicode")
-
     @property
     def command_line(self):
         return self._command_line
@@ -231,6 +231,7 @@ class DFXMLObject(object):
     def version(self, value):
         self._version = _strcast(value)
 
+
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
         self.metadata = kwargs.get("metadata")
@@ -255,6 +256,17 @@ class RegXMLObject(object):
         else:
             logging.debug("value = %r" % value)
             raise TypeError("Expecting a HiveObject or a CellObject.  Got instead this type: %r." % type(value))
+
+    def print_regxml(self):
+        """Serializes and prints the entire object, without constructing the whole tree."""
+        regxml_wrapper = ET.tostring(self.to_partial_Element(), encoding="unicode")
+        regxml_foot = "</regxml>"
+        regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
+
+        print(regxml_head)
+        for hive in self._hives:
+            hive.print_regxml()
+        print(regxml_foot)
 
     def to_Element(self):
         outel = self.to_partial_Element()
@@ -284,18 +296,34 @@ class RegXMLObject(object):
         """Serializes the entire RegXML document tree into a string.  Returns that string.  RAM-intensive.  You probably want print_regxml()."""
         return ET.tostring(self.to_Element(), encoding="unicode")
 
-    def print_regxml(self):
-        """Serializes and prints the entire object, without constructing the whole tree."""
-        regxml_wrapper = ET.tostring(self.to_partial_Element(), encoding="unicode")
-        regxml_foot = "</regxml>"
-        regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
-
-        print(regxml_head)
-        for hive in self._hives:
-            hive.print_regxml()
-        print(regxml_foot)
 
 class VolumeObject(object):
+    _all_properties = set([
+      "byte_runs",
+      "partition_offset",
+      "sector_size",
+      "block_size",
+      "ftype",
+      "ftype_str",
+      "block_count",
+      "first_block",
+      "last_block",
+      "allocated_only"
+    ])
+
+    _comparable_properties = set([
+      "byte_runs",
+      "partition_offset",
+      "sector_size",
+      "block_size",
+      "ftype",
+      "ftype_str",
+      "block_count",
+      "first_block",
+      "last_block",
+      "allocated_only"
+    ])
+
     def __init__(self, *args, **kwargs):
         self._files = []
 
@@ -337,44 +365,6 @@ class VolumeObject(object):
             else:
                 raise ValueError("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
-    _all_properties = set([
-      "byte_runs",
-      "partition_offset",
-      "sector_size",
-      "block_size",
-      "ftype",
-      "ftype_str",
-      "block_count",
-      "first_block",
-      "last_block",
-      "allocated_only"
-    ])
-
-    _comparable_properties = set([
-      "byte_runs",
-      "partition_offset",
-      "sector_size",
-      "block_size",
-      "ftype",
-      "ftype_str",
-      "block_count",
-      "first_block",
-      "last_block",
-      "allocated_only"
-    ])
-
-    def to_partial_Element(self):
-        """Returns the volume element with its properties, except for the child fileobjects."""
-        outel = ET.Element("volume")
-        return outel
-
-    def to_Element(self):
-        outel = self.to_partial_Element()
-        for f in self._files:
-            tmpel = f.to_Element()
-            outel.append(tmpel)
-        return outel
-
     def print_dfxml(self):
         pe = self.to_partial_Element()
         dfxml_wrapper = ET.tostring(pe, encoding="unicode")
@@ -398,6 +388,18 @@ class VolumeObject(object):
             print(ET.tostring(e, encoding="unicode"))
         print(dfxml_foot)
 
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        for f in self._files:
+            tmpel = f.to_Element()
+            outel.append(tmpel)
+        return outel
+
+    def to_partial_Element(self):
+        """Returns the volume element with its properties, except for the child fileobjects."""
+        outel = ET.Element("volume")
+        return outel
+
 class HiveObject(object):
     def __init__(self, *args, **kwargs):
         self._cells = []
@@ -406,16 +408,16 @@ class HiveObject(object):
         assert isinstance(value, CellObject)
         self._cells.append(value)
 
+    def print_regxml(self):
+        for cell in self._cells:
+            print(cell.to_regxml())
+
     def to_Element(self):
         outel = ET.Element("hive")
         for cell in self._cells:
             tmpel = cell.to_Element()
             outel.append(tmpel)
         return outel
-
-    def print_regxml(self):
-        for cell in self._cells:
-            print(cell.to_regxml())
 
 class ByteRun(object):
 
@@ -429,14 +431,6 @@ class ByteRun(object):
     def __init__(self, *args, **kwargs):
         for prop in ByteRun._all_properties:
             setattr(self, prop, kwargs.get(prop))
-
-    def __repr__(self):
-        parts = []
-        for prop in ByteRun._all_properties:
-            val = getattr(self, prop)
-            if not val is None:
-                parts.append("%s=%r" % (prop, val))
-        return "ByteRun(" + ", ".join(parts) + ")"
 
     def __eq__(self, other):
         #Check type
@@ -454,13 +448,13 @@ class ByteRun(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_Element(self):
-        outel = ET.Element("byte_run")
+    def __repr__(self):
+        parts = []
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
             if not val is None:
-                outel.attrib[prop] = str(val)
-        return outel
+                parts.append("%s=%r" % (prop, val))
+        return "ByteRun(" + ", ".join(parts) + ")"
 
     def populate_from_Element(self, e):
         assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
@@ -474,6 +468,14 @@ class ByteRun(object):
             val = e.attrib.get(prop)
             if not val is None:
                 setattr(self, prop, val)
+
+    def to_Element(self):
+        outel = ET.Element("byte_run")
+        for prop in ByteRun._all_properties:
+            val = getattr(self, prop)
+            if not val is None:
+                outel.attrib[prop] = str(val)
+        return outel
 
     @property
     def file_offset(self):
@@ -529,27 +531,8 @@ class ByteRuns(list):
             for run in run_list:
                 self.append(run)
 
-    def __repr__(self):
-        parts = []
-        for run in self:
-            parts.append(repr(run))
-        return "ByteRuns(run_list=[" + ", ".join(parts) + "])"
-
-    def __len__(self):
-        return self._listdata.__len__()
-
-    def __getitem__(self, key):
-        return self._listdata.__getitem__(key)
-
-    def __setitem__(self, key, value):
-        assert isinstance(value, ByteRun)
-        self._listdata[key] = value
-
     def __delitem__(self, key):
         del self._listdata[key]
-
-    def __iter__(self):
-        return iter(self._listdata)
 
     def __eq__(self, other):
         """Compares the byte run lists."""
@@ -571,19 +554,36 @@ class ByteRuns(list):
                 return False
         return True
 
+    def __getitem__(self, key):
+        return self._listdata.__getitem__(key)
+
+    def __iter__(self):
+        return iter(self._listdata)
+
+    def __len__(self):
+        return self._listdata.__len__()
+
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __repr__(self):
+        parts = []
+        for run in self:
+            parts.append(repr(run))
+        return "ByteRuns(run_list=[" + ", ".join(parts) + "])"
+
+    def __setitem__(self, key, value):
+        assert isinstance(value, ByteRun)
+        self._listdata[key] = value
 
     def append(self, value):
         assert isinstance(value, ByteRun)
         self._listdata.append(value)
 
-    def to_Element(self):
-        outel = ET.Element("byte_runs")
-        for run in self:
-            tmpel = run.to_Element()
-            outel.append(tmpel)
-        return outel
+    def contents(self, raw_image):
+        """Generator.  Yields contents, given a backing raw image path."""
+        assert not raw_image is None
+        raise Exception("Not implemented yet.")
 
     def populate_from_Element(self, e):
         assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
@@ -600,10 +600,12 @@ class ByteRuns(list):
                 nbr.populate_from_Element(ce)
                 self.append(nbr)
 
-    def contents(self, raw_image):
-        """Generator.  Yields contents, given a backing raw image path."""
-        assert not raw_image is None
-        raise Exception("Not implemented yet.")
+    def to_Element(self):
+        outel = ET.Element("byte_runs")
+        for run in self:
+            tmpel = run.to_Element()
+            outel.append(tmpel)
+        return outel
 
 re_precision = re.compile(r"(?P<num>\d+)(?P<unit>(|m|n)s|d)?")
 class TimestampObject(object):
@@ -719,6 +721,7 @@ class TimestampObject(object):
             #logging.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
             self._time = checked_value
 
+
 class FileObject(object):
     """
     This class provides property accesses, an XML serializer (ElementTree-based), and a deserializer.
@@ -765,6 +768,42 @@ class FileObject(object):
       "used"
     ])
 
+    _comparable_properties = set([
+      "alloc",
+      "atime",
+      "bkup_time",
+      "byte_runs",
+      "compressed",
+      "crtime",
+      "dtime",
+      "filename",
+      "filesize",
+      "gid",
+      "inode",
+      "libmagic",
+      "md5",
+      "meta_type",
+      "mode",
+      "mtime",
+      "name_type",
+      "nlink",
+      "orphan",
+      "parent_object",
+      "seq",
+      "sha1",
+      "uid",
+      "unalloc",
+      "used"
+    ])
+
+    _diff_attr_names = {
+      "_new":"delta:new_file",
+      "_deleted":"delta:deleted_file",
+      "_renamed":"delta:renamed_file",
+      "_changed":"delta:changed_file",
+      "_modified":"delta:modified_file"
+    }
+
     def __init__(self, *args, **kwargs):
         #Prime all the properties
         for prop in FileObject._all_properties:
@@ -786,30 +825,17 @@ class FileObject(object):
 
         return "FileObject(" + ", ".join(parts) + ")"
 
-    def populate_from_stat(self, s):
-        """Populates FileObject fields from a stat() call."""
-        import os
-        _typecheck(s, os.stat_result)
+    def compare_to_original(self):
+        assert self.original_fileobject
 
-        self.mode = s.st_mode
-        self.inode = s.st_ino
-        self.nlink = s.st_nlink
-        self.uid = s.st_uid
-        self.gid = s.st_gid
-        self.filesize = s.st_size
-        #s.st_dev is ignored for now.
-
-        if "st_mtime" in dir(s):
-            self.mtime = s.st_mtime
-
-        if "st_atime" in dir(s):
-            self.atime = s.st_atime
-
-        if "st_ctime" in dir(s):
-            self.ctime = s.st_ctime
-
-        if "st_birthtime" in dir(s):
-            self.crtime = s.st_birthtime
+        for propname in FileObject._comparable_properties:
+            oval = getattr(self.original_fileobject, propname)
+            nval = getattr(self, propname)
+            if oval is None and nval is None:
+                continue
+            if oval != nval:
+                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                self._diffs.add(propname)
 
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
@@ -861,13 +887,30 @@ class FileObject(object):
             else:
                 raise ValueError("Uncertain what to do with this element: %r" % ce)
 
-    _diff_attr_names = {
-      "_new":"delta:new_file",
-      "_deleted":"delta:deleted_file",
-      "_renamed":"delta:renamed_file",
-      "_changed":"delta:changed_file",
-      "_modified":"delta:modified_file"
-    }
+    def populate_from_stat(self, s):
+        """Populates FileObject fields from a stat() call."""
+        import os
+        _typecheck(s, os.stat_result)
+
+        self.mode = s.st_mode
+        self.inode = s.st_ino
+        self.nlink = s.st_nlink
+        self.uid = s.st_uid
+        self.gid = s.st_gid
+        self.filesize = s.st_size
+        #s.st_dev is ignored for now.
+
+        if "st_mtime" in dir(s):
+            self.mtime = s.st_mtime
+
+        if "st_atime" in dir(s):
+            self.atime = s.st_atime
+
+        if "st_ctime" in dir(s):
+            self.ctime = s.st_ctime
+
+        if "st_birthtime" in dir(s):
+            self.crtime = s.st_birthtime
 
     def to_Element(self):
         """Creates an ElementTree Element with elements in DFXML schema order."""
@@ -960,46 +1003,6 @@ class FileObject(object):
 
     def to_dfxml(self):
         return ET.tostring(self.to_Element(), encoding="unicode")
-
-    _comparable_properties = set([
-      "alloc",
-      "atime",
-      "bkup_time",
-      "byte_runs",
-      "compressed",
-      "crtime",
-      "dtime",
-      "filename",
-      "filesize",
-      "gid",
-      "inode",
-      "libmagic",
-      "md5",
-      "meta_type",
-      "mode",
-      "mtime",
-      "name_type",
-      "nlink",
-      "orphan",
-      "parent_object",
-      "seq",
-      "sha1",
-      "uid",
-      "unalloc",
-      "used"
-    ])
-
-    def compare_to_original(self):
-        assert self.original_fileobject
-
-        for propname in FileObject._comparable_properties:
-            oval = getattr(self.original_fileobject, propname)
-            nval = getattr(self, propname)
-            if oval is None and nval is None:
-                continue
-            if oval != nval:
-                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
-                self._diffs.add(propname)
 
     @property
     def alloc(self):
@@ -1248,7 +1251,16 @@ class FileObject(object):
             _typecheck(val, VolumeObject)
         self._volume_object = val
 
+
 class CellObject(object):
+    _comparable_properties = set([
+      "cellpath",
+      "name",
+      "name_type",
+      "alloc",
+      "mtime"
+    ])
+
     def __init__(self, *args, **kwargs):
         #These properties must be assigned first for sanity check dependencies
         self.name_type = kwargs.get("name_type")
@@ -1291,6 +1303,20 @@ class CellObject(object):
 
         return "CellObject(" + ", ".join(parts) + ")"
 
+    def compare_to_original(self):
+        assert self.original_cellobject
+
+        self._diffs = set()
+
+        for propname in CellObject._comparable_properties:
+            oval = getattr(self.original_cellobject, propname)
+            nval = getattr(self, propname)
+            if oval is None and nval is None:
+                continue
+            if oval != nval:
+                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                self._diffs.add(propname)
+
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
         assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
@@ -1329,6 +1355,15 @@ class CellObject(object):
 
         self.sanity_check()
 
+    def sanity_check(self):
+        if self.name_type and self.name_type != "k":
+            if self.mtime:
+                logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
+                raise ValueError("A Registry Key (node) is the only kind of CellObject that can have a timestamp.")
+            if self.root:
+                logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
+                raise ValueError("A Registry Key (node) is the only kind of CellObject that can have the 'root' attribute.")
+
     def to_Element(self):
         self.sanity_check()
 
@@ -1366,37 +1401,6 @@ class CellObject(object):
 
     def to_regxml(self):
         return ET.tostring(self.to_Element(), encoding="unicode")
-
-    def sanity_check(self):
-        if self.name_type and self.name_type != "k":
-            if self.mtime:
-                logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
-                raise ValueError("A Registry Key (node) is the only kind of CellObject that can have a timestamp.")
-            if self.root:
-                logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
-                raise ValueError("A Registry Key (node) is the only kind of CellObject that can have the 'root' attribute.")
-
-    _comparable_properties = set([
-      "cellpath",
-      "name",
-      "name_type",
-      "alloc",
-      "mtime"
-    ])
-
-    def compare_to_original(self):
-        assert self.original_cellobject
-
-        self._diffs = set()
-
-        for propname in CellObject._comparable_properties:
-            oval = getattr(self.original_cellobject, propname)
-            nval = getattr(self, propname)
-            if oval is None and nval is None:
-                continue
-            if oval != nval:
-                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
-                self._diffs.add(propname)
 
     @property
     def alloc(self):
