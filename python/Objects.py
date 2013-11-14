@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 import logging
 import re
@@ -850,7 +850,7 @@ class FileObject(object):
         #Map "delta:" attributes of <fileobject>s into the special self.diffs members
         #Start with inverting the dictionary
         _d = { FileObject._diff_attr_names[k].replace("delta:",""):k for k in FileObject._diff_attr_names }
-        logging.debug("Inverted dictionary: _d = %r" % _d)
+        #logging.debug("Inverted dictionary: _d = %r" % _d)
         for attr in e.attrib:
             logging.debug("Looking for differential annotations: %r" % e.attrib)
             (ns, an) = _qsplit(attr)
@@ -1161,7 +1161,13 @@ class FileObject(object):
 
     @name_type.setter
     def name_type(self, val):
-        self._name_type = _strcast(val)
+        if val is None:
+            self._name_type = val
+        else:
+            cast_val = _strcast(val)
+            if cast_val not in ["-", "p", "c", "d", "b", "r", "l", "s", "h", "w", "v"]:
+                raise ValueError("Unexpected name_type received: %r (casted to %r)." % (val, cast_val))
+            self._name_type = cast_val
 
     @property
     def nlink(self):
