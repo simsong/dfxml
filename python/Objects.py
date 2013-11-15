@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 import logging
 import re
@@ -116,6 +116,15 @@ class DFXMLObject(object):
             self.append(v)
         for f in input_files:
             self.append(f)
+
+    def __iter__(self):
+        """Yields all VolumeObjects, recursively their FileObjects, and the FileObjects directly attached to this DFXMLObject, in that order."""
+        for v in self._volumes:
+            yield v
+            for f in v:
+                yield f
+        for f in self._files:
+            yield f
 
     def add_namespace(self, prefix, url):
         self._namespaces[prefix] = url
@@ -331,6 +340,11 @@ class VolumeObject(object):
             if prop == "files":
                 continue
             setattr(self, prop, kwargs.get(prop))
+
+    def __iter__(self):
+        """Yields all FileObjects directly attached to this VolumeObject."""
+        for f in self._files:
+            yield f
 
     def __repr__(self):
         parts = []
