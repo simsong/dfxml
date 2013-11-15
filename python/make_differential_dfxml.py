@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import Objects
 import logging
@@ -18,19 +18,24 @@ import sys
 import collections
 import dfxml
 
-def main():
-    global args
+def make_differential_dfxml(pre, post):
+    """
+    Takes as input two paths to DFXML files.  Returns a DFXMLObject.
+    @param pre String.
+    @param post String.
+    """
+
+    fileobjects_changed = []
 
     #Key: (partition, inode, filename); value: FileObject
     old_fis = None
     new_fis = None
 
-    fileobjects_changed = []
-
     d = Objects.DFXMLObject(version="1.1.0")
     d.add_namespace("delta", dfxml.XMLNS_DELTA)
 
-    for infile in args.infiles:
+    for infile in [pre, post]:
+
         logging.debug("infile = %r" % infile)
         old_fis = new_fis
         new_fis = dict()
@@ -119,8 +124,23 @@ def main():
             d.append(fi)
 
         #Output
-        print(d.to_dfxml())
+        return d
 
+def main():
+    global args
+
+    pre = None
+    post = None
+
+    if len(args.infiles) > 2:
+        raise NotImplementedError("This program only analyzes two files at the moment.")
+
+    for infile in args.infiles:
+        pre = post
+        post = infile
+        if not pre is None:
+            print(make_differential_dfxml(pre, post).to_dfxml())
+            
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
