@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 import logging
 import re
@@ -50,26 +50,6 @@ def _intcast(val):
 
     logging.debug("val = " + repr(val))
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
-
-@functools.lru_cache(maxsize=128)
-def _octcast(val):
-    if val is None:
-        return None
-
-    #Use _intcast to deal with nulls and bad strings
-    i = _intcast(val)
-    if not isinstance(i, int):
-        logging.debug("val = " + repr(val))
-        raise ValueError("(Unforeseen revisions since last tested.)")
-
-    s = "0o" + str(i)
-    try:
-        retval = int(s, 8)
-        return retval
-    except ValueError:
-        logging.debug("val = " + repr(val))
-        logging.warning("Failed interpreting an octal mode.")
-        return None
 
 @functools.lru_cache(maxsize=None)
 def _qsplit(tagname):
@@ -888,6 +868,7 @@ class FileObject(object):
       "gid",
       "id",
       "inode",
+      "link_target",
       "libmagic",
       "md5",
       "meta_type",
@@ -906,32 +887,8 @@ class FileObject(object):
       "used"
     ])
 
-    _comparable_properties = set([
-      "alloc",
-      "atime",
-      "bkup_time",
-      "byte_runs",
-      "compressed",
-      "crtime",
-      "dtime",
-      "filename",
-      "filesize",
-      "gid",
-      "inode",
-      "libmagic",
-      "md5",
-      "meta_type",
-      "mode",
-      "mtime",
-      "name_type",
-      "nlink",
-      "orphan",
-      "parent_object",
-      "seq",
-      "sha1",
-      "uid",
-      "unalloc",
-      "used"
+    _incomparable_properties = set([
+      "id"
     ])
 
     _diff_attr_names = {
@@ -948,10 +905,24 @@ class FileObject(object):
             setattr(self, prop, kwargs.get(prop))
         self._diffs = set()
 
+    def __eq__(self, other):
+        if other is None:
+            return False
+        _typecheck(other, FileObject)
+        for prop in FileObject._all_properties:
+            if prop in FileObject._incomparable_properties:
+                continue
+            if getattr(self, prop) != getattr(other, prop):
+                return False
+        return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__(self):
         parts = []
 
-        for prop in FileObject._all_properties:
+        for prop in sorted(FileObject._all_properties):
             #Save byte runs for the end
             if prop != "byte_runs":
                 value = getattr(self, prop)
@@ -964,16 +935,27 @@ class FileObject(object):
         return "FileObject(" + ", ".join(parts) + ")"
 
     def compare_to_original(self):
-        assert self.original_fileobject
+        self._diffs = self.compare_to_other(self.original_fileobject, True)
 
-        for propname in FileObject._comparable_properties:
-            oval = getattr(self.original_fileobject, propname)
+    def compare_to_other(self, other, ignore_original=False):
+        _typecheck(other, FileObject)
+
+        diffs = set()
+
+        for propname in FileObject._all_properties:
+            if propname in FileObject._incomparable_properties:
+                continue
+            if ignore_original and propname == "original_fileobject":
+                continue
+            oval = getattr(other, propname)
             nval = getattr(self, propname)
             if oval is None and nval is None:
                 continue
             if oval != nval:
                 #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
-                self._diffs.add(propname)
+                diffs.add(propname)
+
+        return diffs
 
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
@@ -1089,6 +1071,11 @@ class FileObject(object):
                 _anno_change(tmpel)
                 outel.append(tmpel)
 
+        if self.parent_object:
+            tmpel = self.parent_object.to_Element()
+            tmpel.tag = "parent_object"
+            outel.append(tmpel)
+
         _append_str("filename", self.filename)
         _append_str("partition", self.partition)
         _append_str("id", self.id)
@@ -1112,6 +1099,8 @@ class FileObject(object):
         _append_str("seq", self.seq)
         _append_time("dtime", self.dtime) #TODO Needs handling for prec
         _append_time("bkup_time", self.bkup_time) #TODO Needs handling for prec
+        _append_str("link_target", self.link_target)
+        _append_str("libmagic", self.libmagic)
 
         if self.byte_runs:
             tmpel = self.byte_runs.to_Element()
@@ -1273,13 +1262,13 @@ class FileObject(object):
 
     @property
     def mode(self):
-        """The security mode is represented in the FileObject as a base-10 integer.  It is serialized as an octal integer as most people expect a Posix permission definition (e.g. 0755)."""
+        """The security mode is represented in the FileObject as a base-10 integer.  It is also serialized as a decimal integer."""
         #TODO This decimal-octal business is worth a unit test.
         return self._mode
 
     @mode.setter
     def mode(self, val):
-        self._mode = _octcast(val)
+        self._mode = _intcast(val)
 
     @property
     def mtime(self):
@@ -1807,60 +1796,5 @@ if __name__ == "__main__":
     ho.append(nco)
     ro.append(ho)
     ro.print_regxml()
-
-    ofo = FileObject()
-    parent = FileObject()
-    parent.inode = 234
-    ofo.parent_object = parent
-    ofo.filename = "test file"
-    ofo.error = "Neither a real file, nor real error"
-    ofo.partition = 2
-    ofo.id = 235
-    ofo.name_type = "r"
-    ofo.filesize = 1234
-    ofo.unalloc = 0
-    ofo.unused = 0
-    ofo.orphan = 0
-    ofo.compressed = 1
-    ofo.inode = 6543
-    ofo.libmagic = "data"
-    ofo.meta_type = 8
-    ofo.mode = 755
-    ofo.nlink = 1
-    ofo.uid = "S-1-234-etc"
-    ofo.gid = "S-2-234-etc"
-    ofo.mtime = "1999-12-31T12:34:56Z"
-    ofo.ctime = "1998-12-31T12:34:56Z"
-    ofo.atime = "1997-12-31T12:34:56Z"
-    ofo.crtime = "1996-12-31T12:34:56Z"
-    ofo.seq = 3
-    ofo.dtime = "1995-12-31T12:34:56Z"
-    ofo.bkup_time = "1994-12-31T12:34:56Z"
-    ofo.link_target = "Nonexistent file"
-    ofo.libmagic = "Some kind of compressed"
-    ofo.sha1 = "7d97e98f8af710c7e7fe703abc8f639e0ee507c4"   
-    ofo.md5 = "2b00042f7481c7b056c4b410d28f33cf"
-    ofo.brs = brs
-    print(ofo.to_dfxml())
-
-    ofoe = ofo.to_Element()
-    nfo = FileObject()
-    nfo.populate_from_Element(ofoe)
-    nfo.mtime = "2013-12-31T12:34:56Z"
-    nfo.sha1 = "447d306060631570b7713ea48e74103c68eab0a3"
-    nfo.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
-    nfo.id += 1
-    nfo.original_fileobject = ofo
-    #nfo.byte_runs = nco.byte_runs #TODO
-    print(nfo.to_dfxml())
-
-    nfo.compare_to_original()
-    print(nfo.diffs)
-
-    import os
-    s = os.stat(__file__)
-    sfo = FileObject()
-    sfo.populate_from_stat(s)
-    print(sfo.to_dfxml())
 
     print("Unit tests passed.")
