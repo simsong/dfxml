@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 import logging
 import re
@@ -43,7 +43,7 @@ def _intcast(val):
     if isinstance(val, str):
         if val[0] == "-":
             if val[1:].isdigit():
-                return (-1) * int(val)
+                return int(val)
         else:
             if val.isdigit():
                 return int(val)
@@ -320,21 +320,12 @@ class VolumeObject(object):
       "allocated_only"
     ])
 
-    _comparable_properties = set([
-      "byte_runs",
-      "partition_offset",
-      "sector_size",
-      "block_size",
-      "ftype",
-      "ftype_str",
-      "block_count",
-      "first_block",
-      "last_block",
-      "allocated_only"
-    ])
+    _incomparable_properties = set()
 
     def __init__(self, *args, **kwargs):
         self._files = []
+        self._original_volume = None
+        self._diffs = None
 
         for prop in VolumeObject._all_properties:
             if prop == "files":
@@ -361,21 +352,43 @@ class VolumeObject(object):
         assert isinstance(value, FileObject)
         self._files.append(value)
 
+    def compare_to_original(self):
+        self._diffs = self.compare_to_other(self.original_volume)
+
+    def compare_to_other(self, other):
+        """Returns a set of all the properties found to differ."""
+        _typecheck(other, VolumeObject)
+        diffs = set()
+        for prop in VolumeObject._all_properties:
+            if prop in VolumeObject._incomparable_properties:
+                continue
+            #logging.debug("getattr(self, %r) = %r" % (prop, getattr(self, prop)))
+            #logging.debug("getattr(other, %r) = %r" % (prop, getattr(other, prop)))
+            if getattr(self, prop) != getattr(other, prop):
+                diffs.add(prop)
+        return diffs
+
     def populate_from_Element(self, e):
-        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
+        _typecheck(e, (ET.Element, ET.ElementTree))
+        logging.debug("e = %r" % e)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
-        assert tn == "volume"
+        assert tn in ["volume", "original_volume"]
 
         #Look through direct-child elements to populate run array
         for ce in e.findall("./*"):
+            #logging.debug("ce = %r" % ce)
             (cns, ctn) = _qsplit(ce.tag)
+            #logging.debug("cns = %r" % cns)
+            #logging.debug("ctn = %r" % ctn)
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn in VolumeObject._all_properties:
+                #logging.debug("ce.text = %r" % ce.text)
                 setattr(self, ctn, ce.text)
+                #logging.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
             else:
                 raise ValueError("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
@@ -410,9 +423,120 @@ class VolumeObject(object):
         return outel
 
     def to_partial_Element(self):
-        """Returns the volume element with its properties, except for the child fileobjects."""
+        """Returns the volume element with its properties, except for the child fileobjects.  Properties are appended in DFXML schema order."""
         outel = ET.Element("volume")
+
+        if self.byte_runs:
+            outel.append(self.byte_runs.to_Element())
+
+        for prop in [
+          "partition_offset",
+          "sector_size",
+          "block_size",
+          "ftype",
+          "ftype_str",
+          "block_count",
+          "first_block",
+          "last_block"
+        ]:
+            value = getattr(self, prop)
+            if not value is None:
+                tmpel = ET.Element(prop)
+                tmpel.text = str(value)
+                outel.append(tmpel)
+
+        if not self.allocated_only is None:
+            tmpel = ET.Element("allocated_only")
+            tmpel.text = "1" if self.allocated_only else "0"
+            outel.append(tmpel)
+
         return outel
+
+    @property
+    def allocated_only(self):
+        return self._allocated_only
+
+    @allocated_only.setter
+    def allocated_only(self, val):
+        self._allocated_only = _boolcast(val)
+
+    @property
+    def block_count(self):
+        return self._block_count
+
+    @block_count.setter
+    def block_count(self, val):
+        self._block_count = _intcast(val)
+
+    @property
+    def block_size(self):
+        return self._block_size
+
+    @block_size.setter
+    def block_size(self, val):
+        self._block_size = _intcast(val)
+
+    @property
+    def diffs(self):
+        return self._diffs
+
+    @property
+    def first_block(self):
+        return self._first_block
+
+    @first_block.setter
+    def first_block(self, val):
+        self._first_block = _intcast(val)
+
+    @property
+    def ftype(self):
+        return self._ftype
+
+    @ftype.setter
+    def ftype(self, val):
+        self._ftype = _intcast(val)
+
+    @property
+    def ftype_str(self):
+        return self._ftype_str
+
+    @ftype_str.setter
+    def ftype_str(self, val):
+        self._ftype_str = _strcast(val)
+
+    @property
+    def last_block(self):
+        return self._last_block
+
+    @last_block.setter
+    def last_block(self, val):
+        self._last_block = _intcast(val)
+
+    @property
+    def original_volume(self):
+        return self._original_volume
+
+    @original_volume.setter
+    def original_volume(self, val):
+        if not val is None:
+            _typecheck(val, VolumeObject)
+        self._original_volume= val
+
+    @property
+    def partition_offset(self):
+        return self._partition_offset
+
+    @partition_offset.setter
+    def partition_offset(self, val):
+        self._partition_offset = _intcast(val)
+
+    @property
+    def sector_size(self):
+        return self._sector_size
+
+    @sector_size.setter
+    def sector_size(self, val):
+        self._sector_size = _intcast(val)
 
 class HiveObject(object):
     def __init__(self, *args, **kwargs):
@@ -1596,8 +1720,11 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     #Run unit tests
 
+    assert _intcast(-1) == -1
+    assert _intcast("-1") == -1
     assert _qsplit("{http://www.w3.org/2001/XMLSchema}all") == ("http://www.w3.org/2001/XMLSchema","all")
     assert _qsplit("http://www.w3.org/2001/XMLSchema}all") == (None, "http://www.w3.org/2001/XMLSchema}all")
+
 
     fi = FileObject()
 
