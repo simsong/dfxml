@@ -4,7 +4,8 @@ check: \
   check-dfxml_tool \
   check-differential_dfxml \
   check-idifference-dfxml \
-  check-mac_timelines
+  check-mac_timelines \
+  check-Objects
 	@echo "Tests passed!"
 
 check-dfxml:
@@ -25,6 +26,9 @@ check-idifference-dfxml:
 check-mac_timelines:
 	./test_mac_timelines.sh
 	
+check-Objects:
+	$(MAKE) -C test_Objects
+
 clean:
 	rm -f dfxml_tool_*xml
 	rm -f cat_test_*.dfxml
