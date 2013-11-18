@@ -18,6 +18,12 @@ import sys
 import collections
 import dfxml
 
+def ignorable_name(fn):
+    """Filter out recognized names."""
+    if fn is None:
+        return False
+    return fn in [".", "..", "$FAT1", "$FAT2"]
+
 def make_differential_dfxml(pre, post):
     """
     Takes as input two paths to DFXML files.  Returns a DFXMLObject.
@@ -45,6 +51,9 @@ def make_differential_dfxml(pre, post):
         for (i, obj) in enumerate(Objects.objects_from_file(infile, dfxmlobject=d)):
             #logging.debug("%d. obj = %r" % (i, obj))
             if not isinstance(obj, Objects.FileObject):
+                continue
+
+            if ignorable_name(obj.filename):
                 continue
 
             #Ignore unallocated content comparisons for now.  The unique identification needs a little more to work.
@@ -76,9 +85,15 @@ def make_differential_dfxml(pre, post):
         if old_fis is None:
             continue
 
+        logging.debug("len(old_fis) = %d" % len(old_fis))
+        logging.debug("len(new_fis) = %d" % len(new_fis))
+        logging.debug("len(fileobjects_changed) = %d" % len(fileobjects_changed))
+
         #Identify renames - only possible if 1-to-1.  Many-to-many renames are just left as new and deleted files.
+        logging.debug("Detecting renames...")
         fileobjects_renamed = []
         def _make_name_map(d):
+            """Returns a dictionary, mapping (partition, inode) -> {filename}."""
             retdict = collections.defaultdict(lambda: set())
             for (partition, inode, filename) in d.keys():
                 retdict[(partition, inode)].add(filename)
@@ -93,13 +108,40 @@ def make_differential_dfxml(pre, post):
             if len(old_inode_names[key]) != 1:
                 continue
             (partition, inode) = key
-            old_obj = old_fis.pop((partition, inode, old_inode_names[key][0]))
-            new_obj = new_fis.pop((partition, inode, new_inode_names[key][0]))
+            old_name = old_inode_names[key].pop()
+            new_name = new_inode_names[key].pop()
+            old_obj = old_fis.pop((partition, inode, old_name))
+            new_obj = new_fis.pop((partition, inode, new_name))
             new_obj.original_fileobject = old_obj
             new_obj.compare_to_original()
             fileobjects_renamed.append(new_obj)
+        logging.debug("len(old_fis) -> %d" % len(old_fis))
+        logging.debug("len(new_fis) -> %d" % len(new_fis))
+        logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
+        logging.debug("len(fileobjects_renamed) = %d" % len(fileobjects_renamed))
 
-        #TODO Identify files that just changed inode number - basically, doing the rename detection again, though it'll be simpler.
+        #Identify files that just changed inode number - basically, doing the rename detection again, though it'll be simpler.
+        logging.debug("Detecting inode number changes...")
+        def _make_inode_map(d):
+            """Returns a dictionary, mapping (partition, filename) -> inode."""
+            retdict = dict()
+            for (partition, inode, filename) in d.keys():
+                retdict[(partition, filename)] = inode
+            return retdict
+        old_name_inodes = _make_inode_map(old_fis)
+        new_name_inodes = _make_inode_map(new_fis)
+        for key in new_name_inodes.keys():
+            if not key in old_name_inodes:
+                continue
+            (partition, name) = key
+            old_obj = old_fis.pop((partition, old_name_inodes[key], name))
+            new_obj = new_fis.pop((partition, new_name_inodes[key], name))
+            new_obj.original_fileobject = old_obj
+            new_obj.compare_to_original()
+            fileobjects_changed.append(new_obj)
+        logging.debug("len(old_fis) -> %d" % len(old_fis))
+        logging.debug("len(new_fis) -> %d" % len(new_fis))
+        logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
 
         #TODO Group outputs by volume
 
