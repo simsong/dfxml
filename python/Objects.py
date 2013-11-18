@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 import logging
 import re
@@ -118,6 +118,17 @@ class DFXMLObject(object):
         else:
             logging.debug("value = %r" % value)
             raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
+
+    def populate_from_Element(self, e):
+        if "version" in e.attrib:
+            self.version = e.attrib["version"]
+
+        for elem in e.findall(".//*"):
+            (ns, ln) = _qsplit(elem.tag)
+            if ln == "command_line":
+                self.command_line = elem.text
+            elif ln == "image_filename":
+                self.sources.append(elem.text)
 
     def print_dfxml(self):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
@@ -996,10 +1007,10 @@ class FileObject(object):
         return diffs
 
     def populate_from_Element(self, e):
-        """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
+        """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #logging.debug("FileObject.populated_from_Element(%r)" % e)
+        #logging.debug("FileObject.populate_from_Element(%r)" % e)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -1119,7 +1130,6 @@ class FileObject(object):
         _append_str("id", self.id)
         _append_str("name_type", self.name_type)
         _append_str("filesize", self.filesize)
-        _append_bool("unalloc", self.unalloc)
         _append_bool("alloc", self.alloc)
         _append_bool("used", self.used)
         _append_bool("orphan", self.orphan)
@@ -1171,11 +1181,14 @@ class FileObject(object):
 
     @property
     def alloc(self):
+        """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         return self._alloc
 
     @alloc.setter
     def alloc(self, val):
         self._alloc = _boolcast(val)
+        if not self._alloc is None:
+            self._unalloc = not self._alloc
 
     @property
     def atime(self):
@@ -1397,11 +1410,14 @@ class FileObject(object):
 
     @property
     def unalloc(self):
+        """Note that setting .unalloc will affect the value of .alloc, and vice versa.  The last one to set wins."""
         return self._unalloc
 
     @unalloc.setter
     def unalloc(self, val):
         self._unalloc = _boolcast(val)
+        if not self._unalloc is None:
+            self._alloc = not self._unalloc
 
     @property
     def used(self):
@@ -1683,13 +1699,22 @@ def objects_from_file(filename, dfxmlobject=None):
     vo = None
 
     #It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first fileobject is hit.
+    #Likewise with the Element for the DFXMLObject.
+    dfxml_proxy = None
     volume_proxy = None
 
     #State machine, used to track when the first fileobject of a volume is encountered.
-    READING_OTHER = 0
-    READING_VOLUMES = 1
-    READING_FILES = 2
-    _state = READING_OTHER
+    READING_START = 0
+    READING_PRESTREAM = 1 #DFXML metadata, pre-Object stream
+    READING_VOLUMES = 2
+    READING_FILES = 3
+    READING_POSTSTREAM = 4 #DFXML metadata, post-Object stream (typically the <rusage> element)
+    _state = READING_START
+
+    def _populate_DFXMLObject():
+        dobj = DFXMLObject()
+        dobj.populate_from_Element(dfxml_proxy)
+        return dobj
 
     for (event, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
         #logging.debug("(event, elem) = (%r, %r)" % (event, elem))
@@ -1704,14 +1729,32 @@ def objects_from_file(filename, dfxmlobject=None):
         (ns, ln) = _qsplit(elem.tag)
 
         if event == "start":
-            if ln == "volume":
-                volume_proxy = ET.Element(elem.tag)
+            if ln == "dfxml":
+                if _state != READING_START:
+                    raise ValueError("Encountered a <dfxml> element, but the parser isn't in its start state.  Recursive <dfxml> declarations aren't supported at this time.")
+                dfxml_proxy = ET.Element(elem.tag)
                 for k in elem.attrib:
-                    volume_proxy.attrib[k] = elem.attrib[k] 
+                    #TODO Check if xmlns declarations cause problems here
+                    dfxml_proxy.attrib[k] = elem.attrib[k] 
+                _state = READING_PRESTREAM
+            elif ln == "volume":
+                if _state == READING_PRESTREAM:
+                    #Cut; yield DFXMLObject now.
+                    dobj = _populate_DFXMLObject()
+                    yield dobj
+                else:
+                    #Start populating a new Volume proxy.
+                    volume_proxy = ET.Element(elem.tag)
+                    for k in elem.attrib:
+                        volume_proxy.attrib[k] = elem.attrib[k] 
                 _state = READING_VOLUMES
-            if ln == "fileobject":
-                if _state == READING_VOLUMES:
-                    #Cut; populate VolumeObject now.
+            elif ln == "fileobject":
+                if _state == READING_PRESTREAM:
+                    #Cut; yield DFXMLObject now.
+                    dobj = _populate_DFXMLObject()
+                    yield dobj
+                elif _state == READING_VOLUMES:
+                    #Cut; yield VolumeObject now.
                     if volume_proxy is not None:
                         vo = VolumeObject()
                         vo.populate_from_Element(volume_proxy)
@@ -1719,10 +1762,10 @@ def objects_from_file(filename, dfxmlobject=None):
                         #Reset
                         volume_proxy = None
                         elem.clear()
-                    _state = READING_FILES
+                _state = READING_FILES
         elif event == "end":
             if ln == "fileobject":
-                if _state == READING_OTHER:
+                if _state in (READING_PRESTREAM, READING_POSTSTREAM):
                     #This particular branch can be reached if there are trailing fileobject elements after the volume element.  This would happen if a tool needed to represent files (likely reassembled fragments) found outside all the partitions.
                     #More frequently, we hit this point when there are no volume groupings.
                     vo = None
@@ -1734,11 +1777,16 @@ def objects_from_file(filename, dfxmlobject=None):
                 #Reset
                 elem.clear()
             elif elem.tag == "volume":
-                _state = READING_OTHER
+                _state = READING_POSTSTREAM
             elif _state == READING_VOLUMES:
                 #This is a volume property; glom onto the proxy.
                 if volume_proxy is not None:
                     volume_proxy.append(elem)
+            elif _state == READING_PRESTREAM:
+                if ln in ["metadata", "creator", "source"]:
+                    #This is a direct child of the DFXML document property; glom onto the proxy.
+                    if dfxml_proxy is not None:
+                        dfxml_proxy.append(elem)
 
 if __name__ == "__main__":
     import argparse

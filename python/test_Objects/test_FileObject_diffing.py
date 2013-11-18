@@ -62,7 +62,7 @@ f2.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
 
 d01 = f0.compare_to_other(f1)
 logging.debug("d01 = %r" % d01)
-assert d01 == set(["alloc"])
+assert d01 == set(["alloc"]) or d01 == set(["alloc", "unalloc"])
 
 d02 = f0.compare_to_other(f2)
 
