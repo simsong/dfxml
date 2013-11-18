@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 import logging
 import re
@@ -1051,10 +1051,10 @@ class FileObject(object):
         #Recall that Element text must be a string
         def _append_str(name, value):
             #TODO Need lookup support for diff annos
-            #TODO Need to also output empty elements (still in schema order) if a change was recorded.
-            if not value is None:
+            if not value is None or name in diffs_whittle_set:
                 tmpel = ET.Element(name)
-                tmpel.text = str(value)
+                if not value is None:
+                    tmpel.text = str(value)
                 _anno_change(tmpel)
                 outel.append(tmpel)
 
@@ -1085,7 +1085,7 @@ class FileObject(object):
         _append_bool("alloc", self.alloc)
         _append_bool("used", self.used)
         _append_bool("orphan", self.orphan)
-        _append_str("compressed", self.compressed)
+        _append_bool("compressed", self.compressed)
         _append_str("inode", self.inode)
         _append_str("meta_type", self.meta_type)
         _append_str("mode", self.mode)
