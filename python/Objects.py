@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 import logging
 import re
@@ -729,6 +729,8 @@ re_precision = re.compile(r"(?P<num>\d+)(?P<unit>(|m|n)s|d)?")
 class TimestampObject(object):
     """
     Encodes the "dftime" type.  Wraps around dfxml.dftime, closely enough that this might just get folded into that class.
+
+    TimestampObjects implement a vs-null comparison workaround as in the SAS family of products:  Null, for ordering purposes, is considered to be a value less than negative infinity.
     """
 
     timestamp_name_list = ["mtime", "atime", "ctime", "crtime", "dtime", "bkup_time"]
@@ -759,6 +761,38 @@ class TimestampObject(object):
             return False
         return True
 
+    def __ge__(self, other):
+        """Note: The semantics here and in other ordering functions are that "Null" is a value less than negative infinity."""
+        if other is None:
+            return False
+        else:
+            self._comparison_sanity_check(other)
+        return self.time.__ge__(other.time)
+
+    def __gt__(self, other):
+        """Note: The semantics here and in other ordering functions are that "Null" is a value less than negative infinity."""
+        if other is None:
+            return False
+        else:
+            self._comparison_sanity_check(other)
+        return self.time.__gt__(other.time)
+
+    def __le__(self, other):
+        """Note: The semantics here and in other ordering functions are that "Null" is a value less than negative infinity."""
+        if other is None:
+            return True
+        else:
+            self._comparison_sanity_check(other)
+        return self.time.__le__(other.time)
+
+    def __lt__(self, other):
+        """Note: The semantics here and in other ordering functions are that "Null" is a value less than negative infinity."""
+        if other is None:
+            return True
+        else:
+            self._comparison_sanity_check(other)
+        return self.time.__lt__(other.time)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -777,6 +811,10 @@ class TimestampObject(object):
             return str(self.time)
         else:
             return self.__repr__()
+
+    def _comparison_sanity_check(self, other):
+        if None in (self.time, other.time):
+            raise ValueError("Can't compare TimestampObjects: %r, %r." % self, other)
 
     def to_Element(self):
         assert self.name
