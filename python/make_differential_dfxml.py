@@ -37,6 +37,10 @@ def make_differential_dfxml(pre, post):
     old_fis = None
     new_fis = None
 
+    #Key: (partition, inode, filename); value: FileObject list
+    old_fis_unalloc = None
+    new_fis_unalloc = None
+
     d = Objects.DFXMLObject(version="1.1.0")
     d.add_namespace("delta", dfxml.XMLNS_DELTA)
 
@@ -45,6 +49,9 @@ def make_differential_dfxml(pre, post):
         logging.debug("infile = %r" % infile)
         old_fis = new_fis
         new_fis = dict()
+
+        old_fis_unalloc = new_fis_unalloc
+        new_fis_unalloc = collections.defaultdict(list)
 
         d.sources.append(infile)
 
@@ -56,11 +63,12 @@ def make_differential_dfxml(pre, post):
             if ignorable_name(obj.filename):
                 continue
 
-            #Ignore unallocated content comparisons for now.  The unique identification needs a little more to work.
-            if obj.alloc == False:
-                continue
-
             key = (obj.partition, obj.inode, obj.filename)
+
+            #Ignore unallocated content comparisons until a later loop.  The unique identification of deleted files needs a little more to work.
+            if obj.alloc == False:
+                new_fis_unalloc[key].append(obj)
+                continue
 
             #The rest of this loop is irrelevant until the second file.
             if old_fis is None:
@@ -84,6 +92,7 @@ def make_differential_dfxml(pre, post):
         #The rest of the files loop is irrelevant until the second file.
         if old_fis is None:
             continue
+
 
         logging.debug("len(old_fis) = %d" % len(old_fis))
         logging.debug("len(new_fis) = %d" % len(new_fis))
@@ -143,6 +152,38 @@ def make_differential_dfxml(pre, post):
         logging.debug("len(new_fis) -> %d" % len(new_fis))
         logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
 
+        #We may be able to match files that aren't allocated against files we think are deleted
+        logging.debug("Detecting modifications from unallocated files...")
+        TESTING = """
+        fileobjects_deleted = []
+        for key in new_fis_unalloc:
+            #1 partition, 1 inode number, 1 name, repeated:  Too ambiguous to compare.
+            if len(new_fis_unalloc[key]) != 1:
+                continue
+
+            if key in old_fis_unalloc:
+                if len(old_fis_unalloc[key]) == 1:
+                    #The file was unallocated in the previous image, too.
+                    old_obj = old_fis_unalloc[key].pop()
+                    new_obj = new_fis_unalloc[key].pop()
+                    new_obj.original_fileobject = old_obj
+                    new_obj.compare_to_original()
+                    #The file might not have changed.  It's interesting if it did, though.
+                    if len(new_obj.diffs) > 0:
+                        fileobjects_changed.append(new_obj)
+            elif key in old_fis:
+                #Identified a deletion.
+                old_obj = old_fis.pop(key)
+                new_obj = new_fis_unalloc[key].pop()
+                new_obj.original_fileobject = old_obj
+                new_obj.compare_to_original()
+                fileobjects_deleted.append(new_obj)
+        logging.debug("len(old_fis) -> %d" % len(old_fis))
+        logging.debug("len(new_fis) -> %d" % len(new_fis))
+        logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
+        logging.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
+        """
+
         #TODO Group outputs by volume
 
         #Populate DFXMLObject.
@@ -151,6 +192,11 @@ def make_differential_dfxml(pre, post):
             fi = new_fis[key]
             fi.diffs.add("_new")
             d.append(fi)
+        TESTING = """
+        for fi in fileobjects_deleted:
+            fi.diffs.add("_deleted")
+            d.append(fi)
+        """
         for key in old_fis:
             ofi = old_fis[key]
             nfi = Objects.FileObject()
