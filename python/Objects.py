@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.15"
+__version__ = "0.0.16"
 
 import logging
 import re
@@ -15,6 +15,8 @@ import dfxml
 
 #For memoization
 import functools
+
+_nagged_alloc = False
 
 @functools.lru_cache(maxsize=None)
 def _boolcast(val):
@@ -905,6 +907,8 @@ class FileObject(object):
 
     _all_properties = set([
       "alloc",
+      "alloc_inode",
+      "alloc_name",
       "atime",
       "bkup_time",
       "byte_runs",
@@ -1130,7 +1134,11 @@ class FileObject(object):
         _append_str("id", self.id)
         _append_str("name_type", self.name_type)
         _append_str("filesize", self.filesize)
-        _append_bool("alloc", self.alloc)
+        if self.alloc_name is None and self.alloc_inode is None:
+            _append_bool("alloc", self.alloc)
+        else:
+            _append_bool("alloc_inode", self.alloc_inode)
+            _append_bool("alloc_name", self.alloc_name)
         _append_bool("used", self.used)
         _append_bool("orphan", self.orphan)
         _append_bool("compressed", self.compressed)
@@ -1182,13 +1190,36 @@ class FileObject(object):
     @property
     def alloc(self):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
-        return self._alloc
+        global _nagged_alloc
+        if not _nagged_alloc:
+            logging.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode or .alloc_name instead.  .alloc is proxied as True if and only if alloc_inode and alloc_name are both True.")
+            _nagged_alloc = True
+        if self.alloc_inode and self.alloc_name:
+            return True
+        else:
+            return self._alloc
 
     @alloc.setter
     def alloc(self, val):
         self._alloc = _boolcast(val)
         if not self._alloc is None:
             self._unalloc = not self._alloc
+
+    @property
+    def alloc_inode(self):
+        return self._alloc_inode
+
+    @alloc_inode.setter
+    def alloc_inode(self, val):
+        self._alloc_inode = _boolcast(val)
+
+    @property
+    def alloc_name(self):
+        return self._alloc_name
+
+    @alloc_name.setter
+    def alloc_name(self, val):
+        self._alloc_name = _boolcast(val)
 
     @property
     def atime(self):
