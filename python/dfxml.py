@@ -701,8 +701,16 @@ class fileobject:
         return self.name_type()=='r' or self.name_type()==None
 
     def inode(self):
-        """Inode; may be a number or SleuthKit x-y-z formatr"""
+        """Inode; may be a number or SleuthKit x-y-z format"""
         return self.tag("inode")
+
+    def allocated_inode(self):
+        """Returns True if the file's inode data structure is allocated, False otherwise.  (Does not return None.)"""
+        return isone(self.tag("alloc_inode"))
+
+    def allocated_name(self):
+        """Returns True if the file's name data structure is allocated, False otherwise.  (Does not return None.)"""
+        return isone(self.tag("alloc_name"))
 
     def allocated(self):
         """Returns True if the file is allocated, False if it was not
@@ -711,7 +719,10 @@ class fileobject:
         We also need to tolerate the case of the unalloc tag being used.
         """
         if self.filename()=="$OrphanFiles": return False
-        return isone(self.tag("alloc")) or isone(self.tag("ALLOC")) or not isone(self.tag("unalloc"))
+        if self.allocated_inode() and self.allocated_name():
+            return True
+        else:
+            return isone(self.tag("alloc")) or isone(self.tag("ALLOC")) or not isone(self.tag("unalloc"))
 
     def compressed(self):
         if not self.has_tag("compressed") and not self.has_tag("compressed") : return False
@@ -1217,7 +1228,7 @@ class fileobject_reader(xml_reader):
 
 
     def _end_element(self, name):
-        """Handles the end of an eleement for the XPAT scanner"""
+        """Handles the end of an element for the XPAT scanner"""
         assert(self.tagstack.pop()==name) # make sure that the stack matches
         if name=="volume":
             self.volumeobject = None
