@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import os
 import logging
@@ -100,11 +100,11 @@ def main():
 
 
     idifference.h2("New files:")
-    res = [(obj.mtime, obj.filename, obj.filesize) for obj in new_files]
+    res = [(obj.mtime, obj.filename or "", obj.filesize) for obj in new_files]
     idifference.table(sorted(res))
 
     idifference.h2("Deleted files:")
-    res = [(obj.mtime, obj.filename, obj.filesize) for obj in deleted_files]
+    res = [(obj.mtime, obj.filename or "", obj.filesize) for obj in deleted_files]
     idifference.table(sorted(res))
 
     idifference.h2("Renamed files:")
