@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 import logging
 import re
@@ -121,6 +121,11 @@ class DFXMLObject(object):
             logging.debug("value = %r" % value)
             raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
 
+    def iter_namespaces(self):
+        """Yields (prefix, url) pairs of each namespace registered in this DFXMLObject."""
+        for prefix in self._namespaces:
+            yield (prefix, self._namespaces[prefix])
+
     def populate_from_Element(self, e):
         if "version" in e.attrib:
             self.version = e.attrib["version"]
@@ -214,6 +219,10 @@ class DFXMLObject(object):
         if not value is None:
             assert isinstance(value, str)
         self._command_line = value
+
+    @property
+    def namespaces(self):
+        raise AttributeError("The namespaces dictionary should not be directly accessed; instead, use .iter_namespaces().")
 
     @property
     def sources(self):
@@ -1718,7 +1727,7 @@ def objects_from_file(filename, dfxmlobject=None):
     Currently only accepts filenames ending in "xml".  Will accept disk image files in the future.
 
     @param filename: A string
-    @param dfxmlobject: A DFXMLObject document.  Use this to track namespaces encountered in the input file.
+    @param dfxmlobject: A DFXMLObject document.  Optional.  A DFXMLObject is created and yielded in the object stream if this argument is not supplied.
     """
 
     if not filename.endswith("xml"):
@@ -1726,8 +1735,10 @@ def objects_from_file(filename, dfxmlobject=None):
 
     fh = open(filename, "rb")
 
+    dobj = dfxmlobject or DFXMLObject()
+
     #The only way to efficiently populated VolumeObjects is to populate the object when the stream has hit its first FileObject.
-    vo = None
+    vobj = None
 
     #It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first fileobject is hit.
     #Likewise with the Element for the DFXMLObject.
@@ -1742,18 +1753,12 @@ def objects_from_file(filename, dfxmlobject=None):
     READING_POSTSTREAM = 4 #DFXML metadata, post-Object stream (typically the <rusage> element)
     _state = READING_START
 
-    def _populate_DFXMLObject():
-        dobj = DFXMLObject()
-        dobj.populate_from_Element(dfxml_proxy)
-        return dobj
-
     for (event, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
         #logging.debug("(event, elem) = (%r, %r)" % (event, elem))
 
         #Track namespaces
         if event == "start-ns":
-            if not dfxmlobject is None:
-                dfxmlobject.add_namespace(*elem)
+            dobj.add_namespace(*elem)
             continue
 
         #Split tag name into namespace and local name
@@ -1771,25 +1776,25 @@ def objects_from_file(filename, dfxmlobject=None):
             elif ln == "volume":
                 if _state == READING_PRESTREAM:
                     #Cut; yield DFXMLObject now.
-                    dobj = _populate_DFXMLObject()
+                    dobj.populate_from_Element(dfxml_proxy)
                     yield dobj
-                else:
-                    #Start populating a new Volume proxy.
-                    volume_proxy = ET.Element(elem.tag)
-                    for k in elem.attrib:
-                        volume_proxy.attrib[k] = elem.attrib[k] 
+                #Start populating a new Volume proxy.
+                volume_proxy = ET.Element(elem.tag)
+                for k in elem.attrib:
+                    volume_proxy.attrib[k] = elem.attrib[k] 
                 _state = READING_VOLUMES
             elif ln == "fileobject":
                 if _state == READING_PRESTREAM:
                     #Cut; yield DFXMLObject now.
-                    dobj = _populate_DFXMLObject()
+                    dobj.populate_from_Element(dfxml_proxy)
                     yield dobj
                 elif _state == READING_VOLUMES:
+                    logging.debug("Encountered a fileobject while reading volume properties.  Yielding volume now.")
                     #Cut; yield VolumeObject now.
                     if volume_proxy is not None:
-                        vo = VolumeObject()
-                        vo.populate_from_Element(volume_proxy)
-                        yield vo
+                        vobj = VolumeObject()
+                        vobj.populate_from_Element(volume_proxy)
+                        yield vobj
                         #Reset
                         volume_proxy = None
                         elem.clear()
@@ -1799,10 +1804,10 @@ def objects_from_file(filename, dfxmlobject=None):
                 if _state in (READING_PRESTREAM, READING_POSTSTREAM):
                     #This particular branch can be reached if there are trailing fileobject elements after the volume element.  This would happen if a tool needed to represent files (likely reassembled fragments) found outside all the partitions.
                     #More frequently, we hit this point when there are no volume groupings.
-                    vo = None
+                    vobj = None
                 fi = FileObject()
                 fi.populate_from_Element(elem)
-                fi.volume_object = vo
+                fi.volume_object = vobj
                 #logging.debug("fi = %r" % fi)
                 yield fi
                 #Reset

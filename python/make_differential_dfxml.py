@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 import Objects
 import logging
@@ -31,6 +31,11 @@ def make_differential_dfxml(pre, post):
     @param post String.
     """
 
+    #d: The container DFXMLObject, ultimately returned.
+    d = Objects.DFXMLObject(version="1.1.0")
+    d.command_line = " ".join(sys.argv)
+    d.add_namespace("delta", dfxml.XMLNS_DELTA)
+
     fileobjects_changed = []
 
     #Key: (partition, inode, filename); value: FileObject
@@ -40,9 +45,6 @@ def make_differential_dfxml(pre, post):
     #Key: (partition, inode, filename); value: FileObject list
     old_fis_unalloc = None
     new_fis_unalloc = None
-
-    d = Objects.DFXMLObject(version="1.1.0")
-    d.add_namespace("delta", dfxml.XMLNS_DELTA)
 
     for infile in [pre, post]:
 
@@ -55,9 +57,18 @@ def make_differential_dfxml(pre, post):
 
         d.sources.append(infile)
 
-        for (i, obj) in enumerate(Objects.objects_from_file(infile, dfxmlobject=d)):
+        for (i, obj) in enumerate(Objects.objects_from_file(infile)):
+            if isinstance(obj, Objects.DFXMLObject):
+                #Inherit desired properties from the source DFXMLObject.
+
+                #Inherit namespaces
+                for (prefix, url) in obj.iter_namespaces():
+                    d.add_namespace(prefix, url)
+
+                continue
             #logging.debug("%d. obj = %r" % (i, obj))
-            if not isinstance(obj, Objects.FileObject):
+            elif not isinstance(obj, Objects.FileObject):
+                #The rest of this loop compares only file objects.
                 continue
 
             if ignorable_name(obj.filename):
