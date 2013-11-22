@@ -57,48 +57,49 @@ def make_differential_dfxml(pre, post):
 
         d.sources.append(infile)
 
-        for (i, obj) in enumerate(Objects.objects_from_file(infile)):
-            if isinstance(obj, Objects.DFXMLObject):
+        for (i, new_obj) in enumerate(Objects.objects_from_file(infile)):
+            if isinstance(new_obj, Objects.DFXMLObject):
                 #Inherit desired properties from the source DFXMLObject.
 
                 #Inherit namespaces
-                for (prefix, url) in obj.iter_namespaces():
+                for (prefix, url) in new_obj.iter_namespaces():
                     d.add_namespace(prefix, url)
 
                 continue
             #logging.debug("%d. obj = %r" % (i, obj))
-            elif not isinstance(obj, Objects.FileObject):
+            elif not isinstance(new_obj, Objects.FileObject):
                 #The rest of this loop compares only file objects.
                 continue
 
-            if ignorable_name(obj.filename):
+            if ignorable_name(new_obj.filename):
                 continue
 
-            key = (obj.partition, obj.inode, obj.filename)
+            key = (new_obj.partition, new_obj.inode, new_obj.filename)
 
             #Ignore unallocated content comparisons until a later loop.  The unique identification of deleted files needs a little more to work.
-            if obj.alloc == False:
-                new_fis_unalloc[key].append(obj)
+            if new_obj.alloc == False:
+                new_fis_unalloc[key].append(new_obj)
                 continue
 
             #The rest of this loop is irrelevant until the second file.
             if old_fis is None:
-                new_fis[key] = obj
+                new_fis[key] = new_obj
                 continue
 
-            #Extract the old fileobject and check for changes
             if key in old_fis:
-                prior_obj = old_fis.pop(key)
-                obj.original_fileobject = prior_obj
-                obj.compare_to_original()
+                #Extract the old fileobject and check for changes
+                old_obj = old_fis.pop(key)
+                new_obj.original_fileobject = old_obj
+                new_obj.compare_to_original()
                 #TODO the old idifference just checked a few fields.  Add flag logic for this more stringent check.
-                if len(obj.diffs) > 0:
-                    fileobjects_changed.append(obj)
+                if len(new_obj.diffs) > 0:
+                    fileobjects_changed.append(new_obj)
                 else:
                     #Reclaim memory
-                    del obj
+                    del new_obj
             else:
-                new_fis[key] = obj
+                #Store the new object
+                new_fis[key] = new_obj
 
         #The rest of the files loop is irrelevant until the second file.
         if old_fis is None:
@@ -140,7 +141,7 @@ def make_differential_dfxml(pre, post):
         logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
         logging.debug("len(fileobjects_renamed) = %d" % len(fileobjects_renamed))
 
-        #Identify files that just changed inode number - basically, doing the rename detection again, though it'll be simpler.
+        #Identify files that just changed inode number - basically, doing the rename detection again
         logging.debug("Detecting inode number changes...")
         def _make_inode_map(d):
             """Returns a dictionary, mapping (partition, filename) -> inode."""
