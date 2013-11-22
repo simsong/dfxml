@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.17"
+__version__ = "0.0.18"
 
 import logging
 import re
@@ -327,7 +327,7 @@ class VolumeObject(object):
     def __init__(self, *args, **kwargs):
         self._files = []
         self._original_volume = None
-        self._diffs = None
+        self._diffs = set()
 
         for prop in VolumeObject._all_properties:
             if prop == "files":
@@ -372,7 +372,9 @@ class VolumeObject(object):
 
     def populate_from_Element(self, e):
         _typecheck(e, (ET.Element, ET.ElementTree))
-        logging.debug("e = %r" % e)
+        #logging.debug("e = %r" % e)
+
+        #TODO Read differential annotations
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -387,6 +389,9 @@ class VolumeObject(object):
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
+            elif ctn == "original_volume":
+                self.original_volume = VolumeObject()
+                self.original_volume.populate_from_Element(ce)
             elif ctn in VolumeObject._all_properties:
                 #logging.debug("ce.text = %r" % ce.text)
                 setattr(self, ctn, ce.text)
@@ -428,8 +433,33 @@ class VolumeObject(object):
         """Returns the volume element with its properties, except for the child fileobjects.  Properties are appended in DFXML schema order."""
         outel = ET.Element("volume")
 
+        if len(self.diffs) > 0:
+            outel.attrib["delta:modified_volume"] = "1"
+
         if self.byte_runs:
             outel.append(self.byte_runs.to_Element())
+
+        def _append_el(prop, value):
+            tmpel = ET.Element(prop)
+            _keep = False
+            if not value is None:
+                tmpel.text = str(value)
+                _keep = True
+            if prop in self.diffs:
+                tmpel.attrib["delta:changed_property"] = "1"
+                _keep = True
+            if _keep:
+                outel.append(tmpel)
+
+        def _append_str(prop):
+            value = getattr(self, prop)
+            _append_el(prop, value)
+
+        def _append_bool(prop):
+            value = getattr(self, prop)
+            if not value is None:
+                value = "1" if value else "0"
+            _append_el(prop, value)
 
         for prop in [
           "partition_offset",
@@ -441,15 +471,16 @@ class VolumeObject(object):
           "first_block",
           "last_block"
         ]:
-            value = getattr(self, prop)
-            if not value is None:
-                tmpel = ET.Element(prop)
-                tmpel.text = str(value)
-                outel.append(tmpel)
+            _append_str(prop)
 
-        if not self.allocated_only is None:
-            tmpel = ET.Element("allocated_only")
-            tmpel.text = "1" if self.allocated_only else "0"
+        #Output the one Boolean property
+        _append_bool("allocated_only")
+
+        #Output the original volume's properties
+        if not self.original_volume is None:
+            #Skip FileObject list, if any
+            tmpel = self.original_volume.to_partial_Element()
+            tmpel.tag = "delta:original_volume"
             outel.append(tmpel)
 
         return outel

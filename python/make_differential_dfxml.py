@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.2.4"
+__version__ = "0.3.0"
 
 import Objects
 import logging
@@ -36,6 +36,7 @@ def make_differential_dfxml(pre, post):
     d.command_line = " ".join(sys.argv)
     d.add_namespace("delta", dfxml.XMLNS_DELTA)
 
+    #The list most of this function is spent on building
     fileobjects_changed = []
 
     #Key: (partition, inode, filename); value: FileObject
@@ -45,6 +46,12 @@ def make_differential_dfxml(pre, post):
     #Key: (partition, inode, filename); value: FileObject list
     old_fis_unalloc = None
     new_fis_unalloc = None
+
+    #Key: Partition byte offset within the disk image
+    #Value: VolumeObject
+    volumes_by_offset = dict()
+    #Populated in distinct-offset encounter order
+    volumes_offset_encounter_order = dict()
 
     for infile in [pre, post]:
 
@@ -66,13 +73,39 @@ def make_differential_dfxml(pre, post):
                     d.add_namespace(prefix, url)
 
                 continue
-            #logging.debug("%d. obj = %r" % (i, obj))
+            elif isinstance(new_obj, Objects.VolumeObject):
+                offset = new_obj.partition_offset
+                if offset in volumes_by_offset:
+                    logging.debug("Found a volume again, at offset %r." % offset)
+                    if i == 0:
+                        logging.debug("new_obj.partition_offset = %r." % offset)
+                        logging.warning("Encountered a volume that starts at an offset as another volume, in the same disk image.  This analysis is based on the assumption that that doesn't happen.  Check results that depend on partition mappings.")
+                    else:
+                        #New volume; compare
+                        logging.debug("Found a volume in post image, at offset %r." % offset)
+                        volumes_by_offset[offset].original_volume = new_obj
+                        volumes_by_offset[offset].compare_to_original()
+                        if len(volumes_by_offset[offset].diffs) > 0:
+                            volumes_by_offset[offset].diffs.add("_modified")
+                else:
+                    logging.debug("Found a new volume, at offset %r." % offset)
+                    new_obj.diffs.add("_new")
+                    volumes_by_offset[offset] = new_obj
+                    volumes_offset_encounter_order[offset] = len(volumes_by_offset)
+                continue
             elif not isinstance(new_obj, Objects.FileObject):
                 #The rest of this loop compares only file objects.
                 continue
 
             if ignorable_name(new_obj.filename):
                 continue
+
+            #Normalize the partition number
+            if new_obj.volume_object is None:
+                new_obj.partition = None
+            else:
+                po = new_obj.volume_object.partition_offset
+                new_obj.partition = volumes_offset_encounter_order[po]
 
             key = (new_obj.partition, new_obj.inode, new_obj.filename)
 
@@ -165,6 +198,7 @@ def make_differential_dfxml(pre, post):
         logging.debug("len(old_fis) -> %d" % len(old_fis))
         logging.debug("len(new_fis) -> %d" % len(new_fis))
         logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
+        #And that's the end of the allocated-only, per-volume analysis.
 
         #We may be able to match files that aren't allocated against files we think are deleted
         logging.debug("Detecting modifications from unallocated files...")
@@ -198,34 +232,42 @@ def make_differential_dfxml(pre, post):
         logging.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
         """
 
-        #TODO Group outputs by volume
+        #Key: Partition number, or None
+        #Value: Reference to the VolumeObject corresponding with that partition number.  None -> the DFXMLObject.
+        appenders = dict()
+        for offset in volumes_offset_encounter_order:
+            appenders[volumes_offset_encounter_order[offset]] = volumes_by_offset[offset]
+        appenders[None] = d
+
+        for voffset in sorted(volumes_by_offset.keys()):
+            d.append(volumes_by_offset[voffset])
 
         #Populate DFXMLObject.
         for key in new_fis:
             #TODO If this script ever does a series of >2 DFXML files, these diff additions need to be removed for the next round.
             fi = new_fis[key]
             fi.diffs.add("_new")
-            d.append(fi)
+            appenders[fi.partition].append(fi)
         TESTING = """
         for fi in fileobjects_deleted:
             fi.diffs.add("_deleted")
-            d.append(fi)
+            appenders[fi.partition].append(fi)
         """
         for key in old_fis:
             ofi = old_fis[key]
             nfi = Objects.FileObject()
             nfi.original_fileobject = ofi
             nfi.diffs.add("_deleted")
-            d.append(nfi)
+            appenders[ofi.partition].append(nfi)
         for fi in fileobjects_renamed:
             fi.diffs.add("_renamed")
-            d.append(fi)
+            appenders[fi.partition].append(fi)
         for fi in fileobjects_changed:
             if len(set(["md5", "sha1", "ctime", "mtime"]).intersection(fi.diffs)) > 0:
                 fi.diffs.add("_modified")
             else:
                 fi.diffs.add("_changed")
-            d.append(fi)
+            appenders[fi.partition].append(fi)
 
         #Output
         return d
