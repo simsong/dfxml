@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 import Objects
 import logging
@@ -147,6 +147,8 @@ def make_differential_dfxml(pre, post):
             """Returns a dictionary, mapping (partition, filename) -> inode."""
             retdict = dict()
             for (partition, inode, filename) in d.keys():
+                if (partition, filename) in retdict:
+                    logging.warning("Multiple instances of the file path %r were found in partition %r; this violates an assumption of this program, that paths are unique within partitions." % (filename, partition))
                 retdict[(partition, filename)] = inode
             return retdict
         old_name_inodes = _make_inode_map(old_fis)
