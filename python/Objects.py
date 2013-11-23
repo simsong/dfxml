@@ -5,12 +5,13 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.18"
+__version__ = "0.0.19"
 
 import logging
 import re
 import copy
 import xml.etree.ElementTree as ET
+import subprocess
 import dfxml
 
 #For memoization
@@ -1753,18 +1754,23 @@ class CellObject(object):
 
 def objects_from_file(filename, dfxmlobject=None):
     """
-    Generator.  Yields a stream of populated VolumeObjects and FileObjects.
+    Generator.  Yields a stream of populated DFXMLObjects, VolumeObjects and FileObjects.  The DFXMLObject and VolumeObjects do not have their child lists populated with this method - that is left to the calling program.
 
-    Currently only accepts filenames ending in "xml".  Will accept disk image files in the future.
+    Currently only accepts filenames ending in "xml", assumed to be DFXML files, and disk images that the system's Fiwalk can read.
 
     @param filename: A string
     @param dfxmlobject: A DFXMLObject document.  Optional.  A DFXMLObject is created and yielded in the object stream if this argument is not supplied.
     """
 
-    if not filename.endswith("xml"):
-        raise NotImplementedError("This only works on DFXML files at the moment.")
-
-    fh = open(filename, "rb")
+    #The DFXML stream file handle.
+    fh = None
+    subp = None
+    subp_command = ["fiwalk", "-x", filename]
+    if filename.endswith("xml"):
+        fh = open(filename, "rb")
+    else:
+        subp = subprocess.Popen(subp_command, stdout=subprocess.PIPE)
+        fh = subp.stdout
 
     dobj = dfxmlobject or DFXMLObject()
 
@@ -1854,6 +1860,16 @@ def objects_from_file(filename, dfxmlobject=None):
                     #This is a direct child of the DFXML document property; glom onto the proxy.
                     if dfxml_proxy is not None:
                         dfxml_proxy.append(elem)
+
+    #If we called Fiwalk, double-check that it exited successfully.
+    if not subp is None:
+        logging.debug("Calling wait() to let the Fiwalk subprocess terminate...") #Just reading from subp.stdout doesn't let the process terminate; it only finishes working.
+        subp.wait()
+        if subp.returncode != 0:
+            e = subprocess.CalledProcessError("There was an error running Fiwalk.")
+            e.returncode = subp.returncode
+            e.cmd = subp_command
+            raise e
 
 if __name__ == "__main__":
     import argparse
