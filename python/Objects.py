@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.19"
+__version__ = "0.0.20"
 
 import logging
 import re
@@ -752,10 +752,78 @@ class ByteRuns(list):
         assert isinstance(value, ByteRun)
         self._listdata.append(value)
 
-    def contents(self, raw_image):
-        """Generator.  Yields contents, given a backing raw image path."""
-        assert not raw_image is None
-        raise Exception("Not implemented yet.")
+    def iter_contents(self, raw_image, buffer_size=1048576, sector_size=512, errlog=None, statlog=None):
+        """
+        Generator.  Yields contents, as byte strings one block at a time, given a backing raw image path.  Relies on The SleuthKit's img_cat, so contents can be extracted from any disk image type that TSK supports.
+        @param buffer_size The maximum size of the byte strings yielded.
+        @param sector_size The size of a disk sector in the raw image.  Required by img_cat.
+        """
+        if not isinstance(raw_image, str):
+            raise TypeError("iter_contents needs the string path to the image file.  Received: %r." % raw_image)
+
+        stderr_fh = None
+        if not errlog is None:
+            stderr_fh = open(errlog, "wb")
+
+        status_fh = None
+        if not statlog is None:
+            status_fh = open(errlog, "wb")
+
+        #The exit status of the last img_cat.
+        last_status = None
+
+        try:
+            for run in self:
+                if run.img_offset is None:
+                    raise AttributeError("Byte runs can't be extracted without the img_offset.")
+
+                cmd = ["img_cat"]
+                cmd.append("-b")
+                cmd.append(str(sector_size))
+                cmd.append("-s")
+                cmd.append(str(run.img_offset//sector_size))
+                cmd.append("-e")
+                cmd.append(str( (run.img_offset + run.len)//sector_size))
+                cmd.append(raw_image)
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
+
+                #Do the buffered read
+                len_to_read = run.len
+                while len_to_read > 0:
+                    buffer_data = p.stdout.read(buffer_size)
+                    yield_data = buffer_data[ : min(len_to_read, buffer_size)]
+                    if len(yield_data) > 0:
+                        yield yield_data
+                    else:
+                        #Let the subprocess terminate so we can see the exit status
+                        p.wait()
+                        last_status = p.returncode
+                        if last_status != 0:
+                            e = subprocess.CalledProcessError("img_cat failed.")
+                            e.returncode = last_status
+                            e.cmd = cmd
+                            raise e
+                    len_to_read -= buffer_size
+        except Exception as e:
+            #Cleanup in an exception
+            if not stderr_fh is None:
+                stderr_fh.close()
+
+            if not status_fh is None:
+                if isinstance(e, subprocess.CalledProcessError):
+                    status_fh.write(e.returncode)
+                else:
+                    status_fh.write("1")
+                status_fh.close()
+            raise e
+
+        #Cleanup when all's gone well.
+        if not status_fh is None:
+            if not last_status is None:
+                status_fh.write(last_status)
+            status_fh.close()
+        if not stderr_fh is None:
+            stderr_fh.close()
 
     def populate_from_Element(self, e):
         assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
