@@ -2,7 +2,7 @@
 
 """This program reads a disk image and verifies the SHA1's of every regular file, using only the byte runs."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import logging
 import hashlib
@@ -22,6 +22,8 @@ for f in Objects.objects_from_file(args.image_file):
     if f.name_type != "r":
         continue
 
+    if f.compressed:
+        raise NotImplementedError("The Python bindings don't support working with compressed files at this time.")
 
     if not f.byte_runs is None:
         s = hashlib.sha1()

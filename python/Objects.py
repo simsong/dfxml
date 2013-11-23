@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 import logging
 import re
@@ -35,6 +35,14 @@ def _boolcast(val):
 
     logging.debug("val = " + repr(val))
     raise ValueError("Received a not-straightforwardly-Boolean value.  Expected some form of 0, 1, True, or False.")
+
+def _bytecast(val):
+    """Casts a value as a byte string.  If a character string, assumes a UTF-8 encoding."""
+    if val is None:
+        return None
+    if isinstance(val, bytes):
+        return val
+    return _strcast(val).encode("utf-8")
 
 def _intcast(val):
     """Casts input integer or string to integer.  Preserves nulls.  Balks at everything else."""
@@ -597,6 +605,7 @@ class ByteRun(object):
       "img_offset",
       "fs_offset",
       "file_offset",
+      "fill",
       "len"
     ])
 
@@ -615,6 +624,7 @@ class ByteRun(object):
           self.img_offset == other.img_offset and \
           self.fs_offset == other.fs_offset and \
           self.file_offset == other.file_offset and \
+          self.fill == other.fill and \
           self.len == other.len
 
     def __ne__(self, other):
@@ -656,6 +666,15 @@ class ByteRun(object):
     @file_offset.setter
     def file_offset(self, val):
         self._file_offset = _intcast(val)
+
+    @property
+    def fill(self):
+        """There is an implicit assumption that the fill character is encoded as UTF-8."""
+        return self._fill
+
+    @fill.setter
+    def fill(self, val):
+        self._fill = _bytecast(val)
 
     @property
     def fs_offset(self):
@@ -774,8 +793,22 @@ class ByteRuns(list):
 
         try:
             for run in self:
+                if run.len is None:
+                    raise AttributeError("Byte runs can't be extracted if a run length is undefined.")
+
+                len_to_read = run.len
+
+                #If we have a fill character, just pump out that character
+                if not run.fill is None and len(run.fill) > 0:
+                    while len_to_read > 0:
+                        #This multiplication and slice should handle multi-byte fill characters, in case that ever comes up.
+                        yield (run.fill * buffer_size)[:len_to_read]
+                        len_to_read -= buffer_size
+                    #Next byte run
+                    continue
+
                 if run.img_offset is None:
-                    raise AttributeError("Byte runs can't be extracted without the img_offset.")
+                    raise AttributeError("Byte runs can't be extracted if missing a fill character and image offset.")
 
                 cmd = ["img_cat"]
                 cmd.append("-b")
@@ -788,7 +821,6 @@ class ByteRuns(list):
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
 
                 #Do the buffered read
-                len_to_read = run.len
                 while len_to_read > 0:
                     buffer_data = p.stdout.read(buffer_size)
                     yield_data = buffer_data[ : min(len_to_read, buffer_size)]
