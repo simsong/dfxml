@@ -339,9 +339,9 @@ class dftime(ComparableMixin):
                 #(The check for 13:15 gets the 14th and 15th characters, since the day can be single- or double-digit.)
                 self.datetime_ = rfc822Tdatetime(val)
             else:
-                #Maybe the data are a string-wrapped int?
+                #Maybe the data are a string-wrapped int or float?
                 #If this fails, the string format is completely unexpected, so just raise an error.
-                self.timestamp_ = int(val)
+                self.timestamp_ = float(val)
         elif type(val)==int or type(val)==float:
             self.timestamp_ = val
         elif isinstance(val, datetime.datetime):
