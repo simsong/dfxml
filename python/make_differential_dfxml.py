@@ -294,6 +294,8 @@ if __name__ == "__main__":
     parser.add_argument("infiles", nargs="+")
     args = parser.parse_args()
 
+    #TODO Add -i,--ignore: Ignore a particular element if it differs.  nargs="+".  Necessary for comparisons of directories from different systems.
+
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
     if len(args.infiles) != 2:
