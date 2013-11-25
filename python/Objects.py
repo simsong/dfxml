@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 import logging
 import re
@@ -16,6 +16,9 @@ import dfxml
 
 #For memoization
 import functools
+
+#Contains: (namespace, local name) qualified XML element name pairs
+_warned_elements = set([])
 
 _nagged_alloc = False
 
@@ -380,6 +383,7 @@ class VolumeObject(object):
         return diffs
 
     def populate_from_Element(self, e):
+        global _warned_elements
         _typecheck(e, (ET.Element, ET.ElementTree))
         #logging.debug("e = %r" % e)
 
@@ -406,7 +410,9 @@ class VolumeObject(object):
                 setattr(self, ctn, ce.text)
                 #logging.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
             else:
-                raise ValueError("Unsure what to do with this element in a VolumeObject: %r" % ce)
+                if (cns, ctn) not in _warned_elements:
+                    _warned_elements.add((cns, ctn))
+                    logging.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
     def print_dfxml(self):
         pe = self.to_partial_Element()
@@ -1153,6 +1159,7 @@ class FileObject(object):
 
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
+        global _warned_elements
         _typecheck(e, (ET.Element, ET.ElementTree))
 
         #logging.debug("FileObject.populate_from_Element(%r)" % e)
@@ -1199,7 +1206,9 @@ class FileObject(object):
             elif ctn in FileObject._all_properties:
                 setattr(self, ctn, ce.text)
             else:
-                raise ValueError("Uncertain what to do with this element: %r" % ce)
+                if (cns, ctn) not in _warned_elements:
+                    _warned_elements.add((cns, ctn))
+                    logging.warning("Uncertain what to do with this element: %r" % ce)
 
     def populate_from_stat(self, s):
         """Populates FileObject fields from a stat() call."""
@@ -1678,6 +1687,7 @@ class CellObject(object):
 
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
+        global _warned_elements
         assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
 
         #Split into namespace and tagname
@@ -1710,7 +1720,9 @@ class CellObject(object):
                 self.parent_object = CellObject()
                 self.parent_object.populate_from_Element(ce)
             else:
-                raise ValueError("Uncertain what to do with this element: %r" % ce)
+                if (cns, ctn) not in _warned_elements:
+                    _warned_elements.add((cns, ctn))
+                    logging.warning("Uncertain what to do with this element: %r" % ce)
 
         self.sanity_check()
 
