@@ -37,6 +37,7 @@
 #define MUTEX_LOCK(M)   pthread_mutex_lock(M)
 #define MUTEX_UNLOCK(M) pthread_mutex_unlock(M)
 #else
+#define MUTEX_INIT(M)   {}
 #define MUTEX_LOCK(M)   {}
 #define MUTEX_UNLOCK(M) {}
 #endif
