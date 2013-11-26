@@ -630,8 +630,7 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
         if(tag.size()) tagout(tag,attribute+"/");
     } else {
         if(tag.size()) tagout(tag,attribute);
-        if(escape_value) *out << xmlescape(value);
-        else *out << value;
+        *out << (escape_value ? xmlescape(value) : value);
         if(tag.size()) tagout("/"+tag,"");
     }
     *out << "\n";
