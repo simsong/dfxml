@@ -27,6 +27,9 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifdef HAVE_SQLITE3_H
+#include <sqlite3.h>
+#endif
 
 #ifdef HAVE_BOOST_VERSION_HPP
 #include <boost/version.hpp>
@@ -712,24 +715,28 @@ void dfxml_writer::add_DFXML_build_environment()
     xmlout("library", "", std::string("name=\"exiv2\" version=\"") + Exiv2::version() + "\"",false);
 #endif
 #if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
-    xmlout("tre", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
+    xmlout("library", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
 #ifdef HAVE_HASHID
     xmlout("library", "", std::string("name=\"hashdb\" version=\"") + hashdb_version() + "\"",false);
 #endif
+#ifdef SQLITE_VERSION
+    xmlout("library", "", "name=\"sqlite\" version=\"" SQLITE_VERSION "\" source_id=\"" SQLITE_SOURCE_ID "\"",false);
+#endif
 #ifdef HAVE_ZMQ_VERSION
-    int zmq_major, zmq_minor, zmq_patch;
-    zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
-    stringstream zmq_ss;
-    zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
-    xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
+    {
+        int zmq_major, zmq_minor, zmq_patch;
+        zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
+        stringstream zmq_ss;
+        zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
+        xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
+    }
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
 #endif
 #ifdef GIT_COMMIT
-#define tostring(s) #s
-    xmlout("git", "", std::string("commit=\"") + tostring(GIT_COMMIT) + "\"",false);
+    xmlout("git", "", "commit=\"" GIT_COMMIT "\"",false);
 #endif
     pop();
 }
