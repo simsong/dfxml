@@ -734,6 +734,7 @@ void dfxml_writer::add_DFXML_build_environment()
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
+    xmlout("library","","name=\"gnuexif\" version=\"?\"",false);
 #endif
 #ifdef GIT_COMMIT
     xmlout("git", "", "commit=\"" GIT_COMMIT "\"",false);
