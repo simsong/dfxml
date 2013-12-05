@@ -2,7 +2,7 @@
 
 """This program reads a disk image and verifies the SHA1's of every regular file, using only the byte runs."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import logging
 import hashlib
@@ -15,7 +15,7 @@ args = parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG)
 
-for f in Objects.objects_from_file(args.image_file):
+for (event, f) in Objects.iterparse(args.image_file):
     if not isinstance(f, Objects.FileObject):
         continue
 

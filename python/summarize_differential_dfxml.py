@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import os
 import logging
@@ -68,7 +68,7 @@ def main():
 
     original_dfxml_files = []
 
-    for obj in Objects.objects_from_file(args.infile):
+    for (event, obj) in Objects.iterparse(args.infile):
         if isinstance(obj, Objects.FileObject):
             #logging.debug("Inspecting %s for changes" % obj)
             if "_new" in obj.diffs:
@@ -85,6 +85,9 @@ def main():
             #TODO
             pass
         elif isinstance(obj, Objects.DFXMLObject):
+            #Nothing happens with this DFXMLObject after the start.
+            if event != "start":
+                continue
             for source in obj.sources:
                 logging.debug("Adding to inspection queue: Source file %r." % source)
                 original_dfxml_files.append(source)
@@ -93,7 +96,7 @@ def main():
     counters = []
     for (num, path) in enumerate(original_dfxml_files):
         counters.append(FOCounter())
-        for obj in Objects.objects_from_file(path):
+        for (event, obj) in Objects.iterparse(path):
             if not isinstance(obj, Objects.FileObject):
                 continue
             counters[num].add(obj)
