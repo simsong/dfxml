@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 import Objects
 import logging
@@ -24,12 +24,17 @@ def ignorable_name(fn):
         return False
     return fn in [".", "..", "$FAT1", "$FAT2", "$OrphanFiles"]
 
-def make_differential_dfxml(pre, post):
+def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
     """
     Takes as input two paths to DFXML files.  Returns a DFXMLObject.
     @param pre String.
     @param post String.
     """
+
+    _expected_diff_modes = ["all", "idifference"]
+    if diff_mode not in _expected_diff_modes:
+        raise ValueError("Differencing mode should be in: %r" % _expected_diff_modes)
+    _diff_mode = diff_mode
 
     #d: The container DFXMLObject, ultimately returned.
     d = Objects.DFXMLObject(version="1.1.0")
@@ -38,6 +43,9 @@ def make_differential_dfxml(pre, post):
 
     #The list most of this function is spent on building
     fileobjects_changed = []
+
+    #Unmodified files; only retained if requested.
+    fileobjects_unchanged = []
 
     #Key: (partition, inode, filename); value: FileObject
     old_fis = None
@@ -114,7 +122,7 @@ def make_differential_dfxml(pre, post):
             key = (new_obj.partition, new_obj.inode, new_obj.filename)
 
             #Ignore unallocated content comparisons until a later loop.  The unique identification of deleted files needs a little more to work.
-            if new_obj.alloc == False:
+            if not new_obj.alloc:
                 new_fis_unalloc[key].append(new_obj)
                 continue
 
@@ -128,12 +136,26 @@ def make_differential_dfxml(pre, post):
                 old_obj = old_fis.pop(key)
                 new_obj.original_fileobject = old_obj
                 new_obj.compare_to_original()
-                #TODO the old idifference just checked a few fields.  Add flag logic for this more stringent check.
-                if len(new_obj.diffs) > 0:
+                new_diffs = new_obj.diffs
+                if _diff_mode == "idifference":
+                    new_diffs &= set([
+                      "atime",
+                      "byte_runs"
+                      "crtime",
+                      "ctime",
+                      "filename",
+                      "filesize",
+                      "md5",
+                      "mtime",
+                      "sha1"
+                    ])
+
+                if len(new_diffs) > 0:
                     fileobjects_changed.append(new_obj)
                 else:
-                    #Reclaim memory
-                    del new_obj
+                    #Unmodified file; only keep if requested.
+                    if retain_unchanged:
+                        fileobjects_unchanged.append(new_obj)
             else:
                 #Store the new object
                 new_fis[key] = new_obj
@@ -207,7 +229,6 @@ def make_differential_dfxml(pre, post):
         #We may be able to match files that aren't allocated against files we think are deleted
         logging.debug("Detecting modifications from unallocated files...")
         fileobjects_deleted = []
-        TESTING = """
         for key in new_fis_unalloc:
             #1 partition; 1 inode number; 1 name, repeated:  Too ambiguous to compare.
             if len(new_fis_unalloc[key]) != 1:
@@ -220,9 +241,12 @@ def make_differential_dfxml(pre, post):
                     new_obj = new_fis_unalloc[key].pop()
                     new_obj.original_fileobject = old_obj
                     new_obj.compare_to_original()
+                    #TODO Apply difference mask here too
                     #The file might not have changed.  It's interesting if it did, though.
                     if len(new_obj.diffs) > 0:
                         fileobjects_changed.append(new_obj)
+                    elif retain_unchanged:
+                        fileobjects_unchanged.append(new_obj)
             elif key in old_fis:
                 #Identified a deletion.
                 old_obj = old_fis.pop(key)
@@ -234,7 +258,6 @@ def make_differential_dfxml(pre, post):
         logging.debug("len(new_fis) -> %d" % len(new_fis))
         logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
         logging.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
-        """
 
         #After deletion matching is performed, one might want to look for files migrating to other partitions.
         #However, since between-volume migration creates a new deleted file, this algorithm instead ignores partition migrations.
@@ -257,6 +280,10 @@ def make_differential_dfxml(pre, post):
             fi = new_fis[key]
             fi.diffs.add("_new")
             appenders[fi.partition].append(fi)
+        for key in new_fis_unalloc:
+            for fi in new_fis_unalloc[key]:
+                fi.diffs.add("_new")
+                appenders[fi.partition].append(fi)
         for fi in fileobjects_deleted:
             fi.diffs.add("_deleted")
             appenders[fi.partition].append(fi)
@@ -266,21 +293,44 @@ def make_differential_dfxml(pre, post):
             nfi.original_fileobject = ofi
             nfi.diffs.add("_deleted")
             appenders[ofi.partition].append(nfi)
+        for key in old_fis_unalloc:
+            for ofi in old_fis_unalloc[key]:
+                nfi = Objects.FileObject()
+                nfi.original_fileobject = ofi
+                nfi.diffs.add("_deleted")
+                appenders[ofi.partition].append(nfi)
         for fi in fileobjects_renamed:
             fi.diffs.add("_renamed")
             appenders[fi.partition].append(fi)
         for fi in fileobjects_changed:
-            if len(set(["md5", "sha1", "ctime", "mtime"]).intersection(fi.diffs)) > 0:
+            content_diffs = set(["md5", "sha1", "mtime"])
+            #Independently flag for content and metadata modifications
+            if len(content_diffs.intersection(fi.diffs)) > 0:
                 fi.diffs.add("_modified")
-            else:
+            if len(fi.diffs - content_diffs) > 0:
                 fi.diffs.add("_changed")
+            appenders[fi.partition].append(fi)
+        for fi in fileobjects_unchanged:
             appenders[fi.partition].append(fi)
 
         #Output
         return d
 
-def main():
-    global args
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--idifference-diffs", action="store_true", help="Only consider the modifications idifference had considered (names, hashes, timestamps).")
+    parser.add_argument("--retain-unchanged", action="store_true", help="Output unchanged files in the resulting DFXML file.", default=False)
+    parser.add_argument("infiles", nargs="+")
+    args = parser.parse_args()
+
+    #TODO Add -i,--ignore: Ignore a particular element if it differs.  nargs="+".  Necessary for comparisons of directories from different systems.
+
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
+
+    if len(args.infiles) != 2:
+        raise ValueError("This script requires exactly two DFXML files as input.")
 
     pre = None
     post = None
@@ -292,20 +342,10 @@ def main():
         pre = post
         post = infile
         if not pre is None:
-            print(make_differential_dfxml(pre, post).to_dfxml())
+            print(make_differential_dfxml(
+              pre,
+              post,
+              diff_mode="idifference" if args.idifference_diffs else "all",
+              retain_unchanged=args.retain_unchanged
+            ).to_dfxml())
             
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("infiles", nargs="+")
-    args = parser.parse_args()
-
-    #TODO Add -i,--ignore: Ignore a particular element if it differs.  nargs="+".  Necessary for comparisons of directories from different systems.
-
-    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
-
-    if len(args.infiles) != 2:
-        raise ValueError("This script requires exactly two DFXML files as input.")
-
-    main()
