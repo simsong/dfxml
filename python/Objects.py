@@ -7,6 +7,9 @@ Consider this file highly experimental (read: unstable).
 
 __version__ = "0.0.23"
 
+#Roadmap to 0.1.0:
+# * Use Object.annos instead of underscore-prefixed Object.diffs
+
 import logging
 import re
 import copy
@@ -1173,10 +1176,10 @@ class FileObject(object):
         _d = { FileObject._diff_attr_names[k].replace("delta:",""):k for k in FileObject._diff_attr_names }
         #logging.debug("Inverted dictionary: _d = %r" % _d)
         for attr in e.attrib:
-            logging.debug("Looking for differential annotations: %r" % e.attrib)
+            #logging.debug("Looking for differential annotations: %r" % e.attrib)
             (ns, an) = _qsplit(attr)
             if an in _d and ns == dfxml.XMLNS_DELTA:
-                logging.debug("Found; adding _d[an]=%r." % _d[an])
+                #logging.debug("Found; adding _d[an]=%r." % _d[an])
                 self.diffs.add(_d[an])
 
         #Look through direct-child elements for other properties
@@ -1342,7 +1345,7 @@ class FileObject(object):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         global _nagged_alloc
         if not _nagged_alloc:
-            logging.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode or .alloc_name instead.  .alloc is proxied as True if and only if alloc_inode and alloc_name are both True.")
+            logging.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
             _nagged_alloc = True
         if self.alloc_inode and self.alloc_name:
             return True
