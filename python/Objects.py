@@ -7,8 +7,9 @@ Consider this file highly experimental (read: unstable).
 
 __version__ = "0.0.23"
 
-#Roadmap to 0.1.0:
+#Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
+# * verify_differential_dfxml.py vets changed file properties and counts of differential samples 2 vs. 3.
 
 import logging
 import re
