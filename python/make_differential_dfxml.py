@@ -206,10 +206,10 @@ def make_differential_dfxml(pre, post):
 
         #We may be able to match files that aren't allocated against files we think are deleted
         logging.debug("Detecting modifications from unallocated files...")
-        TESTING = """
         fileobjects_deleted = []
+        TESTING = """
         for key in new_fis_unalloc:
-            #1 partition, 1 inode number, 1 name, repeated:  Too ambiguous to compare.
+            #1 partition; 1 inode number; 1 name, repeated:  Too ambiguous to compare.
             if len(new_fis_unalloc[key]) != 1:
                 continue
 
@@ -236,6 +236,11 @@ def make_differential_dfxml(pre, post):
         logging.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
         """
 
+        #After deletion matching is performed, one might want to look for files migrating to other partitions.
+        #However, since between-volume migration creates a new deleted file, this algorithm instead ignores partition migrations.
+
+        #Begin output.
+
         #Key: Partition number, or None
         #Value: Reference to the VolumeObject corresponding with that partition number.  None -> the DFXMLObject.
         appenders = dict()
@@ -252,11 +257,9 @@ def make_differential_dfxml(pre, post):
             fi = new_fis[key]
             fi.diffs.add("_new")
             appenders[fi.partition].append(fi)
-        TESTING = """
         for fi in fileobjects_deleted:
             fi.diffs.add("_deleted")
             appenders[fi.partition].append(fi)
-        """
         for key in old_fis:
             ofi = old_fis[key]
             nfi = Objects.FileObject()
