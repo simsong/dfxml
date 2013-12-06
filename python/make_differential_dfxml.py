@@ -9,11 +9,12 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 
 import Objects
 import logging
 import xml.etree.ElementTree as ET
+import os
 import sys
 import collections
 import dfxml
@@ -22,7 +23,7 @@ def ignorable_name(fn):
     """Filter out recognized pseudo-file names."""
     if fn is None:
         return False
-    return fn in [".", "..", "$FAT1", "$FAT2", "$OrphanFiles"]
+    return os.path.basename(fn) in [".", "..", "$FAT1", "$FAT2", "$OrphanFiles"]
 
 def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
     """
