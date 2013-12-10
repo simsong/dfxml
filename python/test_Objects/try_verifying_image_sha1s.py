@@ -2,8 +2,9 @@
 
 """This program reads a disk image and verifies the SHA1's of every regular file, using only the byte runs."""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
+import os
 import logging
 import hashlib
 import argparse
@@ -14,6 +15,7 @@ parser.add_argument("image_file")
 args = parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG)
+_logger = logging.getLogger(os.path.basename(__file__))
 
 for (event, f) in Objects.iterparse(args.image_file):
     if not isinstance(f, Objects.FileObject):
@@ -35,13 +37,13 @@ for (event, f) in Objects.iterparse(args.image_file):
                 bytes_tally += len(block)
                 s.update(block)
             if f.sha1 != s.hexdigest():
-                logging.debug("Hash mismatch on %r." % f.filename)
-                logging.debug("f.filesize = %r" % f.filesize)
-                logging.debug("bytes_tally = %r" % bytes_tally)
-                logging.debug("f.sha1 = %r" % f.sha1)
-                logging.debug("mysha1 = %r" % s.hexdigest())
-                logging.debug("f.byte_runs = %r" % f.byte_runs)
+                _logger.debug("Hash mismatch on %r." % f.filename)
+                _logger.debug("f.filesize = %r" % f.filesize)
+                _logger.debug("bytes_tally = %r" % bytes_tally)
+                _logger.debug("f.sha1 = %r" % f.sha1)
+                _logger.debug("mysha1 = %r" % s.hexdigest())
+                _logger.debug("f.byte_runs = %r" % f.byte_runs)
         except:
-            logging.info("Error reading contents of %r." % f.filename)
-            logging.debug("f.byte_runs = %r" % f.byte_runs)
+            _logger.info("Error reading contents of %r." % f.filename)
+            _logger.debug("f.byte_runs = %r" % f.byte_runs)
             raise

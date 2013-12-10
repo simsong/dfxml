@@ -8,6 +8,8 @@ sys.path.append("..")
 import Objects
 import make_differential_dfxml
 
+_logger = logging.getLogger(os.path.basename(__file__))
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -18,7 +20,7 @@ if __name__ == "__main__":
     )
     print(d.to_dfxml(), file=open("junk.xml","w"))
     for o in d:
-        logging.debug(repr(o))
+        _logger.debug(repr(o))
         if isinstance(o, Objects.VolumeObject):
             expected_partition_diffs = {
               1048576: set(["_new"]),
@@ -27,9 +29,9 @@ if __name__ == "__main__":
               4294967296: set(["_new"])
             }
             if o.diffs != expected_partition_diffs[o.partition_offset]:
-                logging.info("Partition offset: %r;" % o.partition_offset)
-                logging.info("Expected: %r;" % expected_partition_diffs[o.partition_offset])
-                logging.info("Received: %r." % o.diffs)
+                _logger.info("Partition offset: %r;" % o.partition_offset)
+                _logger.info("Expected: %r;" % expected_partition_diffs[o.partition_offset])
+                _logger.info("Received: %r." % o.diffs)
                 assert False
         else:
             #FileObjects

@@ -5,11 +5,12 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.23"
+__version__ = "0.0.24"
 
 #Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
 # * verify_differential_dfxml.py vets changed file properties and counts of differential samples 2 vs. 3.
+# * Use cast functions instead of asserts
 
 import logging
 import re
@@ -17,9 +18,12 @@ import copy
 import xml.etree.ElementTree as ET
 import subprocess
 import dfxml
+import os
 
 #For memoization
 import functools
+
+_logger = logging.getLogger(os.path.basename(__file__))
 
 #Contains: (namespace, local name) qualified XML element name pairs
 _warned_elements = set([])
@@ -40,7 +44,7 @@ def _boolcast(val):
     if _val in [0, 1]:
         return _val == 1
 
-    logging.debug("val = " + repr(val))
+    _logger.debug("val = " + repr(val))
     raise ValueError("Received a not-straightforwardly-Boolean value.  Expected some form of 0, 1, True, or False.")
 
 def _bytecast(val):
@@ -66,7 +70,7 @@ def _intcast(val):
             if val.isdigit():
                 return int(val)
 
-    logging.debug("val = " + repr(val))
+    _logger.debug("val = " + repr(val))
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
 
 @functools.lru_cache(maxsize=None)
@@ -86,7 +90,7 @@ def _strcast(val):
 
 def _typecheck(obj, classinfo):
     if not isinstance(obj, classinfo):
-        logging.info("obj = " + repr(obj))
+        _logger.info("obj = " + repr(obj))
         if isinstance(classinfo, tuple):
             raise TypeError("Expecting object to be one of the types %r." % (classinfo,))
         else:
@@ -134,7 +138,7 @@ class DFXMLObject(object):
         elif isinstance(value, FileObject):
             self._files.append(value)
         else:
-            logging.debug("value = %r" % value)
+            _logger.debug("value = %r" % value)
             raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
 
     def iter_namespaces(self):
@@ -281,7 +285,7 @@ class RegXMLObject(object):
         elif isinstance(value, CellObject):
             self._cells.append(value)
         else:
-            logging.debug("value = %r" % value)
+            _logger.debug("value = %r" % value)
             raise TypeError("Expecting a HiveObject or a CellObject.  Got instead this type: %r." % type(value))
 
     def print_regxml(self):
@@ -380,8 +384,8 @@ class VolumeObject(object):
         for prop in VolumeObject._all_properties:
             if prop in VolumeObject._incomparable_properties:
                 continue
-            #logging.debug("getattr(self, %r) = %r" % (prop, getattr(self, prop)))
-            #logging.debug("getattr(other, %r) = %r" % (prop, getattr(other, prop)))
+            #_logger.debug("getattr(self, %r) = %r" % (prop, getattr(self, prop)))
+            #_logger.debug("getattr(other, %r) = %r" % (prop, getattr(other, prop)))
             if getattr(self, prop) != getattr(other, prop):
                 diffs.add(prop)
         return diffs
@@ -389,7 +393,7 @@ class VolumeObject(object):
     def populate_from_Element(self, e):
         global _warned_elements
         _typecheck(e, (ET.Element, ET.ElementTree))
-        #logging.debug("e = %r" % e)
+        #_logger.debug("e = %r" % e)
 
         #TODO Read differential annotations
 
@@ -399,10 +403,10 @@ class VolumeObject(object):
 
         #Look through direct-child elements to populate run array
         for ce in e.findall("./*"):
-            #logging.debug("ce = %r" % ce)
+            #_logger.debug("ce = %r" % ce)
             (cns, ctn) = _qsplit(ce.tag)
-            #logging.debug("cns = %r" % cns)
-            #logging.debug("ctn = %r" % ctn)
+            #_logger.debug("cns = %r" % cns)
+            #_logger.debug("ctn = %r" % ctn)
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
@@ -410,13 +414,13 @@ class VolumeObject(object):
                 self.original_volume = VolumeObject()
                 self.original_volume.populate_from_Element(ce)
             elif ctn in VolumeObject._all_properties:
-                #logging.debug("ce.text = %r" % ce.text)
+                #_logger.debug("ce.text = %r" % ce.text)
                 setattr(self, ctn, ce.text)
-                #logging.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
+                #_logger.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
-                    logging.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
+                    _logger.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
     def print_dfxml(self):
         pe = self.to_partial_Element()
@@ -743,14 +747,14 @@ class ByteRuns(list):
         assert isinstance(other, ByteRuns)
 
         if len(self) != len(other):
-            #logging.debug("len(self) = %d" % len(self))
-            #logging.debug("len(other) = %d" % len(other))
+            #_logger.debug("len(self) = %d" % len(self))
+            #_logger.debug("len(other) = %d" % len(other))
             return False
         for (sbr_index, sbr) in enumerate(self):
             obr = other[sbr_index]
-            #logging.debug("sbr_index = %d" % sbr_index)
-            #logging.debug("sbr = %r" % sbr)
-            #logging.debug("obr = %r" % obr)
+            #_logger.debug("sbr_index = %d" % sbr_index)
+            #_logger.debug("sbr = %r" % sbr)
+            #_logger.debug("obr = %r" % obr)
             if sbr != obr:
                 return False
         return True
@@ -902,8 +906,8 @@ class TimestampObject(object):
     def __init__(self, *args, **kwargs):
         self.name = kwargs.get("name")
         self.prec = kwargs.get("prec")
-        #logging.debug("type(args) = %r" % type(args))
-        #logging.debug("args = %r" % (args,))
+        #_logger.debug("type(args) = %r" % type(args))
+        #_logger.debug("args = %r" % (args,))
         if len(args) == 0:
             self.time = None
         elif len(args) == 1:
@@ -1022,7 +1026,7 @@ class TimestampObject(object):
         m = re_precision.match(value)
         md = m.groupdict()
         tup = (int(md["num"]), md.get("unit") or "s")
-        #logging.debug("tup = %r" % (tup,))
+        #_logger.debug("tup = %r" % (tup,))
         self._prec = tup
 
     @property
@@ -1038,7 +1042,7 @@ class TimestampObject(object):
             self._time = None
         else:
             checked_value = dfxml.dftime(value)
-            #logging.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
+            #_logger.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
             self._time = checked_value
 
 
@@ -1156,7 +1160,7 @@ class FileObject(object):
             if oval is None and nval is None:
                 continue
             if oval != nval:
-                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                #_logger.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
                 diffs.add(propname)
 
         return diffs
@@ -1166,7 +1170,7 @@ class FileObject(object):
         global _warned_elements
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #logging.debug("FileObject.populate_from_Element(%r)" % e)
+        #_logger.debug("FileObject.populate_from_Element(%r)" % e)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -1175,12 +1179,12 @@ class FileObject(object):
         #Map "delta:" attributes of <fileobject>s into the special self.diffs members
         #Start with inverting the dictionary
         _d = { FileObject._diff_attr_names[k].replace("delta:",""):k for k in FileObject._diff_attr_names }
-        #logging.debug("Inverted dictionary: _d = %r" % _d)
+        #_logger.debug("Inverted dictionary: _d = %r" % _d)
         for attr in e.attrib:
-            #logging.debug("Looking for differential annotations: %r" % e.attrib)
+            #_logger.debug("Looking for differential annotations: %r" % e.attrib)
             (ns, an) = _qsplit(attr)
             if an in _d and ns == dfxml.XMLNS_DELTA:
-                #logging.debug("Found; adding _d[an]=%r." % _d[an])
+                #_logger.debug("Found; adding _d[an]=%r." % _d[an])
                 self.diffs.add(_d[an])
 
         #Look through direct-child elements for other properties
@@ -1212,7 +1216,7 @@ class FileObject(object):
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
-                    logging.warning("Uncertain what to do with this element: %r" % ce)
+                    _logger.warning("Uncertain what to do with this element: %r" % ce)
 
     def populate_from_stat(self, s):
         """Populates FileObject fields from a stat() call."""
@@ -1346,7 +1350,7 @@ class FileObject(object):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         global _nagged_alloc
         if not _nagged_alloc:
-            logging.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
+            _logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
             _nagged_alloc = True
         if self.alloc_inode and self.alloc_name:
             return True
@@ -1686,7 +1690,7 @@ class CellObject(object):
             if oval is None and nval is None:
                 continue
             if oval != nval:
-                #logging.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+                #_logger.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
                 self._diffs.add(propname)
 
     def populate_from_Element(self, e):
@@ -1726,17 +1730,17 @@ class CellObject(object):
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
-                    logging.warning("Uncertain what to do with this element: %r" % ce)
+                    _logger.warning("Uncertain what to do with this element: %r" % ce)
 
         self.sanity_check()
 
     def sanity_check(self):
         if self.name_type and self.name_type != "k":
             if self.mtime:
-                logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
+                _logger.debug("Error occurred sanity-checking this CellObject: %r" % (self))
                 raise ValueError("A Registry Key (node) is the only kind of CellObject that can have a timestamp.")
             if self.root:
-                logging.debug("Error occurred sanity-checking this CellObject: %r" % (self))
+                _logger.debug("Error occurred sanity-checking this CellObject: %r" % (self))
                 raise ValueError("A Registry Key (node) is the only kind of CellObject that can have the 'root' attribute.")
 
     def to_Element(self):
@@ -1914,7 +1918,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
     _state = READING_START
 
     for (ETevent, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
-        #logging.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
+        #_logger.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
 
         #Track namespaces
         if ETevent == "start-ns":
@@ -1951,7 +1955,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
                     if "start" in _events:
                         yield ("start", dobj)
                 elif _state == READING_VOLUMES:
-                    logging.debug("Encountered a fileobject while reading volume properties.  Yielding volume now.")
+                    _logger.debug("Encountered a fileobject while reading volume properties.  Yielding volume now.")
                     #Cut; yield VolumeObject now.
                     if volume_proxy is not None:
                         vobj = VolumeObject()
@@ -1971,7 +1975,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
                 fi = FileObject()
                 fi.populate_from_Element(elem)
                 fi.volume_object = vobj
-                #logging.debug("fi = %r" % fi)
+                #_logger.debug("fi = %r" % fi)
                 if "end" in _events:
                     yield ("end", fi)
                 #Reset
@@ -1995,7 +1999,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
 
     #If we called Fiwalk, double-check that it exited successfully.
     if not subp is None:
-        logging.debug("Calling wait() to let the Fiwalk subprocess terminate...") #Just reading from subp.stdout doesn't let the process terminate; it only finishes working.
+        _logger.debug("Calling wait() to let the Fiwalk subprocess terminate...") #Just reading from subp.stdout doesn't let the process terminate; it only finishes working.
         subp.wait()
         if subp.returncode != 0:
             e = subprocess.CalledProcessError("There was an error running Fiwalk.")
@@ -2020,7 +2024,7 @@ if __name__ == "__main__":
 
     #Check property setting
     fi.mtime = "1999-12-31T23:59:59Z"
-    logging.debug("fi = %r" % fi)
+    _logger.debug("fi = %r" % fi)
 
     #Check bad property setting
     failed = None
@@ -2029,21 +2033,21 @@ if __name__ == "__main__":
         failed = False
     except:
         failed = True
-    logging.debug("fi = %r" % fi)
-    logging.debug("failed = %r" % failed)
+    _logger.debug("fi = %r" % fi)
+    _logger.debug("failed = %r" % failed)
     assert failed
 
     t0 = TimestampObject(prec="100ns", name="mtime")
-    logging.debug("t0 = %r" % t0)
+    _logger.debug("t0 = %r" % t0)
     assert t0.prec[0] == 100
     assert t0.prec[1] == "ns"
     t1 = TimestampObject("2009-01-23T01:23:45Z", prec="2", name="atime")
-    logging.debug("t1 = %r" % t1)
+    _logger.debug("t1 = %r" % t1)
     assert t1.prec[0] == 2
     assert t1.prec[1] == "s"
 
     co = CellObject()
-    logging.debug("co = %r" % co)
+    _logger.debug("co = %r" % co)
     print(co.to_regxml())
 
     co.root = 1
@@ -2059,9 +2063,9 @@ if __name__ == "__main__":
     brs = ByteRuns()
     brs.append(br)
     co.byte_runs = brs
-    logging.debug("br = %r" % br)
-    logging.debug("brs = %r" % brs)
-    logging.debug("co = %r" % co)
+    _logger.debug("br = %r" % br)
+    _logger.debug("brs = %r" % brs)
+    _logger.debug("co = %r" % co)
     print(co.to_regxml())
 
     coe = co.to_Element()
@@ -2074,8 +2078,8 @@ if __name__ == "__main__":
     nco.root = False
     nco.byte_runs[0].file_offset += 133
 
-    logging.debug("co.byte_runs = %r" % co.byte_runs)
-    logging.debug("nco.byte_runs = %r" % nco.byte_runs)
+    _logger.debug("co.byte_runs = %r" % co.byte_runs)
+    _logger.debug("nco.byte_runs = %r" % nco.byte_runs)
     assert co.byte_runs != nco.byte_runs
 
     failed = None

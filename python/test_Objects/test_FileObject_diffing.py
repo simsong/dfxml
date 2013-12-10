@@ -1,8 +1,10 @@
 
 import Objects
 import logging
+import os
 
 logging.basicConfig(level=logging.DEBUG)
+_logger = logging.getLogger(os.path.basename(__file__))
 
 f0 = Objects.FileObject()
 
@@ -39,12 +41,12 @@ f0.libmagic = "Some kind of compressed"
 f0.sha1 = "7d97e98f8af710c7e7fe703abc8f639e0ee507c4"
 f0.md5 = "2b00042f7481c7b056c4b410d28f33cf"
 #fo.brs = brs #TODO
-logging.debug("f0.to_dfxml() = %r" % f0.to_dfxml())
+_logger.debug("f0.to_dfxml() = %r" % f0.to_dfxml())
 
 e0 = f0.to_Element()
-logging.debug("e0 = %r" % e0)
+_logger.debug("e0 = %r" % e0)
 
-logging.debug(repr(f0))
+_logger.debug(repr(f0))
 #f1 = eval(repr(f0)) #TODO The recursive evals cause namespace confusion (Objects.foo); replace the next two lines when that's settled.
 f1 = Objects.FileObject()
 f1.populate_from_Element(e0)
@@ -61,17 +63,17 @@ f2.sha1 = "447d306060631570b7713ea48e74103c68eab0a3"
 f2.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
 
 d01 = f0.compare_to_other(f1)
-logging.debug("d01 = %r" % d01)
+_logger.debug("d01 = %r" % d01)
 assert d01 == set(["alloc"]) or d01 == set(["alloc", "unalloc"])
 
 d02 = f0.compare_to_other(f2)
 
-logging.debug("d02 = %r" % d02)
+_logger.debug("d02 = %r" % d02)
 assert d02 == set(["mtime", "md5", "sha1"])
 
 f2.original_fileobject = f0
 f2.compare_to_original()
-logging.debug("f2.diffs = %r" % f2.diffs)
+_logger.debug("f2.diffs = %r" % f2.diffs)
 assert f2.diffs == d02
 
 #TODO include byte_runs

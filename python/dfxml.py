@@ -34,10 +34,12 @@ from sys import stderr
 from subprocess import Popen,PIPE
 import base64
 import hashlib
+import os
 
 import datetime
 
 import logging
+_logger = logging.getLogger(os.path.basename(__file__))
 
 __version__ = "1.0.1"
 
@@ -603,7 +605,7 @@ class fileobject:
 
     def ext(self):
         """Extension, as a lowercase string without the leading '.'"""
-        import os, string
+        import string
         (base,ext) = os.path.splitext(self.filename())
         if ext == '':
             return None
@@ -1196,7 +1198,7 @@ class fileobject_reader(xml_reader):
         
     def _start_element(self, name, attrs):
         """ Handles the start of an element for the XPAT scanner"""
-        logging.debug("fileobject_reader._start_element: name = %r" % name)
+        _logger.debug("fileobject_reader._start_element: name = %r" % name)
         self.tagstack.append(name)
         self.cdata = ""          # new element, so reset the data
         if name=="volume":

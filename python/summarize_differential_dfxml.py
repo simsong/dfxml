@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 import os
 import logging
 import Objects
 import idifference
 import copy
+
+_logger = logging.getLogger(os.path.basename(__file__))
 
 def enumerated_changes(filelist):
     res = set()
@@ -70,7 +72,7 @@ def main():
 
     for (event, obj) in Objects.iterparse(args.infile):
         if isinstance(obj, Objects.FileObject):
-            #logging.debug("Inspecting %s for changes" % obj)
+            #_logger.debug("Inspecting %s for changes" % obj)
             if "_new" in obj.diffs:
                 new_files.append(obj)
             elif "_deleted" in obj.diffs:
@@ -89,7 +91,7 @@ def main():
             if event != "start":
                 continue
             for source in obj.sources:
-                logging.debug("Adding to inspection queue: Source file %r." % source)
+                _logger.debug("Adding to inspection queue: Source file %r." % source)
                 original_dfxml_files.append(source)
 
     #Count basic statistics from source files, if available

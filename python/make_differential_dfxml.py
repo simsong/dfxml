@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 import Objects
 import logging
@@ -18,6 +18,8 @@ import os
 import sys
 import collections
 import dfxml
+
+_logger = logging.getLogger(os.path.basename(__file__))
 
 def ignorable_name(fn):
     """Filter out recognized pseudo-file names."""
@@ -64,7 +66,7 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
 
     for infile in [pre, post]:
 
-        logging.debug("infile = %r" % infile)
+        _logger.debug("infile = %r" % infile)
         old_fis = new_fis
         new_fis = dict()
 
@@ -89,19 +91,19 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
 
                 offset = new_obj.partition_offset
                 if offset in volumes_by_offset:
-                    logging.debug("Found a volume again, at offset %r." % offset)
+                    _logger.debug("Found a volume again, at offset %r." % offset)
                     if i == 0:
-                        logging.debug("new_obj.partition_offset = %r." % offset)
-                        logging.warning("Encountered a volume that starts at an offset as another volume, in the same disk image.  This analysis is based on the assumption that that doesn't happen.  Check results that depend on partition mappings.")
+                        _logger.debug("new_obj.partition_offset = %r." % offset)
+                        _logger.warning("Encountered a volume that starts at an offset as another volume, in the same disk image.  This analysis is based on the assumption that that doesn't happen.  Check results that depend on partition mappings.")
                     else:
                         #New volume; compare
-                        logging.debug("Found a volume in post image, at offset %r." % offset)
+                        _logger.debug("Found a volume in post image, at offset %r." % offset)
                         volumes_by_offset[offset].original_volume = new_obj
                         volumes_by_offset[offset].compare_to_original()
                         if len(volumes_by_offset[offset].diffs) > 0:
                             volumes_by_offset[offset].diffs.add("_modified")
                 else:
-                    logging.debug("Found a new volume, at offset %r." % offset)
+                    _logger.debug("Found a new volume, at offset %r." % offset)
                     new_obj.diffs.add("_new")
                     volumes_by_offset[offset] = new_obj
                     volumes_offset_encounter_order[offset] = len(volumes_by_offset)
@@ -166,12 +168,12 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
             continue
 
 
-        logging.debug("len(old_fis) = %d" % len(old_fis))
-        logging.debug("len(new_fis) = %d" % len(new_fis))
-        logging.debug("len(fileobjects_changed) = %d" % len(fileobjects_changed))
+        _logger.debug("len(old_fis) = %d" % len(old_fis))
+        _logger.debug("len(new_fis) = %d" % len(new_fis))
+        _logger.debug("len(fileobjects_changed) = %d" % len(fileobjects_changed))
 
         #Identify renames - only possible if 1-to-1.  Many-to-many renames are just left as new and deleted files.
-        logging.debug("Detecting renames...")
+        _logger.debug("Detecting renames...")
         fileobjects_renamed = []
         def _make_name_map(d):
             """Returns a dictionary, mapping (partition, inode) -> {filename}."""
@@ -196,19 +198,19 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
             new_obj.original_fileobject = old_obj
             new_obj.compare_to_original()
             fileobjects_renamed.append(new_obj)
-        logging.debug("len(old_fis) -> %d" % len(old_fis))
-        logging.debug("len(new_fis) -> %d" % len(new_fis))
-        logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
-        logging.debug("len(fileobjects_renamed) = %d" % len(fileobjects_renamed))
+        _logger.debug("len(old_fis) -> %d" % len(old_fis))
+        _logger.debug("len(new_fis) -> %d" % len(new_fis))
+        _logger.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
+        _logger.debug("len(fileobjects_renamed) = %d" % len(fileobjects_renamed))
 
         #Identify files that just changed inode number - basically, doing the rename detection again
-        logging.debug("Detecting inode number changes...")
+        _logger.debug("Detecting inode number changes...")
         def _make_inode_map(d):
             """Returns a dictionary, mapping (partition, filename) -> inode."""
             retdict = dict()
             for (partition, inode, filename) in d.keys():
                 if (partition, filename) in retdict:
-                    logging.warning("Multiple instances of the file path %r were found in partition %r; this violates an assumption of this program, that paths are unique within partitions." % (filename, partition))
+                    _logger.warning("Multiple instances of the file path %r were found in partition %r; this violates an assumption of this program, that paths are unique within partitions." % (filename, partition))
                 retdict[(partition, filename)] = inode
             return retdict
         old_name_inodes = _make_inode_map(old_fis)
@@ -222,13 +224,13 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
             new_obj.original_fileobject = old_obj
             new_obj.compare_to_original()
             fileobjects_changed.append(new_obj)
-        logging.debug("len(old_fis) -> %d" % len(old_fis))
-        logging.debug("len(new_fis) -> %d" % len(new_fis))
-        logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
+        _logger.debug("len(old_fis) -> %d" % len(old_fis))
+        _logger.debug("len(new_fis) -> %d" % len(new_fis))
+        _logger.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
         #And that's the end of the allocated-only, per-volume analysis.
 
         #We may be able to match files that aren't allocated against files we think are deleted
-        logging.debug("Detecting modifications from unallocated files...")
+        _logger.debug("Detecting modifications from unallocated files...")
         fileobjects_deleted = []
         for key in new_fis_unalloc:
             #1 partition; 1 inode number; 1 name, repeated:  Too ambiguous to compare.
@@ -255,10 +257,10 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
                 new_obj.original_fileobject = old_obj
                 new_obj.compare_to_original()
                 fileobjects_deleted.append(new_obj)
-        logging.debug("len(old_fis) -> %d" % len(old_fis))
-        logging.debug("len(new_fis) -> %d" % len(new_fis))
-        logging.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
-        logging.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
+        _logger.debug("len(old_fis) -> %d" % len(old_fis))
+        _logger.debug("len(new_fis) -> %d" % len(new_fis))
+        _logger.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
+        _logger.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
 
         #After deletion matching is performed, one might want to look for files migrating to other partitions.
         #However, since between-volume migration creates a new deleted file, this algorithm instead ignores partition migrations.

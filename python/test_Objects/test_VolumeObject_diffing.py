@@ -1,8 +1,10 @@
 
 import Objects
 import logging
+import os
 
 logging.basicConfig(level=logging.DEBUG)
+_logger = logging.getLogger(os.path.basename(__file__))
 
 v0 = Objects.VolumeObject()
 
@@ -17,11 +19,11 @@ v0.allocated_only = False
 v0.first_block = 0
 v0.last_block = v0.block_count
 
-logging.debug(repr(v0))
+_logger.debug(repr(v0))
 v1 = eval("Objects." + repr(v0))
 
 e0 = v0.to_Element()
-logging.debug("e0 = %r" % e0)
+_logger.debug("e0 = %r" % e0)
 
 v2 = Objects.VolumeObject()
 v2.populate_from_Element(e0)
@@ -32,8 +34,8 @@ v2.partition_offset = v0.partition_offset + v0.block_count*v0.block_size
 d01 = v0.compare_to_other(v1)
 d02 = v0.compare_to_other(v2)
 
-logging.debug("d01 = %r" % d01)
+_logger.debug("d01 = %r" % d01)
 assert d01 == set(["block_size"])
 
-logging.debug("d02 = %r" % d02)
+_logger.debug("d02 = %r" % d02)
 assert d02 == set(["partition_offset"])
