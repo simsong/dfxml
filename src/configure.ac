@@ -6,7 +6,7 @@
 
 AC_PREREQ(2.57)
 AC_INIT(DFXML, 0.0.1, bugs@afflib.org)
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIR(m4)
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -16,15 +16,14 @@ AM_MAINTAINER_MODE
 # Programs we will be using
 AC_PROG_CC
 AC_PROG_CXX
+AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
 # use C++11 mode if available; HAVE_CXX11 is defined in config.h if so.  Don't
 # use the GNU C++11 extensions for portability's sake (noext).
-# AC_LANG_PUSH(C++)
-#AX_CXX_COMPILE_STDCXX_11(noext, optional)
-AX_CXX_COMPILE_STDCXX_11()
-# AC_LANG_POP()
-
+AC_LANG_PUSH(C++)
+AX_CXX_COMPILE_STDCXX_11(noext, optional)
+AC_LANG_POP()
 
 m4_include([dfxml_configure.m4])
 

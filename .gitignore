@@ -23,3 +23,5 @@ src/config.h.in
 src/iblkfind.cpp
 stamp-h
 stamp-h1
+src/compile
+src/iblkfind
