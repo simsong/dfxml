@@ -38,4 +38,4 @@ if __name__=="__main__":
     if not fn.endswith(".xml"):
         print("iblkfind requires an XML file")
         exit(1)
-    dfxml.read_dfxml(xmlfile=open(args[0]),callback=process)
+    dfxml.read_dfxml(xmlfile=open(args[0],"rb"),callback=process)
