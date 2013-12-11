@@ -102,7 +102,8 @@ class extents_t {
     std::string dfxml_filename;
 
   public:
-    using extents_set_t = std::set<byte_run_t>;
+    //using extents_set_t = std::set<byte_run_t>;
+    typedef std::set<byte_run_t> extents_set_t;
 
     extents_set_t extents;
 
@@ -115,13 +116,13 @@ class extents_t {
     extents_t(const std::string& p_dfxml_filename) :
       dfxml_filename(p_dfxml_filename) {
 
-      file_object_reader::read_dfxml(
-          dfxml_filename, 
-          [&] (file_object& fi) { // lambda function to process byte_runs into the extents set
-            for(const auto& item : fi.byte_runs) {
-              extents.emplace(item.file_offset,item.img_offset, item.len, fi.filename());
-            }
-          });
+        dfxml::file_object_reader::read_dfxml(
+            dfxml_filename, 
+            [&] (dfxml::file_object& fi) { // lambda function to process byte_runs into the extents set
+                for(const auto& item : fi.byte_runs) {
+                    extents.emplace(item.file_offset,item.img_offset, item.len, fi.filename());
+                }
+            });
     }
     ///@}
 

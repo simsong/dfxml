@@ -20,6 +20,10 @@
 #include <stack>
 #include <map>
 #include <sstream>
+#if __cplusplus >= 201103L
+#include <functional>
+#endif
+
 #include <stdint.h>
 
 #ifdef HAVE_EXPAT_H
@@ -123,7 +127,12 @@ namespace dfxml {
 #endif
     };
 
+#if __cplusplus >= 201103L
+    typedef std::function<void (file_object&)> fileobject_callback_t;
+#else
     typedef void (*fileobject_callback_t)(file_object &);
+#endif
+
     class dfxml_reader {
     public:
         dfxml_reader():tagstack(),cdata(){}
