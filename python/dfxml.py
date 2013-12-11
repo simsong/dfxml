@@ -45,6 +45,7 @@ __version__ = "1.0.1"
 
 tsk_virtual_filenames = set(['$FAT1','$FAT2'])
 
+XMLNS_DC = "http://purl.org/dc/elements/1.1/"
 XMLNS_DFXML = "http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML"
 XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
 
