@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.25"
+__version__ = "0.0.26"
 
 #Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
@@ -1923,7 +1923,10 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
     _state = READING_START
 
     for (ETevent, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
+        #View the object event stream in debug mode
         #_logger.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
+        #if ETevent in ("start", "end"):
+        #    _logger.debug("ET.tostring(elem) = %r" % ET.tostring(elem))
 
         #Track namespaces
         if ETevent == "start-ns":
@@ -1968,8 +1971,8 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
                         if "start" in _events:
                             yield ("start", vobj)
                         #Reset
+                        volume_proxy.clear()
                         volume_proxy = None
-                        elem.clear()
                 _state = READING_FILES
         elif ETevent == "end":
             if ln == "fileobject":
