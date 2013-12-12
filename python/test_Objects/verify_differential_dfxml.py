@@ -25,7 +25,7 @@ if __name__ == "__main__":
             expected_partition_diffs = {
               1048576: set(["_new"]),
               1073741824: set([]),
-              2147483648: set(["_modified", "ftype_str"]),
+              2147483648: set(["_new"]),
               4294967296: set(["_new"])
             }
             if o.diffs != expected_partition_diffs[o.partition_offset]:
