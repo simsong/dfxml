@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 import Objects
 import logging
@@ -27,19 +27,22 @@ def ignorable_name(fn):
         return False
     return os.path.basename(fn) in [".", "..", "$FAT1", "$FAT2", "$OrphanFiles"]
 
-def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
+def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, ignore_properties=set()):
     """
     Takes as input two paths to DFXML files.  Returns a DFXMLObject.
     @param pre String.
     @param post String.
+    @param diff_mode Optional.  One of "all" or "idifference".
+    @param retain_unchanged Optional.  Boolean.
+    @param ignore_properties Optiona.  Must be a Set.
     """
 
     _expected_diff_modes = ["all", "idifference"]
     if diff_mode not in _expected_diff_modes:
         raise ValueError("Differencing mode should be in: %r." % _expected_diff_modes)
-    diff_mask_set = None
+    diff_mask_set = set()
     if diff_mode == "idifference":
-        diff_mask_set = set([
+        diff_mask_set |= set([
           "atime",
           "byte_runs"
           "crtime",
@@ -50,6 +53,9 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
           "mtime",
           "sha1"
         ])
+    diff_mask_set |= ignore_properties
+    _logger.debug("diff_mask_set = " + repr(diff_mask_set))
+        
 
     #d: The container DFXMLObject, ultimately returned.
     d = Objects.DFXMLObject(version="1.1.0")
@@ -139,7 +145,11 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
                 vo = new_obj.volume_object
                 new_obj.partition = volumes_encounter_order[(vo.partition_offset, vo.ftype_str)]
 
-            key = (new_obj.partition, new_obj.inode, new_obj.filename)
+            #Define the identity key of this file -- affected by the --ignore argument
+            _key_partition = None if "partition" in ignore_properties else new_obj.partition
+            _key_inode = None if "inode" in ignore_properties else new_obj.inode
+            _key_filename = None if "filename" in ignore_properties else new_obj.filename
+            key = (_key_partition, _key_inode, _key_filename)
 
             #Ignore unallocated content comparisons until a later loop.  The unique identification of deleted files needs a little more to work.
             if not new_obj.alloc:
@@ -157,10 +167,9 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
                 old_obj = old_fis.pop(key)
                 new_obj.original_fileobject = old_obj
                 new_obj.compare_to_original()
-                if not diff_mask_set is None:
-                    new_obj.diffs &= diff_mask_set
 
-                if len(new_obj.diffs) > 0:
+                if len(new_obj.diffs - diff_mask_set) > 0:
+                    _logger.debug("Remaining diffs: " + repr(new_obj.diffs - diff_mask_set))
                     fileobjects_changed.append(new_obj)
                 else:
                     #Unmodified file; only keep if requested.
@@ -251,10 +260,9 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False):
                     new_obj = new_fis_unalloc[key].pop()
                     new_obj.original_fileobject = old_obj
                     new_obj.compare_to_original()
-                    if not diff_mask_set is None:
-                        new_obj.diffs &= diff_mask_set
                     #The file might not have changed.  It's interesting if it did, though.
-                    if len(new_obj.diffs) > 0:
+                    if len(new_obj.diffs - diff_mask_set) > 0:
+                        _logger.debug("Remaining diffs: " + repr(new_obj.diffs - diff_mask_set))
                         fileobjects_changed.append(new_obj)
                     elif retain_unchanged:
                         fileobjects_unchanged.append(new_obj)
@@ -335,13 +343,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("--idifference-diffs", action="store_true", help="Only consider the modifications idifference had considered (names, hashes, timestamps).")
+    parser.add_argument("-i", "--ignore", action="append", help="Object property to ignore in all difference operations.  E.g. pass '-i inode' to ignore inode differences when comparing directory trees on the same file system.")
     parser.add_argument("--retain-unchanged", action="store_true", help="Output unchanged files in the resulting DFXML file.", default=False)
     parser.add_argument("infiles", nargs="+")
     args = parser.parse_args()
 
-    #TODO Add -i,--ignore: Ignore a particular element if it differs.  nargs="+".  Necessary for comparisons of directories from different systems.
     #TODO Allow --ignore to ignore ftype_str, to compare only file system offsets for partitions
-    #TODO Allow --ignore to ignore .inode and/or .partition, to match strictly on names.
     #TODO Add --ignore-volumes.  It should (probably) strip all volume information from each file.
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
@@ -355,6 +362,11 @@ if __name__ == "__main__":
     if len(args.infiles) > 2:
         raise NotImplementedError("This program only analyzes two files at the moment.")
 
+    ignore_properties = set()
+    if not args.ignore is None:
+        for i in args.ignore:
+            ignore_properties.add(i)
+
     for infile in args.infiles:
         pre = post
         post = infile
@@ -363,6 +375,7 @@ if __name__ == "__main__":
               pre,
               post,
               diff_mode="idifference" if args.idifference_diffs else "all",
-              retain_unchanged=args.retain_unchanged
+              retain_unchanged=args.retain_unchanged,
+              ignore_properties=ignore_properties
             ).to_dfxml())
             
