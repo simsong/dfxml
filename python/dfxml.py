@@ -42,6 +42,7 @@ __version__ = "1.0.1"
 tsk_virtual_filenames = set(['$FAT1','$FAT2'])
 
 XMLNS_DFXML = "http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML"
+XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
 
 def isone(x):
     """Return true if something is one (number or string)"""
@@ -749,8 +750,10 @@ class fileobject:
     def content_for_run(self,run=None,imagefile=None):
         """ Returns the content for a specific run. This is a convenience feature
         which does not touch the file object if an imagefile is provided."""
-        if imagefile==None: imagefile=self.imagefile
-        if run.len== -1:
+        if imagefile is None: imagefile=self.imagefile
+        if run is None: raise ValueError("content_for_run called without a 'run' argument.")
+
+        if run.len == -1:
             return chr(0) * run.len
         elif hasattr(run,'fill'):
             return chr(run.fill) * run.len
@@ -1405,7 +1408,7 @@ def read_dfxml(xmlfile=None,imagefile=None,flags=0,callback=None,preserve_fis=Fa
     r.process_xml_stream(xmlfile,callback,preserve_fis)
     return r
 
-def iter_dfxml(xmlfile, preserve_elements=False):
+def iter_dfxml(xmlfile, preserve_elements=False, imagefile=None):
     """Returns an interator that yields fileobjects from a DFXML file.
     
     @param preserve_elements
@@ -1455,7 +1458,7 @@ def iter_dfxml(xmlfile, preserve_elements=False):
                     #TODO The volumeobject isn't populated this way; need to catch with iterparse.
                     if preserve_elements:
                         fi.xml_element = elem
-                reader = read_dfxml(pseudof, callback=temp_callback, preserve_fis=True)
+                reader = read_dfxml(xmlfile=pseudof, imagefile=imagefile, callback=temp_callback, preserve_fis=True)
                 yield reader.fi_history[0]
                 if not preserve_elements:
                     elem.clear()

@@ -14,12 +14,15 @@ Process:
 4. Replace the old maps with the new maps
 """
 
-__version__ = "0.2.0rfc3"
+__version__ = "0.2.0rfc4"
 
 import sys,fiwalk,dfxml,time
 import copy
 if sys.version_info < (3,1):
     raise RuntimeError("idifference.py now requires Python 3.1 or above")
+
+#Global variable, to be adjusted later
+options = None
 
 def ignore_filename(fn, include_dotdirs=False):
     """
@@ -34,17 +37,18 @@ def ptime(t):
     global options
     if t is None:
         return "null"
-    if options.timestamp:
+    if options and options.timestamp:
         return str(t.timestamp())
     else:
         return str(t.iso8601())
 
 def dprint(x):
     global options
-    if options.debug: print(x)
+    if options and options.debug: print(x)
 
 def header():
-    if options.html:
+    global options
+    if options and options.html:
         print("""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <body>
@@ -57,14 +61,14 @@ body  { font-family: Sans-serif;}
 
 def h1(title):
     global options
-    if options.html:
+    if options and options.html:
         print("<h1>%s</h1>" % title)
         return
     print("\n\n%s\n" % title)
 
 def h2(title):
     global options
-    if options.html:
+    if options and options.html:
         print("<h2>%s</h2>" % title)
         return
     print("\n\n%s\n%s" % (title,"="*len(title)))
@@ -85,7 +89,7 @@ def table(rows,styles=None,break_on_change=False):
             return "{0:>12}".format(x)
         return str(x)
             
-    if options.html:
+    if options and options.html:
         print("<table>")
         for row in rows:
             print("<tr>")
@@ -125,6 +129,14 @@ class DiskState:
         self.notimeline = notimeline
         self.summary = summary
         self.include_dotdirs = include_dotdirs
+        self.changed_mtime_tally = 0
+        self.changed_atime_tally = 0
+        self.changed_ctime_tally = 0
+        self.changed_crtime_tally = 0
+        self.changed_dir_sha1_tally = 0
+        self.changed_file_sha1_tally = 0
+        self.changed_filesize_tally = 0
+        self.changed_first_byterun_tally = 0
         self.next()
         
     def next(self):
@@ -146,6 +158,14 @@ class DiskState:
             self.timeline = None
         else:
             self.timeline = set()
+        self.changed_mtime_tally = 0
+        self.changed_atime_tally = 0
+        self.changed_ctime_tally = 0
+        self.changed_crtime_tally = 0
+        self.changed_dir_sha1_tally = 0
+        self.changed_file_sha1_tally = 0
+        self.changed_filesize_tally = 0
+        self.changed_first_byterun_tally = 0
 
     def process_fi(self,fi):
         global options
@@ -169,15 +189,51 @@ class DiskState:
         ofi = self.fnames.get(fi.filename(),None)
         if ofi:
             dprint("   found ofi")
+            any_diff = False
             if ofi.sha1()!=fi.sha1():
                 dprint("      >>> sha1 changed")
                 self.changed_content.add((ofi,fi))
+                any_diff = True
             elif ofi.atime() != fi.atime() or \
                     ofi.mtime() != fi.mtime() or \
                     ofi.crtime() != fi.crtime() or \
                     ofi.ctime() != fi.ctime():
                 dprint("      >>> time changed")
                 self.changed_properties.add((ofi,fi))
+                any_diff = True
+
+            if any_diff:
+                #Count the types of changes that happened
+                if ofi.filesize() != fi.filesize():
+                    self.changed_filesize_tally += 1
+                if ofi.sha1() != fi.sha1():
+                    if ofi.is_dir():
+                        self.changed_dir_sha1_tally += 1
+                    elif ofi.is_file():
+                        self.changed_file_sha1_tally += 1
+                if ofi.mtime() != fi.mtime():
+                    self.changed_mtime_tally += 1
+                if ofi.atime() != fi.atime():
+                    self.changed_atime_tally += 1
+                if ofi.ctime() != fi.ctime():
+                    self.changed_ctime_tally += 1
+                if ofi.crtime() != fi.crtime():
+                    self.changed_crtime_tally += 1
+                if ofi.byte_runs() and fi.byte_runs():
+                    brdiff = 0
+                    ofirstbr = ofi.byte_runs()[0]
+                    nfirstbr =  fi.byte_runs()[0]
+                    try:
+                        if ofirstbr.file_offset == nfirstbr.file_offset:
+                            brdiff = 1
+                        if ofirstbr.img_offset == nfirstbr.img_offset:
+                            brdiff = 1
+                        if ofirstbr.fs_offset == nfirstbr.fs_offset:
+                            brdiff = 1
+                    except:
+                        pass
+                    self.changed_first_byterun_tally += brdiff
+          
 
         # If a new file, note that (and optionally add to the timeline)
         if not ofi:
@@ -203,11 +259,11 @@ class DiskState:
         self.prior_fname = self.current_fname
         self.current_fname = fname
         if fname.endswith("xml"):
-            with open(infile,'rb') as xmlfile:
+            with open(fname,'rb') as xmlfile:
                 for fi in dfxml.iter_dfxml(xmlfile, preserve_elements=True):
                     self.process_fi(fi)
         else:
-            fiwalk.fiwalk_using_sax(imagefile=open(infile,'rb'), flags=fiwalk.ALLOC_ONLY, callback=self.process_fi)
+            fiwalk.fiwalk_using_sax(imagefile=open(fname,'rb'), flags=fiwalk.ALLOC_ONLY, callback=self.process_fi)
 
     def print_fis(self,title,fis):
         h2(title)
@@ -264,8 +320,7 @@ class DiskState:
     def to_xml(self):
         import xml.etree.ElementTree as ET
         
-        XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
-        ET.register_namespace("delta", XMLNS_DELTA)
+        ET.register_namespace("delta", dfxml.XMLNS_DELTA)
         
         if not options.xmlfilename:
             sys.stderr.write("XML output filename not specified.\n")
@@ -273,7 +328,7 @@ class DiskState:
 
         metadict = dict()
         metadict["XMLNS_DFXML"] = dfxml.XMLNS_DFXML
-        metadict["XMLNS_DELTA"] = XMLNS_DELTA
+        metadict["XMLNS_DELTA"] = dfxml.XMLNS_DELTA
         metadict["program"] = sys.argv[0]
         metadict["version"] = __version__
         metadict["commandline"] = " ".join(sys.argv)

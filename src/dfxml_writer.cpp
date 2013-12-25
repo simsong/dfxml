@@ -27,15 +27,20 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifdef HAVE_SQLITE3_H
+#include <sqlite3.h>
+#endif
 
 #ifdef HAVE_BOOST_VERSION_HPP
 #include <boost/version.hpp>
 #endif
 
 #ifdef HAVE_PTHREAD
+#define MUTEX_INIT(M)   pthread_mutex_init(M,NULL);
 #define MUTEX_LOCK(M)   pthread_mutex_lock(M)
 #define MUTEX_UNLOCK(M) pthread_mutex_unlock(M)
 #else
+#define MUTEX_INIT(M)   {}
 #define MUTEX_LOCK(M)   {}
 #define MUTEX_UNLOCK(M) {}
 #endif
@@ -107,10 +112,10 @@ int mkstemp(char *tmpl)
 #endif
 
 
-std::string dfxml_writer::xml_PRId32("%"PRId32); // gets around compiler bug
-std::string dfxml_writer::xml_PRIu32("%"PRIu32); // gets around compiler bug
-std::string dfxml_writer::xml_PRId64("%"PRId64); // gets around compiler bug
-std::string dfxml_writer::xml_PRIu64("%"PRIu64); // gets around compiler bug
+std::string dfxml_writer::xml_PRId32("%" PRId32); // gets around compiler bug
+std::string dfxml_writer::xml_PRIu32("%" PRIu32); // gets around compiler bug
+std::string dfxml_writer::xml_PRId64("%" PRId64); // gets around compiler bug
+std::string dfxml_writer::xml_PRIu64("%" PRIu64); // gets around compiler bug
 
 static const char *cstr(const string &str){
     return str.c_str();
@@ -205,9 +210,7 @@ dfxml_writer::dfxml_writer(const std::string &outfilename_,bool makeDTD):
     out(),tags(),tag_stack(),tempfilename(),tempfile_template(outfilename_+"_tmp_XXXXXXXX"),
     t0(),t_last_timestamp(),make_dtd(false),outfilename(outfilename_),oneline()
 {
-#ifdef HAVE_PTHREAD
-    pthread_mutex_init(&M,NULL);
-#endif
+    MUTEX_INIT(&M);
     gettimeofday(&t0,0);
     gettimeofday(&t_last_timestamp,0);
     if(!outf.is_open()){
@@ -382,15 +385,9 @@ void dfxml_writer::set_oneline(bool v)
     oneline = v;
 }
 
-#ifdef HAVE_ASM_CPUID
-#ifndef __WORDSIZE
-#define __WORDSIZE 32
-#endif
-
 void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                 unsigned long *ecx, unsigned long *edx) {
-#ifdef HAVE_ASM_CPUID
-#if defined(__i386__)
+#if defined(HAVE_ASM_CPUID) && defined(__i386__) 
 #if defined(__PIC__)
     __asm__ __volatile__("pushl %%ebx      \n\t" /* save %ebx */
                          "cpuid            \n\t"
@@ -404,16 +401,16 @@ void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
                          : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
                          : "a"(op)
                          : "cc");
-
-#endif
 #endif
 #endif
 }
 
-
-
 void dfxml_writer::add_cpuid()
 {
+#if defined(__i386__)
+#ifndef __WORDSIZE
+#define __WORDSIZE 32
+#endif
 #define BFIX(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))
     char buf[256];
     unsigned long eax=0, ebx=0, ecx=0, edx=0; // =0 avoids a compiler warning
@@ -437,9 +434,9 @@ void dfxml_writer::add_cpuid()
     cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
     xmlout("L1_cache_size", (int64_t) BFIX(ecx, 16, 31) * 1024);
     pop();
-}
 #undef BFIX
 #endif
+}
 
 void dfxml_writer::add_DFXML_execution_environment(const std::string &command_line)
 {
@@ -448,7 +445,6 @@ void dfxml_writer::add_DFXML_execution_environment(const std::string &command_li
 #if defined(HAVE_ASM_CPUID) && defined(__i386__)
     add_cpuid();
 #endif
-
 
 #ifdef HAVE_SYS_UTSNAME_H
     struct utsname name;
@@ -630,8 +626,7 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
         if(tag.size()) tagout(tag,attribute+"/");
     } else {
         if(tag.size()) tagout(tag,attribute);
-        if(escape_value) *out << xmlescape(value);
-        else *out << value;
+        *out << (escape_value ? xmlescape(value) : value);
         if(tag.size()) tagout("/"+tag,"");
     }
     *out << "\n";
@@ -662,6 +657,7 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #endif
 
 #ifdef HAVE_AFFLIB_AFFLIB_H
+#pragma GCC diagnostic ignored "-Wreserved-user-defined-literal"               // required for C11
 #include <afflib/afflib.h>
 #endif
 
@@ -719,24 +715,29 @@ void dfxml_writer::add_DFXML_build_environment()
     xmlout("library", "", std::string("name=\"exiv2\" version=\"") + Exiv2::version() + "\"",false);
 #endif
 #if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
-    xmlout("tre", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
+    xmlout("library", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
 #ifdef HAVE_HASHID
     xmlout("library", "", std::string("name=\"hashdb\" version=\"") + hashdb_version() + "\"",false);
 #endif
+#ifdef SQLITE_VERSION
+    xmlout("library", "", "name=\"sqlite\" version=\"" SQLITE_VERSION "\" source_id=\"" SQLITE_SOURCE_ID "\"",false);
+#endif
 #ifdef HAVE_ZMQ_VERSION
-    int zmq_major, zmq_minor, zmq_patch;
-    zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
-    stringstream zmq_ss;
-    zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
-    xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
+    {
+        int zmq_major, zmq_minor, zmq_patch;
+        zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
+        stringstream zmq_ss;
+        zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
+        xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
+    }
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
+    xmlout("library","","name=\"gnuexif\" version=\"?\"",false);
 #endif
 #ifdef GIT_COMMIT
-#define tostring(s) #s
-    xmlout("git", "", std::string("commit=\"") + tostring(GIT_COMMIT) + "\"",false);
+    xmlout("git", "", "commit=\"" GIT_COMMIT "\"",false);
 #endif
     pop();
 }
