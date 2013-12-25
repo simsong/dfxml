@@ -186,7 +186,7 @@ class DiskState:
         self.new_inodes[(fi.partition(), fi.inode())] = fi
         self.new_fi_tally += 1
 
-        # See if this filename changed or was resized
+        # See if a file with this filename had its contents change or properties changed
         ofi = self.fnames.get(fi.filename(),None)
         if ofi:
             dprint("   found ofi")
@@ -294,8 +294,9 @@ class DiskState:
                 res.add((ofi.filename(),"SHA1 changed",ofi.sha1(),"->",fi.sha1()))
                 if self.timeline: self.timeline.add((fi.mtime(),fi.filename(),"SHA1 changed",ofi.sha1(),"->",fi.sha1()))
             if ofi.atime() != fi.atime():
-                res.add((ofi.filename(),"atime changed",ptime(ofi.atime()),"->",ptime(fi.atime())))
-                if self.timeline: self.timeline.add((fi.atime(),fi.filename(),"atime changed",prtime(ofi.atime()),"->",prtime(fi.atime())))
+                if not options.noatime:
+                    res.add((ofi.filename(),"atime changed",ptime(ofi.atime()),"->",ptime(fi.atime())))
+                    if self.timeline: self.timeline.add((fi.atime(),fi.filename(),"atime changed",prtime(ofi.atime()),"->",prtime(fi.atime())))
             if ofi.mtime() != fi.mtime():
                 res.add((ofi.filename(),"mtime changed",ptime(ofi.mtime()),"->",ptime(fi.mtime())))
                 if self.timeline: self.timeline.add((fi.mtime(),fi.filename(),"mtime changed",prtime(ofi.mtime()),"->",prtime(fi.mtime())))
@@ -573,6 +574,7 @@ if __name__=="__main__":
     parser.add_option("--summary",help="output summary statistics of file system changes",action="store_true", default=False)
     parser.add_option("--timestamp",help="output all times in Unix timestamp format; otherwise use ISO 8601",action="store_true")
     parser.add_option("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
+    parser.add_option("--noatime",help="Do not include atime changes",action="store_true")
 
     (options,args) = parser.parse_args()
 
