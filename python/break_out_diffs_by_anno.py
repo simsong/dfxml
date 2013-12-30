@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-This program (-to-be) reads a DFXML file with differential annotations and produces a table.
+This program reads a DFXML file with differential annotations and produces a table.
 
-Columns: FileObject annotation.
+Columns: FileObject annotation (is it a new file? renamed? etc.).
 Rows: Counts of instances of a property being changed per FileObject annotation.  One row per FileObject direct-child element.
 """
 
