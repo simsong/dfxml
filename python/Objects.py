@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 import subprocess
 import dfxml
 import os
+import sys
 
 #For memoization
 import functools
@@ -1169,6 +1170,86 @@ class FileObject(object):
                 diffs.add(propname)
 
         return diffs
+
+    def extract_facet(self, facet, image_path=None, buffer_size=1048576, partition_offset=None, sector_size=512, errlog=None, statlog=None, icat_threshold = 268435456):
+        """
+        Generator.  Extracts the facet with a SleuthKit tool.
+
+        @param buffer_size The facet data is yielded in chunks of at most this parameter's size. Default 1MiB.
+        @param partition_offset The offset of the file's containing partition, in bytes.  Needed for icat.  If not given, the FileObject's VolumeObject will be used.  If that's also absent, icat can't be used, and img_cat will instead be tried as a fallback (which means byte runs must be in the DFXML).
+        @param icat_threshold icat incurs extensive, non-sequential IO overhead to walk the filesystem to reach the facet's byte runs.  img_cat can be called on each byte run reported in the DFXML file, but on fragmented files this incurs overhead in process spawning.  Facets larger than this threshold are extracted with icat.  Default 256MiB.  Force icat by setting this to -1; force img_cat with infinity (float("inf")).
+        """
+
+        _image_path = image_path
+        if _image_path is None:
+            raise ValueError("The backing image path must be supplied.")
+
+        _partition_offset = partition_offset
+        if _partition_offset is None:
+            if self.volume_object:
+                _partition_offset = self.volume_object.partition_offset
+
+        #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
+        if facet == "content" and \
+          not self.filesize is None and \
+          self.filesize >= icat_threshold and \
+          not self.inode is None and \
+          not _partition_offset is None:
+            _logger.debug("Extracting with icat: %r." % self)
+
+            #Set up logging if desired
+            stderr_fh = sys.stderr
+            if not errlog is None:
+                stderr_fh = open(errlog, "wb")
+
+            status_fh = None
+            if not statlog is None:
+                status_fh = open(errlog, "w")
+
+            #Set up icat process
+            cmd = ["icat"]
+            cmd.append("-b")
+            cmd.append(str(sector_size))
+            cmd.append("-o")
+            cmd.append(str(self.volume_object.partition_offset//sector_size))
+            if not self.volume_object.ftype_str is None:
+                cmd.append("-f")
+                cmd.append(self.volume_object.ftype_str)
+            cmd.append(image_path)
+            cmd.append(str(self.inode))
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
+
+            #Do a buffered read
+            len_to_read = self.filesize
+            while len_to_read > 0:
+                buffer_data = p.stdout.read(buffer_size)
+                yield_data = buffer_data[ : min(len_to_read, buffer_size)]
+                if len(yield_data) > 0:
+                    yield yield_data
+                else:
+                    #Let the subprocess terminate so we can see the exit status
+                    p.wait()
+                    last_status = p.returncode
+
+                    #Log the status if requested
+                    if not status_fh is None:
+                        status_fh.write(last_status)
+
+                    #Act on a bad status
+                    if last_status != 0:
+                        e = subprocess.CalledProcessError("icat failed.")
+                        e.returncode = last_status
+                        e.cmd = cmd
+                        raise e
+                len_to_read -= buffer_size
+
+            #Clean up file handles
+            if status_fh: status_fh.close()
+            if stderr_fh: stderr_fh.close()
+            
+        elif not self.byte_runs is None:
+            for chunk in self.byte_runs.iter_contents(_image_path, buffer_size, sector_size, errlog, statlog):
+                yield chunk
 
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""

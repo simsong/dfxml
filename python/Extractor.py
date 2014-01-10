@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import Objects
 import os
 import sys
 import logging
+import hashlib
 
 logging.basicConfig(level=logging.DEBUG)
 _logger = logging.getLogger(os.path.basename(__file__))
@@ -46,8 +47,6 @@ def main():
             #Absolute prerequisites:
             if not isinstance(obj, Objects.FileObject):
                 continue
-            if obj.byte_runs is None:
-                continue
 
             #Invoker prerequisites
             if not is_file(obj):
@@ -66,6 +65,12 @@ def main():
                 _logger.debug("Skipping already-extracted file: %r." % obj.filename)
                 continue
 
+            #Set up checksum verifier
+            checker = None
+            checked_byte_tally = 0
+            if obj.sha1:
+                checker = hashlib.sha1()
+
             extraction_byte_tally += obj.filesize
 
             if not dry_run:
@@ -74,8 +79,21 @@ def main():
                     os.makedirs(extraction_write_dir)
                 _logger.debug("Extracting to: %r." % extraction_write_path)
                 with open(extraction_write_path, "wb") as extraction_write_fh:
-                    for chunk in obj.byte_runs.iter_contents(image_path):
+                    for chunk in obj.extract_facet("content", image_path):
+                        if checker:
+                            checker.update(chunk)
+                        checked_byte_tally += len(chunk)
                         extraction_write_fh.write(chunk)
+                    
+                    if checked_byte_tally != obj.filesize:
+                        _logger.error("File size mismatch on %r." % obj.filename)
+                        _logger.info("Recorded filesize = %r" % obj.filesize)
+                        _logger.info("Extracted bytes   = %r" % checked_byte_tally)
+                    if checker and (obj.sha1 != checker.hexdigest()):
+                        _logger.error("Hash mismatch on %r." % obj.filename)
+                        _logger.info("Recorded SHA-1 = %r" % obj.sha1)
+                        _logger.info("Computed SHA-1 = %r" % checker.hexdigest())
+                        _logger.debug("File object: %r." % obj)
 
     #Report
     _logger.info("Estimated extraction: %d bytes." % extraction_byte_tally)
