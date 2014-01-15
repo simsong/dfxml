@@ -657,7 +657,7 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #endif
 
 #ifdef HAVE_AFFLIB_AFFLIB_H
-#pragma GCC diagnostic ignored "-Wreserved-user-defined-literal"               // required for C11
+//#pragma GCC diagnostic ignored "-Wreserved-user-defined-literal"               // required for C11
 #include <afflib/afflib.h>
 #endif
 
