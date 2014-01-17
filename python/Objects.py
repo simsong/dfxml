@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.27"
+__version__ = "0.0.28"
 
 #Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
@@ -1112,7 +1112,8 @@ class FileObject(object):
       "_deleted":"delta:deleted_file",
       "_renamed":"delta:renamed_file",
       "_changed":"delta:changed_file",
-      "_modified":"delta:modified_file"
+      "_modified":"delta:modified_file",
+      "_matched":"delta:matched",
     }
 
     def __init__(self, *args, **kwargs):
