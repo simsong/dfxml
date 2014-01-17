@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 import os
 import logging
@@ -18,7 +18,7 @@ def enumerated_changes(filelist):
         diffs_remaining = copy.copy(fi.diffs)
         if "filename" in diffs_remaining:
             diffs_remaining.pop("filename")
-        res.add((fi.filename, "renamed to", fi.original_fileobject.filename))
+        res.add((fi.original_fileobject.filename, "renamed to", fi.filename))
     return sorted(res)
 
 class FOCounter(object):
@@ -151,7 +151,7 @@ def main():
     idifference.table(sorted(res))
 
     idifference.h2("Deleted files:")
-    res = [(obj.mtime, obj.filename or "", obj.filesize) for obj in deleted_files]
+    res = [(obj.original_fileobject.mtime, obj.original_fileobject.filename or "", obj.original_fileobject.filesize) for obj in deleted_files]
     idifference.table(sorted(res))
 
     idifference.h2("Renamed files:")
