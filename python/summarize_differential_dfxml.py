@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 import os
 import logging
 import Objects
 import idifference
 import copy
+import collections
 import make_differential_dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
@@ -83,6 +84,11 @@ def main():
     deleted_files_matched = []
     deleted_files_unmatched = []
     renamed_files = []
+    renamed_files_directory = []
+    renamed_files_regular = []
+    renamed_files_other = []
+    renamed_files_type_changed = []
+    renamed_files_type_changes = collections.defaultdict(int) #Key: (old name_type, new name_type); value: counter
     modified_files = []
     changed_files = []
     unchanged_files = []
@@ -110,6 +116,15 @@ def main():
                     deleted_files_unmatched.append(obj)
             elif "_renamed" in obj.diffs:
                 renamed_files.append(obj)
+                if obj.name_type != obj.original_fileobject.name_type:
+                    renamed_files_type_changed.append(obj)
+                    renamed_files_type_changes[(obj.original_fileobject.name_type, obj.name_type)] += 1
+                elif obj.name_type == "r":
+                    renamed_files_regular.append(obj)
+                elif obj.name_type == "d":
+                    renamed_files_directory.append(obj)
+                else:
+                    renamed_files_other.append(obj)
             elif "_modified" in obj.diffs:
                 modified_files.append(obj)
             elif "_changed" in obj.diffs:
@@ -174,6 +189,14 @@ def main():
       ("  Unmatched", str(len(deleted_files_unmatched))),
       ("  Matched", str(len(deleted_files_matched))),
       ("Renamed files", str(len(renamed_files))),
+      ("  Directories", str(len(renamed_files_directory))),
+      ("  Regular files", str(len(renamed_files_regular))),
+      ("  Other", str(len(renamed_files_other))),
+      ("  Type changed", str(len(renamed_files_type_changed))),
+    ]
+    for key in sorted(renamed_files_type_changes.keys()):
+        summ_recs.append(("    %s -> %s" % key, str(renamed_files_type_changes[key])))
+    summ_recs += [
       ("Files with modified content", str(len(modified_files))),
       ("Files with changed file properties", str(len(changed_files)))
     ]
