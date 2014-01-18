@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 import os
 import logging
@@ -89,6 +89,7 @@ def main():
     renamed_files_other = []
     renamed_files_type_changed = []
     renamed_files_type_changes = collections.defaultdict(int) #Key: (old name_type, new name_type); value: counter
+    renamed_files_content_matches = []
     modified_files = []
     changed_files = []
     unchanged_files = []
@@ -115,6 +116,10 @@ def main():
                 else:
                     deleted_files_unmatched.append(obj)
             elif "_renamed" in obj.diffs:
+                #Count content matches
+                if obj.original_fileobject.sha1 == obj.sha1:
+                    renamed_files_content_matches.append(obj)
+
                 renamed_files.append(obj)
                 if obj.name_type != obj.original_fileobject.name_type:
                     renamed_files_type_changed.append(obj)
@@ -197,6 +202,7 @@ def main():
     for key in sorted(renamed_files_type_changes.keys()):
         summ_recs.append(("    %s -> %s" % key, str(renamed_files_type_changes[key])))
     summ_recs += [
+      ("  Content matches", str(len(renamed_files_content_matches))),
       ("Files with modified content", str(len(modified_files))),
       ("Files with changed file properties", str(len(changed_files)))
     ]
