@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 import Objects
 import logging
@@ -27,7 +27,7 @@ def ignorable_name(fn):
         return False
     return os.path.basename(fn) in [".", "..", "$FAT1", "$FAT2", "$OrphanFiles"]
 
-def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, ignore_properties=set(), annotate_matches=False):
+def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, ignore_properties=set(), annotate_matches=False, rename_requires_hash=False):
     """
     Takes as input two paths to DFXML files.  Returns a DFXMLObject.
     @param pre String.
@@ -53,7 +53,6 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
           "mtime",
           "sha1"
         ])
-    diff_mask_set |= ignore_properties
     _logger.debug("diff_mask_set = " + repr(diff_mask_set))
         
 
@@ -168,8 +167,6 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
                 new_obj.original_fileobject = old_obj
                 new_obj.compare_to_original()
 
-                if len(new_obj.diffs - diff_mask_set) > 0:
-                    _logger.debug("Remaining diffs: " + repr(new_obj.diffs - diff_mask_set))
                     fileobjects_changed.append(new_obj)
                 else:
                     #Unmodified file; only keep if requested.
@@ -200,13 +197,22 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
         old_inode_names = _make_name_map(old_fis)
         new_inode_names = _make_name_map(new_fis)
         for key in new_inode_names.keys():
+            (partition, inode) = key
+
             if len(new_inode_names[key]) != 1:
                 continue
             if not key in old_inode_names:
                 continue
             if len(old_inode_names[key]) != 1:
                 continue
-            (partition, inode) = key
+            if rename_requires_hash:
+                #Peek at the set elements by doing a quite-ephemeral list cast
+                old_obj = old_fis[(partition, inode, list(old_inode_names[key])[0])]
+                new_obj = new_fis[(partition, inode, list(new_inode_names[key])[0])]
+                if old_obj.sha1 != new_obj.sha1:
+                    continue
+
+            #Found a match if we're at this point in the loop
             old_name = old_inode_names[key].pop()
             new_name = new_inode_names[key].pop()
             old_obj = old_fis.pop((partition, inode, old_name))
@@ -366,6 +372,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("--idifference-diffs", action="store_true", help="Only consider the modifications idifference had considered (names, hashes, timestamps).")
     parser.add_argument("-i", "--ignore", action="append", help="Object property to ignore in all difference operations.  E.g. pass '-i inode' to ignore inode differences when comparing directory trees on the same file system.")
+    parser.add_argument("--rename-with-hash", action="store_true", help="Require that renamed files must match on a content hash.")
     parser.add_argument("--retain-unchanged", action="store_true", help="Output unchanged files in the resulting DFXML file.", default=False)
     parser.add_argument("--annotate-matches", action="store_true", help="Add a 'dfxml:matched' Boolean attribute to every produced object.  Useful for some counting purposes, but not always needed.", default=False)
     parser.add_argument("infiles", nargs="+")
@@ -400,6 +407,7 @@ if __name__ == "__main__":
               diff_mode="idifference" if args.idifference_diffs else "all",
               retain_unchanged=args.retain_unchanged,
               ignore_properties=ignore_properties,
-              annotate_matches=args.annotate_matches
+              annotate_matches=args.annotate_matches,
+              rename_requires_hash=args.rename_with_hash
             ).to_dfxml())
             
