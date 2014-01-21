@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.30"
+__version__ = "0.0.31"
 
 #Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
@@ -21,9 +21,6 @@ import dfxml
 import os
 import sys
 
-#For memoization
-import functools
-
 _logger = logging.getLogger(os.path.basename(__file__))
 
 #Contains: (namespace, local name) qualified XML element name pairs
@@ -31,7 +28,6 @@ _warned_elements = set([])
 
 _nagged_alloc = False
 
-@functools.lru_cache(maxsize=None)
 def _boolcast(val):
     """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
     if val is None:
@@ -74,7 +70,6 @@ def _intcast(val):
     _logger.debug("val = " + repr(val))
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
 
-@functools.lru_cache(maxsize=None)
 def _qsplit(tagname):
     """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
     assert isinstance(tagname, str)
