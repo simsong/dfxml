@@ -5,10 +5,9 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.34"
+__version__ = "0.0.35"
 
 #Remaining roadmap to 0.1.0:
-# * Make sure object annos are read in from DFXML files
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
 
 import logging
@@ -351,18 +350,20 @@ class RegXMLObject(object):
 
 
 class VolumeObject(object):
+
     _all_properties = set([
       "annos",
-      "byte_runs",
-      "partition_offset",
-      "sector_size",
+      "allocated_only",
+      "block_count",
       "block_size",
+      "byte_runs",
+      "first_block",
       "ftype",
       "ftype_str",
-      "block_count",
-      "first_block",
       "last_block",
-      "allocated_only"
+      "partition_offset",
+      "original_volume",
+      "sector_size"
     ])
 
     _diff_attr_names = {
@@ -379,7 +380,6 @@ class VolumeObject(object):
 
     def __init__(self, *args, **kwargs):
         self._files = []
-        self._original_volume = None
         self._annos = set()
         self._diffs = set()
 
@@ -409,19 +409,32 @@ class VolumeObject(object):
         self._files.append(value)
 
     def compare_to_original(self):
-        self._diffs = self.compare_to_other(self.original_volume)
+        self._diffs = self.compare_to_other(self.original_volume, True)
 
-    def compare_to_other(self, other):
+    def compare_to_other(self, other, ignore_original=False):
         """Returns a set of all the properties found to differ."""
         _typecheck(other, VolumeObject)
         diffs = set()
         for prop in VolumeObject._all_properties:
             if prop in VolumeObject._incomparable_properties:
                 continue
+            if ignore_original and prop == "original_volume":
+                continue
+
             #_logger.debug("getattr(self, %r) = %r" % (prop, getattr(self, prop)))
             #_logger.debug("getattr(other, %r) = %r" % (prop, getattr(other, prop)))
-            if getattr(self, prop) != getattr(other, prop):
-                diffs.add(prop)
+
+            #Allow file system type to be case-insensitive
+            if prop == "ftype_str":
+                o = getattr(other, prop)
+                if o: o = o.lower()
+                s = getattr(self, prop)
+                if s: s = s.lower()
+                if s != o:
+                    diffs.add(prop)
+            else:
+                if getattr(self, prop) != getattr(other, prop):
+                    diffs.add(prop)
         return diffs
 
     def populate_from_Element(self, e):
@@ -495,10 +508,14 @@ class VolumeObject(object):
         """Returns the volume element with its properties, except for the child fileobjects.  Properties are appended in DFXML schema order."""
         outel = ET.Element("volume")
 
-        if len(self.diffs) > 0:
-            #TODO The diffs appear to be attaching to the wrong object.  It seems to be time to use .annos as well.
-            _logger.debug("self.diffs = %s." % repr(self.diffs))
-            outel.attrib["delta:modified_volume"] = "1"
+        #Add differential annotations
+        annos_whittle_set = copy.deepcopy(self.annos)
+        for annodiff in VolumeObject._diff_attr_names:
+            if annodiff in annos_whittle_set:
+                outel.attrib[VolumeObject._diff_attr_names[annodiff]] = "1"
+                annos_whittle_set.remove(annodiff)
+        if len(annos_whittle_set) > 0:
+            _logger.warning("Failed to export some differential annotations: %r." % annos_whittle_set)
 
         if self.byte_runs:
             outel.append(self.byte_runs.to_Element())
@@ -1390,6 +1407,8 @@ class FileObject(object):
             if annodiff in annos_whittle_set:
                 outel.attrib[FileObject._diff_attr_names[annodiff]] = "1"
                 annos_whittle_set.remove(annodiff)
+        if len(annos_whittle_set) > 0:
+            _logger.warning("Failed to export some differential annotations: %r." % annos_whittle_set)
 
         def _anno_change(el):
             if el.tag in self.diffs:
@@ -2173,6 +2192,25 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
             e.returncode = subp.returncode
             e.cmd = subp_command
             raise e
+
+def parse(filename):
+    """Returns a DFXMLObject populated from the contents of filename."""
+    retval = None
+    appender = None
+    for (event, obj) in iterparse(filename):
+        if event == "start":
+            if isinstance(obj, DFXMLObject):
+                retval = obj
+                appender = obj
+            elif isinstance(obj, VolumeObject):
+                retval.append(obj)
+                appender = obj
+        elif event == "end":
+            if isinstance(obj, VolumeObject):
+                appender = retval
+            elif isinstance(obj, FileObject):
+                appender.append(obj)
+    return retval
 
 if __name__ == "__main__":
     import argparse

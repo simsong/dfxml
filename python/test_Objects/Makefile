@@ -11,4 +11,4 @@ check:
 	$(PYTHON3) verify_differential_dfxml.py
 
 clean:
-	rm verify_differential_dfxml.py-test.xml
+	rm verify_differential_dfxml.py-test[12].xml
