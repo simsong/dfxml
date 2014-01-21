@@ -7,7 +7,7 @@ Columns: FileObject annotation (is it a new file? renamed? etc.).
 Rows: Counts of instances of a property being changed per FileObject annotation.  One row per FileObject direct-child element.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 import Objects
 import sys
@@ -20,14 +20,12 @@ def main():
         if event != "end" or not isinstance(obj, Objects.FileObject):
             continue
         #Loop through annotations
-        for anno in obj.diffs:
-            if anno[0] != "_":
-                continue
+        for anno in obj.annos:
             #Loop through diffs
             for diff in obj.diffs:
                 hist[(anno, diff)] += 1
 
-    annos = ["_new", "_deleted", "_renamed", "_changed", "_modified"]
+    annos = Objects.FileObject._diff_attr_names.keys()
     print("""
 <table>
   <thead>

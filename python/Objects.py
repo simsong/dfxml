@@ -5,11 +5,9 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.33"
+__version__ = "0.0.34"
 
 #Remaining roadmap to 0.1.0:
-# * Use Object.annos instead of underscore-prefixed Object.diffs
-# * Make sure Object.diffs catches Object.annos
 # * Make sure object annos are read in from DFXML files
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
 
@@ -72,6 +70,20 @@ def _intcast(val):
 
     _logger.debug("val = " + repr(val))
     raise ValueError("Received a non-int-castable value.  Expected an integer or an integer as a string.")
+
+def _read_differential_annotations(annodict, element, annoset):
+    """
+    Uses the shorthand-to-attribute mappings of annodict to translate attributes of element into annoset.
+    """
+    #Start with inverting the dictionary
+    _d = { annodict[k].replace("delta:",""):k for k in annodict }
+    #_logger.debug("Inverted dictionary: _d = %r" % _d)
+    for attr in element.attrib:
+        #_logger.debug("Looking for differential annotations: %r" % e.attrib)
+        (ns, an) = _qsplit(attr)
+        if an in _d and ns == dfxml.XMLNS_DELTA:
+            #_logger.debug("Found; adding _d[an]=%r." % _d[an])
+            annoset.add(_d[an])
 
 def _qsplit(tagname):
     """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
@@ -340,6 +352,7 @@ class RegXMLObject(object):
 
 class VolumeObject(object):
     _all_properties = set([
+      "annos",
       "byte_runs",
       "partition_offset",
       "sector_size",
@@ -352,15 +365,26 @@ class VolumeObject(object):
       "allocated_only"
     ])
 
-    _incomparable_properties = set()
+    _diff_attr_names = {
+      "new":"delta:new_volume",
+      "deleted":"delta:deleted_volume",
+      "modified":"delta:modified_volume",
+      "matched":"delta:matched"
+    }
+
+    #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
+    _incomparable_properties = set([
+      "annos"
+    ])
 
     def __init__(self, *args, **kwargs):
         self._files = []
         self._original_volume = None
+        self._annos = set()
         self._diffs = set()
 
         for prop in VolumeObject._all_properties:
-            if prop == "files":
+            if prop in ["annos", "files"]:
                 continue
             setattr(self, prop, kwargs.get(prop))
 
@@ -405,7 +429,8 @@ class VolumeObject(object):
         _typecheck(e, (ET.Element, ET.ElementTree))
         #_logger.debug("e = %r" % e)
 
-        #TODO Read differential annotations
+        #Read differential annotations
+        _read_differential_annotations(VolumeObject._diff_attr_names, e, self.annos)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -531,6 +556,16 @@ class VolumeObject(object):
     @allocated_only.setter
     def allocated_only(self, val):
         self._allocated_only = _boolcast(val)
+
+    @property
+    def annos(self):
+        """Set of differential annotations.  Expected members are the keys of this class's _diff_attr_names dictionary."""
+        return self._annos
+
+    @annos.setter
+    def annos(self, val):
+        _typecheck(val, set)
+        self._annos = val
 
     @property
     def block_count(self):
@@ -1084,6 +1119,7 @@ class FileObject(object):
       "alloc",
       "alloc_inode",
       "alloc_name",
+      "annos",
       "atime",
       "bkup_time",
       "byte_runs",
@@ -1116,23 +1152,28 @@ class FileObject(object):
       "used"
     ])
 
+    #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
     _incomparable_properties = set([
+      "annos",
       "id"
     ])
 
     _diff_attr_names = {
-      "_new":"delta:new_file",
-      "_deleted":"delta:deleted_file",
-      "_renamed":"delta:renamed_file",
-      "_changed":"delta:changed_file",
-      "_modified":"delta:modified_file",
-      "_matched":"delta:matched",
+      "new":"delta:new_file",
+      "deleted":"delta:deleted_file",
+      "renamed":"delta:renamed_file",
+      "changed":"delta:changed_file",
+      "modified":"delta:modified_file",
+      "matched":"delta:matched"
     }
 
     def __init__(self, *args, **kwargs):
         #Prime all the properties
         for prop in FileObject._all_properties:
+            if prop == "annos":
+                continue
             setattr(self, prop, kwargs.get(prop))
+        self._annos = set()
         self._diffs = set()
 
     def __eq__(self, other):
@@ -1279,16 +1320,8 @@ class FileObject(object):
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["fileobject", "original_fileobject", "parent_object"]
 
-        #Map "delta:" attributes of <fileobject>s into the special self.diffs members
-        #Start with inverting the dictionary
-        _d = { FileObject._diff_attr_names[k].replace("delta:",""):k for k in FileObject._diff_attr_names }
-        #_logger.debug("Inverted dictionary: _d = %r" % _d)
-        for attr in e.attrib:
-            #_logger.debug("Looking for differential annotations: %r" % e.attrib)
-            (ns, an) = _qsplit(attr)
-            if an in _d and ns == dfxml.XMLNS_DELTA:
-                #_logger.debug("Found; adding _d[an]=%r." % _d[an])
-                self.diffs.add(_d[an])
+        #Map "delta:" attributes of <fileobject>s into the self.annos set
+        _read_differential_annotations(FileObject._diff_attr_names, e, self.annos)
 
         #Look through direct-child elements for other properties
         for ce in e.findall("./*"):
@@ -1350,12 +1383,13 @@ class FileObject(object):
         """Creates an ElementTree Element with elements in DFXML schema order."""
         outel = ET.Element("fileobject")
 
-        diffs_whittle_set = copy.copy(self.diffs)
+        annos_whittle_set = copy.deepcopy(self.annos)
+        diffs_whittle_set = copy.deepcopy(self.diffs)
 
         for annodiff in FileObject._diff_attr_names:
-            if annodiff in diffs_whittle_set:
+            if annodiff in annos_whittle_set:
                 outel.attrib[FileObject._diff_attr_names[annodiff]] = "1"
-                diffs_whittle_set.remove(annodiff)
+                annos_whittle_set.remove(annodiff)
 
         def _anno_change(el):
             if el.tag in self.diffs:
@@ -1488,6 +1522,16 @@ class FileObject(object):
         self._alloc_name = _boolcast(val)
 
     @property
+    def annos(self):
+        """Set of differential annotations.  Expected members are the keys of this class's _diff_attr_names dictionary."""
+        return self._annos
+
+    @annos.setter
+    def annos(self, val):
+        _typecheck(val, set)
+        self._annos = val
+
+    @property
     def atime(self):
         return self._atime
 
@@ -1545,7 +1589,7 @@ class FileObject(object):
 
     @property
     def diffs(self):
-        """This property intentionally has no setter.  To populate, call compare_to_original() after assigning an original_fileobject.  You can manually add to this the special diffs "_new", "_deleted", and "_renamed", and these will appear as differential annotations with to_Element()."""
+        """This property intentionally has no setter.  To populate, call compare_to_original() after assigning an original_fileobject."""
         return self._diffs
 
     @property

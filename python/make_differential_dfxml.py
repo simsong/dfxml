@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 import Objects
 import logging
@@ -126,11 +126,12 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
                         new_obj.original_volume = old_obj
                         new_obj.compare_to_original()
                         if len(new_obj.diffs) > 0:
-                            new_obj.diffs.add("_modified")
+                            _logger.debug("Volume is modified.  Differences: " + repr(new_obj.diffs) + ".")
+                            new_obj.annos.add("modified")
                         volumes[(offset, ftype_str)] = new_obj
                 else:
                     _logger.debug("Found a new volume, at offset %r." % offset)
-                    new_obj.diffs.add("_new")
+                    new_obj.annos.add("new")
                     volumes[(offset, ftype_str)] = new_obj
                     volumes_encounter_order[(offset, new_obj.ftype_str)] = len(volumes)
                 continue
@@ -321,56 +322,56 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
         def _maybe_match_attr(obj):
             """Just adds the 'matched' annotation when called."""
             if annotate_matches:
-                obj.diffs.add("_matched")
+                obj.annos.add("matched")
 
         #Populate DFXMLObject.
         for key in new_fis:
             #TODO If this script ever does a series of >2 DFXML files, these diff additions need to be removed for the next round.
             fi = new_fis[key]
-            fi.diffs.add("_new")
+            fi.annos.add("new")
             appenders[fi.partition].append(fi)
         for key in new_fis_unalloc:
             for fi in new_fis_unalloc[key]:
-                fi.diffs.add("_new")
+                fi.annos.add("new")
                 appenders[fi.partition].append(fi)
         for fi in fileobjects_deleted:
             #Independently flag for name, content, and metadata modifications
             if len(fi.diffs - content_diffs) > 0:
-                fi.diffs.add("_changed")
+                fi.annos.add("changed")
             if len(content_diffs.intersection(fi.diffs)) > 0:
-                fi.diffs.add("_modified")
+                fi.annos.add("modified")
             if "filename" in fi.diffs:
-                fi.diffs.add("_renamed")
-            fi.diffs.add("_deleted")
+                fi.annos.add("renamed")
+            fi.annos.add("deleted")
             _maybe_match_attr(fi)
             appenders[fi.partition].append(fi)
         for key in old_fis:
             ofi = old_fis[key]
             nfi = Objects.FileObject()
             nfi.original_fileobject = ofi
-            nfi.diffs.add("_deleted")
+            nfi.annos.add("deleted")
             appenders[ofi.partition].append(nfi)
         for key in old_fis_unalloc:
             for ofi in old_fis_unalloc[key]:
                 nfi = Objects.FileObject()
                 nfi.original_fileobject = ofi
-                nfi.diffs.add("_deleted")
+                nfi.annos.add("deleted")
                 appenders[ofi.partition].append(nfi)
         for fi in fileobjects_renamed:
             #Independently flag for content and metadata modifications
             if len(content_diffs.intersection(fi.diffs)) > 0:
-                fi.diffs.add("_modified")
+                fi.annos.add("modified")
             if len(fi.diffs - content_diffs) > 0:
-                fi.diffs.add("_changed")
-            fi.diffs.add("_renamed")
+                fi.annos.add("changed")
+            fi.annos.add("renamed")
             _maybe_match_attr(fi)
             appenders[fi.partition].append(fi)
         for fi in fileobjects_changed:
             #Independently flag for content and metadata modifications
             if len(content_diffs.intersection(fi.diffs)) > 0:
-                fi.diffs.add("_modified")
+                fi.annos.add("modified")
             if len(fi.diffs - content_diffs) > 0:
-                fi.diffs.add("_changed")
+                fi.annos.add("changed")
             _maybe_match_attr(fi)
             appenders[fi.partition].append(fi)
         for fi in fileobjects_unchanged:
