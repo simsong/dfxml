@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.32"
+__version__ = "0.0.33"
 
 #Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
@@ -1112,6 +1112,7 @@ class FileObject(object):
       "sha1",
       "uid",
       "unalloc",
+      "unused",
       "used"
     ])
 
@@ -1715,12 +1716,24 @@ class FileObject(object):
             self._alloc = not self._unalloc
 
     @property
+    def unused(self):
+        return self._used
+
+    @unused.setter
+    def unused(self, val):
+        self._unused = _intcast(val)
+        if not self._unused is None:
+            self._used = not self._unused
+
+    @property
     def used(self):
         return self._used
 
     @used.setter
     def used(self, val):
         self._used = _intcast(val)
+        if not self._used is None:
+            self._unused = not self._used
 
     @property
     def volume_object(self):
