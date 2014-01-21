@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 import Objects
 import os
@@ -9,6 +9,7 @@ import logging
 import hashlib
 import copy
 import traceback
+import dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
@@ -59,6 +60,7 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
     base_manifest.command_line = " ".join(sys.argv)
     base_manifest.version = "1.1.0+"
     base_manifest.add_namespace("extractor", XMLNS_EXTRACTOR)
+    base_manifest.add_namespace("delta", dfxml.XMLNS_DELTA)
     base_manifest.sources.append(image_path)
     if dfxml_path:
         base_manifest.sources.append(dfxml_path)
@@ -66,10 +68,10 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
     #Clone base manifest to all-files' manifest and errors-only manifest
     out_manifest = None
     if out_manifest_path:
-        out_manifest = copy.copy(base_manifest)
+        out_manifest = copy.deepcopy(base_manifest)
     err_manifest = None
     if err_manifest_path:
-        err_manifest = copy.copy(base_manifest)
+        err_manifest = copy.deepcopy(base_manifest)
 
     for (event, obj) in Objects.iterparse(_path_for_iterparse):
         #Absolute prerequisites:
