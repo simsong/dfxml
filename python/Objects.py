@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.36"
+__version__ = "0.0.37"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -117,6 +117,7 @@ class DFXMLObject(object):
         self.command_line = kwargs.get("command_line")
         self.version = kwargs.get("version")
         self.sources = kwargs.get("sources", [])
+        self.dc = kwargs.get("dc", dict())
 
         self._namespaces = dict()
         self._volumes = []
@@ -218,9 +219,13 @@ class DFXMLObject(object):
         outel = ET.Element("dfxml")
 
         tmpel0 = ET.Element("metadata")
-        tmpel1 = ET.Element("dc:type")
-        tmpel1.text = "(Placeholder)"
-        tmpel0.append(tmpel1)
+        for key in sorted(self.dc):
+            _typecheck(key, str)
+            if ":" in key:
+                raise ValueError("Dublin Core key-value entries should have keys without the colon character.  If this causes an interesting namespace issue for you, please report it as a bug.")
+            tmpel1 = ET.Element("dc:" + key)
+            tmpel1.text = self.dc[key]
+            tmpel0.append(tmpel1)
         outel.append(tmpel0)
 
         if self.command_line:
@@ -260,6 +265,16 @@ class DFXMLObject(object):
     @command_line.setter
     def command_line(self, value):
         self._command_line = _strcast(value)
+
+    @property
+    def dc(self):
+        """The Dublin Core dictionary of key-value pairs for this document.  Typically, "type" is  "Hash List", or "Disk Image".  Keys should be strings not containing colons, values should be strings.  If this causes an issue for you, please report it as a bug.."""
+        return self._dc
+
+    @dc.setter
+    def dc(self, value):
+        _typecheck(value, dict)
+        self._dc = value
 
     @property
     def namespaces(self):
