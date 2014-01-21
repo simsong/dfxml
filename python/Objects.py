@@ -5,12 +5,13 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.31"
+__version__ = "0.0.32"
 
 #Remaining roadmap to 0.1.0:
 # * Use Object.annos instead of underscore-prefixed Object.diffs
-# * verify_differential_dfxml.py vets changed file properties and counts of differential samples 2 vs. 3.
-# * Use cast functions instead of asserts
+# * Make sure Object.diffs catches Object.annos
+# * Make sure object annos are read in from DFXML files
+# * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
 
 import logging
 import re
@@ -26,7 +27,9 @@ _logger = logging.getLogger(os.path.basename(__file__))
 #Contains: (namespace, local name) qualified XML element name pairs
 _warned_elements = set([])
 
+#Issue some log statements only once per program invocation.
 _nagged_alloc = False
+_warned_byterun_badtypecomp = False
 
 def _boolcast(val):
     """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
@@ -72,7 +75,7 @@ def _intcast(val):
 
 def _qsplit(tagname):
     """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
-    assert isinstance(tagname, str)
+    _typecheck(tagname, str)
     if tagname[0] == "{":
         i = tagname.rfind("}")
         return ( tagname[1:i], tagname[i+1:] )
@@ -245,9 +248,7 @@ class DFXMLObject(object):
 
     @command_line.setter
     def command_line(self, value):
-        if not value is None:
-            assert isinstance(value, str)
-        self._command_line = value
+        self._command_line = _strcast(value)
 
     @property
     def namespaces(self):
@@ -380,7 +381,7 @@ class VolumeObject(object):
         return "VolumeObject(" + ", ".join(parts) + ")"
 
     def append(self, value):
-        assert isinstance(value, FileObject)
+        _typecheck(value, FileObject)
         self._files.append(value)
 
     def compare_to_original(self):
@@ -646,7 +647,11 @@ class ByteRun(object):
         #Check type
         if other is None:
             return False
-        assert isinstance(other, ByteRun)
+        if not isinstance(other, ByteRun):
+            if not _warned_byterun_badtypecomp:
+                _logger.warning("A ByteRun comparison was called against a non-ByteRun object: " + repr(other) + ".")
+                _warned_byterun_badtypecomp = True
+            return False
 
         #Check values
         return \
@@ -668,7 +673,7 @@ class ByteRun(object):
         return "ByteRun(" + ", ".join(parts) + ")"
 
     def populate_from_Element(self, e):
-        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
+        _typecheck(e, (ET.Element, ET.ElementTree))
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -759,7 +764,7 @@ class ByteRuns(list):
         #Check type
         if other is None:
             return False
-        assert isinstance(other, ByteRuns)
+        _typecheck(other, ByteRuns)
 
         if len(self) != len(other):
             #_logger.debug("len(self) = %d" % len(self))
@@ -793,11 +798,11 @@ class ByteRuns(list):
         return "ByteRuns(run_list=[" + ", ".join(parts) + "])"
 
     def __setitem__(self, key, value):
-        assert isinstance(value, ByteRun)
+        _typecheck(value, ByteRun)
         self._listdata[key] = value
 
     def append(self, value):
-        assert isinstance(value, ByteRun)
+        _typecheck(value, ByteRun)
         self._listdata.append(value)
 
     def iter_contents(self, raw_image, buffer_size=1048576, sector_size=512, errlog=None, statlog=None):
@@ -887,7 +892,7 @@ class ByteRuns(list):
             stderr_fh.close()
 
     def populate_from_Element(self, e):
-        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
+        _typecheck(e, (ET.Element, ET.ElementTree))
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -1000,7 +1005,7 @@ class TimestampObject(object):
             raise ValueError("Can't compare TimestampObjects: %r, %r." % self, other)
 
     def to_Element(self):
-        assert self.name
+        _typecheck(self.name, str)
         outel = ET.Element(self.name)
         if self.prec:
             outel.attrib["prec"] = "%d%s" % self.prec
@@ -1297,9 +1302,9 @@ class FileObject(object):
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "hashdigest":
-                if ce.attrib["type"] == "md5":
+                if ce.attrib["type"].lower() == "md5":
                     self.md5 = ce.text
-                elif ce.attrib["type"] == "sha1":
+                elif ce.attrib["type"].lower() == "sha1":
                     self.sha1 = ce.text
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
@@ -1679,7 +1684,7 @@ class FileObject(object):
     @parent_object.setter
     def parent_object(self, val):
         if not val is None:
-            assert isinstance(val, FileObject)
+            _typecheck(val, FileObject)
         self._parent_object = val
 
     @property
@@ -1781,7 +1786,7 @@ class CellObject(object):
         return "CellObject(" + ", ".join(parts) + ")"
 
     def compare_to_original(self):
-        assert self.original_cellobject
+        _typecheck(self.original_cellobject, CellObject)
 
         self._diffs = set()
 
@@ -1797,7 +1802,7 @@ class CellObject(object):
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
-        assert isinstance(e, ET.Element) or isinstance(e, ET.ElementTree)
+        _typecheck(e, (ET.Element, ET.ElementTree))
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -1897,7 +1902,7 @@ class CellObject(object):
     @byte_runs.setter
     def byte_runs(self, val):
         if not val is None:
-            assert isinstance(val, ByteRuns)
+            _typecheck(val, ByteRuns)
         self._byte_runs = val
 
     @property
@@ -1907,7 +1912,7 @@ class CellObject(object):
     @cellpath.setter
     def cellpath(self, val):
         if not val is None:
-            assert isinstance(val, str)
+            _typecheck(val, str)
         self._cellpath = val
 
     @property
@@ -1930,7 +1935,7 @@ class CellObject(object):
     @name.setter
     def name(self, val):
         if not val is None:
-            assert isinstance(val, str)
+            _typecheck(val, str)
         self._name = val
 
     @property
@@ -1951,7 +1956,7 @@ class CellObject(object):
     @parent_object.setter
     def parent_object(self, val):
         if not val is None:
-            assert isinstance(val, CellObject)
+            _typecheck(val, CellObject)
         self._parent_object = val
 
     @property
@@ -1961,7 +1966,7 @@ class CellObject(object):
     @original_cellobject.setter
     def original_cellobject(self, val):
         if not val is None:
-            assert isinstance(val, CellObject)
+            _typecheck(val, CellObject)
         self._original_cellobject = val
 
     @property
