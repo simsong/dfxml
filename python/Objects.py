@@ -1189,7 +1189,7 @@ class FileObject(object):
 
     def extract_facet(self, facet, image_path=None, buffer_size=1048576, partition_offset=None, sector_size=512, errlog=None, statlog=None, icat_threshold = 268435456):
         """
-        Generator.  Extracts the facet with a SleuthKit tool.
+        Generator.  Extracts the facet with a SleuthKit tool, yielding chunks of the data.
 
         @param buffer_size The facet data is yielded in chunks of at most this parameter's size. Default 1MiB.
         @param partition_offset The offset of the file's containing partition, in bytes.  Needed for icat.  If not given, the FileObject's VolumeObject will be used.  If that's also absent, icat can't be used, and img_cat will instead be tried as a fallback (which means byte runs must be in the DFXML).
@@ -1206,6 +1206,7 @@ class FileObject(object):
                 _partition_offset = self.volume_object.partition_offset
 
         #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
+        #TODO The icat needs a little more experimentation.
         if False and facet == "content" and \
           not self.filesize is None and \
           self.filesize >= icat_threshold and \
