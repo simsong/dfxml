@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.35"
+__version__ = "0.0.36"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -508,8 +508,10 @@ class VolumeObject(object):
         """Returns the volume element with its properties, except for the child fileobjects.  Properties are appended in DFXML schema order."""
         outel = ET.Element("volume")
 
-        #Add differential annotations
         annos_whittle_set = copy.deepcopy(self.annos)
+        diffs_whittle_set = copy.deepcopy(self.diffs)
+
+        #Add differential annotations
         for annodiff in VolumeObject._diff_attr_names:
             if annodiff in annos_whittle_set:
                 outel.attrib[VolumeObject._diff_attr_names[annodiff]] = "1"
@@ -528,6 +530,7 @@ class VolumeObject(object):
                 _keep = True
             if prop in self.diffs:
                 tmpel.attrib["delta:changed_property"] = "1"
+                diffs_whittle_set.remove(prop)
                 _keep = True
             if _keep:
                 outel.append(tmpel)
@@ -558,11 +561,21 @@ class VolumeObject(object):
         _append_bool("allocated_only")
 
         #Output the original volume's properties
-        if not self.original_volume is None:
+        if not self.original_volume is None or "original_volume" in diffs_whittle_set:
             #Skip FileObject list, if any
-            tmpel = self.original_volume.to_partial_Element()
+            if self.original_volume is None:
+                tmpel = ET.Element()
+            else:
+                tmpel = self.original_volume.to_partial_Element()
             tmpel.tag = "delta:original_volume"
+
+            if "original_volume" in diffs_whittle_set:
+                tmpel.attrib["delta:changed_property"] = "1"
+
             outel.append(tmpel)
+
+        if len(diffs_whittle_set) > 0:
+            _logger.warning("Did not annotate all of the differing properties of this volume.  Remaining properties:  %r." % diffs_whittle_set)
 
         return outel
 
@@ -1422,7 +1435,7 @@ class FileObject(object):
 
         #Recall that Element text must be a string
         def _append_str(name, value):
-            #TODO Need lookup support for diff annos
+            """Note that empty elements should be created if the element was removed."""
             if not value is None or name in diffs_whittle_set:
                 tmpel = ET.Element(name)
                 if not value is None:
@@ -1431,28 +1444,56 @@ class FileObject(object):
                 outel.append(tmpel)
 
         def _append_time(name, value):
-            if not value is None and value.time:
-                tmpel = value.to_Element()
+            """Note that empty elements should be created if the element was removed."""
+            if not value is None or name in diffs_whittle_set:
+                if not value is None and value.time:
+                    tmpel = value.to_Element()
+                else:
+                    tmpel = ET.Element(name)
                 _anno_change(tmpel)
                 outel.append(tmpel)
 
         def _append_bool(name, value):
-            if not value is None:
+            """Note that empty elements should be created if the element was removed."""
+            if not value is None or name in diffs_whittle_set:
                 tmpel = ET.Element(name)
-                tmpel.text = str(1 if value else 0)
+                if not value is None:
+                    tmpel.text = str(1 if value else 0)
                 _anno_change(tmpel)
                 outel.append(tmpel)
 
-        if self.parent_object:
-            tmpel = self.parent_object.to_Element()
-            tmpel.tag = "parent_object"
-            outel.append(tmpel)
+        def _append_object(name, value, namespace_prefix=None):
+            """name must be the name of a property that has a to_Element() method.  namespace_prefix will be prepended as-is to the element tag."""
+            obj = getattr(self, name)
+            if obj or name in diffs_whittle_set:
+                if obj:
+                    tmpel = obj.to_Element()
+                else:
+                    tmpel = ET.Element()
+                #Set the tag name here for properties like parent_object, a FileObject without being wholly a FileObject.
+                if namespace_prefix:
+                    tmpel.tag = namespace_prefix + name
+                else:
+                    tmpel.tag = name
+                _anno_change(tmpel)
+                outel.append(tmpel)
 
+        def _append_hash(name, value):
+            if not value is None or name in diffs_whittle_set:
+                tmpel = ET.Element("hashdigest")
+                tmpel.attrib["type"] = name
+                if not value is None:
+                    tmpel.text = value
+                _anno_hash(tmpel)
+                outel.append(tmpel)
+
+        _append_object("parent_object", self.parent_object)
         _append_str("filename", self.filename)
         _append_str("partition", self.partition)
         _append_str("id", self.id)
         _append_str("name_type", self.name_type)
         _append_str("filesize", self.filesize)
+        #TODO Define a better flag for if we're going to output <alloc> elements.
         if self.alloc_name is None and self.alloc_inode is None:
             _append_bool("alloc", self.alloc)
         else:
@@ -1467,39 +1508,22 @@ class FileObject(object):
         _append_str("nlink", self.nlink)
         _append_str("uid", self.uid)
         _append_str("gid", self.gid)
-        _append_time("mtime", self.mtime) #TODO Needs handling for prec (maybe not anymore)
-        _append_time("ctime", self.ctime) #TODO Needs handling for prec
-        _append_time("atime", self.atime) #TODO Needs handling for prec
-        _append_time("crtime", self.crtime) #TODO Needs handling for prec
+        _append_time("mtime", self.mtime)
+        _append_time("ctime", self.ctime)
+        _append_time("atime", self.atime)
+        _append_time("crtime", self.crtime)
         _append_str("seq", self.seq)
-        _append_time("dtime", self.dtime) #TODO Needs handling for prec
-        _append_time("bkup_time", self.bkup_time) #TODO Needs handling for prec
+        _append_time("dtime", self.dtime)
+        _append_time("bkup_time", self.bkup_time)
         _append_str("link_target", self.link_target)
         _append_str("libmagic", self.libmagic)
+        _append_object("byte_runs", self.byte_runs)
+        _append_hash("md5", self.md5)
+        _append_hash("sha1", self.sha1)
+        _append_object("original_fileobject", self.original_fileobject, "delta:")
 
-        if self.byte_runs:
-            tmpel = self.byte_runs.to_Element()
-            _anno_change(tmpel)
-            outel.append(tmpel)
-
-        if self.md5:
-            tmpel = ET.Element("hashdigest")
-            tmpel.attrib["type"] = "md5"
-            tmpel.text = self.md5
-            _anno_hash(tmpel)
-            outel.append(tmpel)
-
-        if self.sha1:
-            tmpel = ET.Element("hashdigest")
-            tmpel.attrib["type"] = "sha1"
-            tmpel.text = self.sha1
-            _anno_hash(tmpel)
-            outel.append(tmpel)
-
-        if self.original_fileobject:
-            tmpel = self.original_fileobject.to_Element()
-            tmpel.tag = "delta:original_fileobject"
-            outel.append(tmpel)
+        if len(diffs_whittle_set) > 0:
+            _logger.warning("Did not annotate all of the differing properties of this file.  Remaining properties:  %r." % diffs_whittle_set)
 
         return outel
 
@@ -1674,7 +1698,6 @@ class FileObject(object):
     @property
     def mode(self):
         """The security mode is represented in the FileObject as a base-10 integer.  It is also serialized as a decimal integer."""
-        #TODO This decimal-octal business is worth a unit test.
         return self._mode
 
     @mode.setter
@@ -2120,7 +2143,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
                     raise ValueError("Encountered a <dfxml> element, but the parser isn't in its start state.  Recursive <dfxml> declarations aren't supported at this time.")
                 dfxml_proxy = ET.Element(elem.tag)
                 for k in elem.attrib:
-                    #TODO Check if xmlns declarations cause problems here
+                    #Note that xmlns declarations don't appear in elem.attrib.
                     dfxml_proxy.attrib[k] = elem.attrib[k] 
                 _state = READING_PRESTREAM
             elif ln == "volume":
