@@ -1185,7 +1185,9 @@ class FileObject(object):
     #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
     _incomparable_properties = set([
       "annos",
-      "id"
+      "id",
+      "unalloc",
+      "unused"
     ])
 
     _diff_attr_names = {
