@@ -34,13 +34,15 @@ if __name__ == "__main__":
             _logger.debug(repr(o))
             if isinstance(o, Objects.VolumeObject):
                 expected_partition_annos = {
-                  1048576: set(["new"]),
-                  1073741824: set([]),
-                  2147483648: set(["new"]),
-                  4294967296: set(["new"])
+                  (1048576,"FAT16"): set(["deleted"]),
+                  (1073741824,"FAT32"): set([]),
+                  (2147483648,"FAT32"): set(["deleted"]),
+                  (2147483648,"NTFS"): set(["new"]),
+                  (4294967296,"FAT32"): set(["new"])
                 }
-                if o.annos != expected_partition_annos[o.partition_offset]:
+                if o.annos != expected_partition_annos[(o.partition_offset, o.ftype_str)]:
                     _logger.info("Partition offset: %r;" % o.partition_offset)
+                    _logger.info("Partition ftype_str: %r;" % o.ftype_str)
                     _logger.info("Expected: %r;" % expected_partition_annos[o.partition_offset])
                     _logger.info("Received: %r." % o.annos)
                     _logger.info("Diffs: %r." % o.diffs)

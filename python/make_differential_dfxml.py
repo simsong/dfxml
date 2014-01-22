@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.8.2"
+__version__ = "0.9.0"
 
 import Objects
 import logging
@@ -20,6 +20,13 @@ import collections
 import dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
+
+def _lower_ftype_str(vo):
+    """The string labels of file system names might differ by something small like the casing.  Normalize the labels by lower-casing them."""
+    Objects._typecheck(vo, Objects.VolumeObject)
+    f = vo.ftype_str
+    if isinstance(f, str): f = f.lower()
+    return f
 
 def ignorable_name(fn):
     """Filter out recognized pseudo-file names."""
@@ -82,7 +89,10 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
 
     #Key: Partition byte offset within the disk image, paired with the file system type
     #Value: VolumeObject
-    volumes = dict()
+    old_volumes = None
+    new_volumes = None
+    matched_volumes = dict()
+
     #Populated in distinct (offset, file system type as string) encounter order
     volumes_encounter_order = dict()
 
@@ -91,6 +101,13 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
         _logger.debug("infile = %r" % infile)
         old_fis = new_fis
         new_fis = dict()
+
+        old_volumes = new_volumes
+        new_volumes = dict()
+        #Fold in the matched volumes - we're just discarding the deleted volumes
+        for k in matched_volumes:
+            old_volumes[k] = matched_volumes[k]
+        matched_volumes = dict()
 
         old_fis_unalloc = new_fis_unalloc
         new_fis_unalloc = collections.defaultdict(list)
@@ -114,27 +131,36 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
                 offset = new_obj.partition_offset
                 if offset is None:
                     raise AttributeError("To perform differencing with volumes, the <volume> elements must have a <partition_offset>.  Either re-generate your DFXML with partition offsets, or run this program again with the --ignore-volumes flag.")
-                ftype_str = new_obj.ftype_str
-                if (offset, ftype_str) in volumes:
-                    _logger.debug("Found a volume again, at offset %r." % offset)
-                    if infile == pre:
-                        _logger.debug("new_obj.partition_offset = %r." % offset)
-                        _logger.warning("Encountered a volume that starts at an offset as another volume, in the same disk image.  This analysis is based on the assumption that that doesn't happen.  Check results that depend on partition mappings.")
-                    else:
-                        #New volume; compare
-                        _logger.debug("Found a volume in post image, at offset %r." % offset)
-                        old_obj = volumes[(offset, ftype_str)]
-                        new_obj.original_volume = old_obj
-                        new_obj.compare_to_original()
-                        if len(new_obj.diffs) > 0:
-                            _logger.debug("Volume is modified.  Differences: " + repr(new_obj.diffs) + ".")
-                            new_obj.annos.add("modified")
-                        volumes[(offset, ftype_str)] = new_obj
+
+                #Use the lower-case volume spelling
+                ftype_str = _lower_ftype_str(new_obj)
+
+                #Re-capping the general differential analysis algorithm: 
+                #0. If the volume is in the new list, something's gone wrong.
+                if (offset, ftype_str) in new_volumes:
+                    _logger.debug("new_obj.partition_offset = %r." % offset)
+                    _logger.warning("Encountered a volume that starts at an offset as another volume, in the same disk image.  This analysis is based on the assumption that that doesn't happen.  Check results that depend on partition mappings.")
+
+                #1. If the volume is in the old list, pop it out of the old list - it's matched.
+                if old_volumes and (offset, ftype_str) in old_volumes:
+                    _logger.debug("Found a volume in post image, at offset %r." % offset)
+                    old_obj = old_volumes.pop((offset, ftype_str))
+                    new_obj.original_volume = old_obj
+                    new_obj.compare_to_original()
+                    matched_volumes[(offset, ftype_str)] = new_obj
+
+                #2. If the volume is NOT in the old list, add it to the new list.
                 else:
                     _logger.debug("Found a new volume, at offset %r." % offset)
-                    new_obj.annos.add("new")
-                    volumes[(offset, ftype_str)] = new_obj
-                    volumes_encounter_order[(offset, new_obj.ftype_str)] = len(volumes)
+                    new_volumes[(offset, ftype_str)] = new_obj
+                    volumes_encounter_order[(offset, ftype_str)] = len(new_volumes) + ((old_volumes and len(old_volumes)) or 0) + len(matched_volumes)
+
+                #3. Afterwards, the old list contains deleted volumes.
+
+                #Record the ID
+                new_obj.id = volumes_encounter_order[(offset, ftype_str)]
+
+                #Move on to the next object
                 continue
             elif not isinstance(new_obj, Objects.FileObject):
                 #The rest of this loop compares only file objects.
@@ -148,7 +174,8 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
                 new_obj.partition = None
             else:
                 vo = new_obj.volume_object
-                new_obj.partition = volumes_encounter_order[(vo.partition_offset, vo.ftype_str)]
+                fts = _lower_ftype_str(vo)
+                new_obj.partition = volumes_encounter_order[(vo.partition_offset, fts)]
 
             #Define the identity key of this file -- affected by the --ignore argument
             _key_partition = None if "partition" in ignore_properties else new_obj.partition
@@ -307,16 +334,31 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
         #TODO We might also want to match the unallocated objects based on metadata addresses.  Unfortunately, that requires implementation of additional byte runs, which hasn't been fully designed yet in the DFXML schema.
 
         #Begin output.
+        #First, annotate the volume objects.
+        for key in new_volumes:
+            v = new_volumes[key]
+            v.annos.add("new")
+        for key in old_volumes:
+            v = old_volumes[key]
+            v.annos.add("deleted")
+        for key in matched_volumes:
+            if len(v.diffs) > 0:
+                v.annos.add("modified")
 
+        #Build list of FileObject appenders, child volumes of the DFXML Document.
         #Key: Partition number, or None
         #Value: Reference to the VolumeObject corresponding with that partition number.  None -> the DFXMLObject.
         appenders = dict()
-        for (offset, ftype_str) in volumes_encounter_order:
-            appenders[volumes_encounter_order[(offset, ftype_str)]] = volumes[(offset, ftype_str)]
-        appenders[None] = d
+        for volume_dict in [new_volumes, matched_volumes, old_volumes]:
+            for (offset, ftype_str) in volume_dict:
+                    if (offset, ftype_str) in appenders:
+                        raise ValueError("This pair is already in the appenders dictionary, which was supposed to be distinct: " + repr((offset, ftype_str)) + ".")
+                    v = volume_dict[(offset, ftype_str)]
+                    appenders[volumes_encounter_order[(offset, ftype_str)]] = v
+                    d.append(v)
 
-        for (voffset, vftype_str) in sorted(volumes.keys()):
-            d.append(volumes[(voffset, vftype_str)])
+        #Add in the default appender, the DFXML Document itself.
+        appenders[None] = d
 
         content_diffs = set(["md5", "sha1", "mtime"])
 
