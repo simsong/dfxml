@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.37"
+__version__ = "0.0.38"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -315,6 +315,15 @@ class RegXMLObject(object):
         for cell in input_cells:
             self.append(cells)
 
+    def __iter__(self):
+        """Yields all HiveObjects, recursively their CellObjects, and the CellObjects directly attached to this RegXMLObject, in that order."""
+        for h in self._hives:
+            yield h
+            for c in h:
+                yield c
+        for c in self._cells:
+            yield c
+
     def append(self, value):
         if isinstance(value, HiveObject):
             self._hives.append(value)
@@ -324,16 +333,18 @@ class RegXMLObject(object):
             _logger.debug("value = %r" % value)
             raise TypeError("Expecting a HiveObject or a CellObject.  Got instead this type: %r." % type(value))
 
-    def print_regxml(self):
+    def print_regxml(self, output_fh=sys.stdout):
         """Serializes and prints the entire object, without constructing the whole tree."""
         regxml_wrapper = ET.tostring(self.to_partial_Element(), encoding="unicode")
         regxml_foot = "</regxml>"
         regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
 
-        print(regxml_head)
+        output_fh.write(regxml_head)
+        output_fh.write("\n")
         for hive in self._hives:
-            hive.print_regxml()
-        print(regxml_foot)
+            hive.print_regxml(output_fh)
+        output_fh.write(regxml_foot)
+        output_fh.write("\n")
 
     def to_Element(self):
         outel = self.to_partial_Element()
@@ -694,13 +705,19 @@ class HiveObject(object):
     def __init__(self, *args, **kwargs):
         self._cells = []
 
+    def __iter__(self):
+        """Yields all CellObjects directly attached to this VolumeObject."""
+        for c in self._cells:
+            yield c
+
     def append(self, value):
         _typecheck(value, CellObject)
         self._cells.append(value)
 
-    def print_regxml(self):
+    def print_regxml(self, output_fh=sys.stdout):
         for cell in self._cells:
-            print(cell.to_regxml())
+            output_fh.write(cell.to_regxml())
+            output_fh.write("\n")
 
     def to_Element(self):
         outel = ET.Element("hive")
@@ -1266,11 +1283,11 @@ class FileObject(object):
             if ignore_original and propname == "original_fileobject":
                 continue
             oval = getattr(other, propname)
-            nval = getattr(self, propname)
-            if oval is None and nval is None:
+            sval = getattr(self, propname)
+            if oval is None and sval is None:
                 continue
-            if oval != nval:
-                #_logger.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
+            if oval != sval:
+                #_logger.debug("propname, oval, sval: %r, %r, %r" % (propname, oval, sval))
                 diffs.add(propname)
 
         return diffs
@@ -1852,74 +1869,97 @@ class FileObject(object):
 
 
 class CellObject(object):
-    _comparable_properties = set([
+
+    _all_properties = set([
+      "alloc",
+      "annos",
+      "byte_runs",
       "cellpath",
+      "mtime",
       "name",
       "name_type",
-      "alloc",
-      "mtime"
+      "original_cellobject",
+      "parent_object",
+      "root"
+    ])
+
+    _diff_attr_names = {
+      "new":"delta:new_cell",
+      "deleted":"delta:deleted_cell",
+      "changed":"delta:changed_cell",
+      "modified":"delta:modified_cell",
+      "matched":"delta:matched"
+    }
+
+    #TODO There may be need in the future to compare the annotations as well.
+    _incomparable_properties = set([
+      "annos"
     ])
 
     def __init__(self, *args, **kwargs):
         #These properties must be assigned first for sanity check dependencies
         self.name_type = kwargs.get("name_type")
 
-        self.alloc = kwargs.get("alloc")
-        self.byte_runs = kwargs.get("byte_runs")
-        self.cellpath = kwargs.get("cellpath")
-        self.mtime = kwargs.get("mtime")
-        self.name = kwargs.get("name")
-        self.name_type = kwargs.get("name_type")
-        self.root = kwargs.get("root")
-        self.original_cellobject = kwargs.get("original_cellobject")
+        for prop in CellObject._all_properties:
+            if prop == "annos":
+                setattr(self, prop, kwargs.get(prop, set()))
+            else:
+                setattr(self, prop, kwargs.get(prop))
+
+        self._diffs = set()
 
     def __eq__(self, other):
-        """Equality is a difficult question on CellObjects.  Use compare()."""
-        raise NotImplementedError
+        if other is None:
+            return False
+        _typecheck(other, CellObject)
+        for prop in CellObject._all_properties:
+            if prop in CellObject._incomparable_properties:
+                continue
+            if getattr(self, prop) != getattr(other, prop):
+                return False
+        return True
 
     def __ne__(self, other):
-        return not self.__eq__(other) #(sic)
+        return not self.__eq__(other)
 
     def __repr__(self):
         parts = []
 
-        if self.alloc:
-            parts.append("alloc=%r" % self.alloc)
-        if self.byte_runs:
-            parts.append("byte_runs=%r" % self.byte_runs)
-        if self.cellpath:
-            parts.append("cellpath=%r" % self.cellpath)
-        if self.mtime:
-            parts.append("mtime=%r" % str(self.mtime))
-        if self.name:
-            parts.append("name=%r" % self.name)
-        if self.name_type:
-            parts.append("name_type=%r" % self.name_type)
-        if self.original_cellobject:
-            parts.append("original_cellobject=%r" % self.original_cellobject)
-        if self.root:
-            parts.append("root=%r" % self.root)
+        for prop in sorted(list(CellObject._all_properties)):
+            if not getattr(self, prop) is None:
+                parts.append("%s=%r" % (prop, getattr(self, prop)))
 
         return "CellObject(" + ", ".join(parts) + ")"
 
     def compare_to_original(self):
-        _typecheck(self.original_cellobject, CellObject)
+        self._diffs = self.compare_to_other(self.original_cellobject, True)
 
-        self._diffs = set()
+    def compare_to_other(self, other, ignore_original=False):
+        _typecheck(other, CellObject)
 
-        for propname in CellObject._comparable_properties:
-            oval = getattr(self.original_cellobject, propname)
-            nval = getattr(self, propname)
-            if oval is None and nval is None:
+        diffs = set()
+
+        for propname in CellObject._all_properties:
+            if propname in CellObject._incomparable_properties:
                 continue
-            if oval != nval:
-                #_logger.debug("propname, oval, nval: %r, %r, %r" % (propname, oval, nval))
-                self._diffs.add(propname)
+            if ignore_original and propname == "original_cellobject":
+                continue
+            oval = getattr(other, propname)
+            sval = getattr(self, propname)
+            if oval is None and sval is None:
+                continue
+            if oval != sval:
+                #_logger.debug("propname, oval, sval: %r, %r, %r" % (propname, oval, sval))
+                diffs.add(propname)
+
+        return diffs
 
     def populate_from_Element(self, e):
         """Populates this CellObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
         _typecheck(e, (ET.Element, ET.ElementTree))
+
+        _read_differential_annotations(CellObject._diff_attr_names, e, self.annos)
 
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
@@ -1960,10 +2000,10 @@ class CellObject(object):
     def sanity_check(self):
         if self.name_type and self.name_type != "k":
             if self.mtime:
-                _logger.debug("Error occurred sanity-checking this CellObject: %r" % (self))
+                _logger.info("Error occurred sanity-checking this CellObject: %r." % self)
                 raise ValueError("A Registry Key (node) is the only kind of CellObject that can have a timestamp.")
             if self.root:
-                _logger.debug("Error occurred sanity-checking this CellObject: %r" % (self))
+                _logger.info("Error occurred sanity-checking this CellObject: %r." % self)
                 raise ValueError("A Registry Key (node) is the only kind of CellObject that can have the 'root' attribute.")
 
     def to_Element(self):
@@ -1971,14 +2011,40 @@ class CellObject(object):
 
         outel = ET.Element("cellobject")
 
+        annos_whittle_set = copy.deepcopy(self.annos)
+        diffs_whittle_set = copy.deepcopy(self.diffs)
+
+        for annodiff in CellObject._diff_attr_names:
+            if annodiff in annos_whittle_set:
+                outel.attrib[CellObject._diff_attr_names[annodiff]] = "1"
+                annos_whittle_set.remove(annodiff)
+        if len(annos_whittle_set) > 0:
+            _logger.warning("Failed to export some differential annotations: %r." % annos_whittle_set)
+
+        def _anno_change(el):
+            if el.tag in self.diffs:
+                el.attrib["delta:changed_property"] = "1"
+                diffs_whittle_set.remove(el.tag)
+
         #Recall that Element text must be a string
         def _append_str(name, value):
-            #TODO Need lookup support for diff annos
-            if value:
+            if not value is None or name in diffs_whittle_set:
                 tmpel = ET.Element(name)
-                tmpel.text = str(value)
+                if not value is None:
+                    tmpel.text = str(value)
+                _anno_change(tmpel)
                 outel.append(tmpel)
 
+        def _append_object(name, value):
+            if not value is None or name in diffs_whittle_set:
+                if value is None:
+                    tmpel = ET.Element(name)
+                else:
+                    tmpel = value.to_Element()
+                _anno_change(tmpel)
+                outel.append(tmpel)
+
+        #TODO root should be an element too.  Revise schema.
         if self.root:
             outel.attrib["root"] = str(self.root)
 
@@ -1986,18 +2052,12 @@ class CellObject(object):
         _append_str("name", self.name)
         _append_str("name_type", self.name_type)
         _append_str("alloc", self.alloc)
+        _append_object("mtime", self.mtime)
+        _append_object("byte_runs", self.byte_runs)
+        _append_object("original_cellobject", self.original_cellobject)
 
-        if self.mtime:
-            tmpel = self.mtime.to_Element()
-            outel.append(tmpel)
-
-        if self.byte_runs:
-            tmpel = self.byte_runs.to_Element()
-            outel.append(tmpel)
-
-        if self.original_cellobject:
-            tmpel = self.original_cellobject.to_Element()
-            outel.append(tmpel)
+        if len(diffs_whittle_set) > 0:
+            _logger.warning("Did not annotate all of the differing properties of this file.  Remaining properties:  %r." % diffs_whittle_set)
 
         return outel
 
@@ -2011,6 +2071,16 @@ class CellObject(object):
     @alloc.setter
     def alloc(self, val):
         self._alloc = _boolcast(val)
+
+    @property
+    def annos(self):
+        """Set of differential annotations.  Expected members are the keys of this class's _diff_attr_names dictionary."""
+        return self._annos
+
+    @annos.setter
+    def annos(self, val):
+        _typecheck(val, set)
+        self._annos = val
 
     @property
     def byte_runs(self):
@@ -2035,6 +2105,11 @@ class CellObject(object):
     @property
     def diffs(self):
         return self._diffs
+
+    @diffs.setter
+    def diffs(self, value):
+        _typecheck(value, set)
+        self._diffs = value
 
     @property
     def mtime(self):
@@ -2066,6 +2141,16 @@ class CellObject(object):
         self._name_type = val
 
     @property
+    def original_cellobject(self):
+        return self._original_cellobject
+
+    @original_cellobject.setter
+    def original_cellobject(self, val):
+        if not val is None:
+            _typecheck(val, CellObject)
+        self._original_cellobject = val
+
+    @property
     def parent_object(self):
         """This object is an extremely sparse CellObject, containing just identifying information.  Alternately, it can be an entire object reference to the parent Object, though uniqueness should be checked."""
         return self._parent_object
@@ -2075,16 +2160,6 @@ class CellObject(object):
         if not val is None:
             _typecheck(val, CellObject)
         self._parent_object = val
-
-    @property
-    def original_cellobject(self):
-        return self._original_cellobject
-
-    @original_cellobject.setter
-    def original_cellobject(self, val):
-        if not val is None:
-            _typecheck(val, CellObject)
-        self._original_cellobject = val
 
     @property
     def root(self):
@@ -2293,7 +2368,7 @@ if __name__ == "__main__":
 
     co = CellObject()
     _logger.debug("co = %r" % co)
-    print(co.to_regxml())
+    _logger.debug("co.to_regxml() = %r" % co.to_regxml())
 
     co.root = 1
     co.cellpath = "\\Deleted_root"
@@ -2311,11 +2386,12 @@ if __name__ == "__main__":
     _logger.debug("br = %r" % br)
     _logger.debug("brs = %r" % brs)
     _logger.debug("co = %r" % co)
-    print(co.to_regxml())
+    _logger.debug("co.to_regxml() = %r" % co.to_regxml())
 
     coe = co.to_Element()
     nco = CellObject()
     nco.populate_from_Element(coe)
+    _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
 
     assert co.byte_runs == nco.byte_runs
 
@@ -2327,18 +2403,11 @@ if __name__ == "__main__":
     _logger.debug("nco.byte_runs = %r" % nco.byte_runs)
     assert co.byte_runs != nco.byte_runs
 
-    failed = None
-    try:
-        co == nco
-    except NotImplementedError:
-        failed = True
-    assert failed
-
-    print(nco.to_regxml())
+    _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
 
     nco.original_cellobject = co
     nco.compare_to_original()
-    print(nco.diffs)
+    _logger.debug("nco.diffs = %r" % nco.diffs)
 
     ro = RegXMLObject(version="2.0")
     ho = HiveObject()
