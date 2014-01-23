@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.38"
+__version__ = "0.0.39"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -831,7 +831,7 @@ class ByteRun(object):
     def len(self, val):
         self._len = _intcast(val)
 
-class ByteRuns(list):
+class ByteRuns(object):
     """
     An extension to Python lists.
 
@@ -2393,15 +2393,8 @@ if __name__ == "__main__":
     nco.populate_from_Element(coe)
     _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
 
-    assert co.byte_runs == nco.byte_runs
-
     nco.name = "(Doubled)"
     nco.root = False
-    nco.byte_runs[0].file_offset += 133
-
-    _logger.debug("co.byte_runs = %r" % co.byte_runs)
-    _logger.debug("nco.byte_runs = %r" % nco.byte_runs)
-    assert co.byte_runs != nco.byte_runs
 
     _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
 
