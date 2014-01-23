@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.39"
+__version__ = "0.0.40"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -1083,12 +1083,12 @@ class TimestampObject(object):
 
     def __repr__(self):
         parts = []
-        if self.time:
-            parts.append("%r" % self.time)
         if self.name:
             parts.append("name=%r" % self.name)
         if self.prec:
             parts.append("prec=%r" % (self.prec,))
+        if self.time:
+            parts.append("%r" % self.time)
         return "TimestampObject(" + ", ".join(parts) + ")"
 
     def __str__(self):
@@ -1100,6 +1100,14 @@ class TimestampObject(object):
     def _comparison_sanity_check(self, other):
         if None in (self.time, other.time):
             raise ValueError("Can't compare TimestampObjects: %r, %r." % self, other)
+
+    def populate_from_Element(self, e):
+        _typecheck(e, (ET.Element, ET.ElementTree))
+        if "prec" in e.attrib:
+            self.prec = e.attrib["prec"]
+        self.time = e.text
+        (ns, tn) = _qsplit(e.tag)
+        self.name = tn
 
     def to_Element(self):
         _typecheck(self.name, str)
@@ -1118,13 +1126,14 @@ class TimestampObject(object):
     @name.setter
     def name(self, value):
         if not value is None:
-            assert value in TimestampObject.timestamp_name_list 
+            if not value in TimestampObject.timestamp_name_list:
+                raise ValueError("The timestamp name must be in this list: %r.  Received: %r." % (TimestampObject.timestamp_name_list, value))
         self._name = value
 
     @property
     def prec(self):
         """
-        A pair, (resolution, unit); unit is a second (s), millisecond, nanosecond, or day (d).  The default unit is "s".
+        A pair, (resolution, unit); unit is a second (s), millisecond, nanosecond, or day (d).  The default unit is "s".  Can be passed as a string or a duple.
         """
         return self._prec
 
@@ -1411,6 +1420,9 @@ class FileObject(object):
             elif ctn == "parent_object":
                 self.parent_object = FileObject()
                 self.parent_object.populate_from_Element(ce)
+            elif ctn in ["atime", "bkup_time", "crtime", "ctime", "dtime", "mtime"]:
+                setattr(self, ctn, TimestampObject())
+                getattr(self, ctn).populate_from_Element(ce)
             elif ctn in FileObject._all_properties:
                 setattr(self, ctn, ce.text)
             else:
@@ -1616,6 +1628,8 @@ class FileObject(object):
     def atime(self, val):
         if val is None:
             self._atime = None
+        elif isinstance(val, TimestampObject):
+            self._atime = val
         else:
             checked_val = TimestampObject(val, name="atime")
             self._atime = checked_val
@@ -1628,6 +1642,8 @@ class FileObject(object):
     def bkup_time(self, val):
         if val is None:
             self._bkup_time = None
+        elif isinstance(val, TimestampObject):
+            self._bkup_time = val
         else:
             checked_val = TimestampObject(val, name="bkup_time")
             self._bkup_time = checked_val
@@ -1648,6 +1664,8 @@ class FileObject(object):
     def ctime(self, val):
         if val is None:
             self._ctime = None
+        elif isinstance(val, TimestampObject):
+            self._ctime = val
         else:
             checked_val = TimestampObject(val, name="ctime")
             self._ctime = checked_val
@@ -1660,6 +1678,8 @@ class FileObject(object):
     def crtime(self, val):
         if val is None:
             self._crtime = None
+        elif isinstance(val, TimestampObject):
+            self._crtime = val
         else:
             checked_val = TimestampObject(val, name="crtime")
             self._crtime = checked_val
@@ -1677,6 +1697,8 @@ class FileObject(object):
     def dtime(self, val):
         if val is None:
             self._dtime = None
+        elif isinstance(val, TimestampObject):
+            self._dtime = val
         else:
             checked_val = TimestampObject(val, name="dtime")
             self._dtime = checked_val
@@ -1746,6 +1768,8 @@ class FileObject(object):
     def mtime(self, val):
         if val is None:
             self._mtime = None
+        elif isinstance(val, TimestampObject):
+            self._mtime = val
         else:
             checked_val = TimestampObject(val, name="mtime")
             self._mtime = checked_val
@@ -1979,7 +2003,8 @@ class CellObject(object):
             elif ctn == "cellpath":
                 self.cellpath = ce.text
             elif ctn == "mtime":
-                self.mtime = ce.text
+                self.mtime = TimestampObject()
+                self.mtime.populate_from_Element(ce)
             elif ctn == "name":
                 self.name = ce.text
             elif ctn == "name_type":
@@ -2117,8 +2142,13 @@ class CellObject(object):
 
     @mtime.setter
     def mtime(self, val):
-        self._mtime = TimestampObject(val, name="mtime")
-        self.sanity_check()
+        if val is None:
+            self._mtime = None
+        elif isinstance(val, TimestampObject):
+            self._mtime = val
+        else:
+            self._mtime = TimestampObject(val, name="mtime")
+            self.sanity_check()
 
     @property
     def name(self):
@@ -2365,48 +2395,5 @@ if __name__ == "__main__":
     _logger.debug("t1 = %r" % t1)
     assert t1.prec[0] == 2
     assert t1.prec[1] == "s"
-
-    co = CellObject()
-    _logger.debug("co = %r" % co)
-    _logger.debug("co.to_regxml() = %r" % co.to_regxml())
-
-    co.root = 1
-    co.cellpath = "\\Deleted_root"
-    co.name = "Deleted_root"
-    co.name_type = "k"
-    co.alloc = 1
-    co.mtime = "2009-01-23T01:23:45Z"
-    co.mtime.prec = "100ns"
-    br = ByteRun()
-    br.file_offset = 4128
-    br.len = 133
-    brs = ByteRuns()
-    brs.append(br)
-    co.byte_runs = brs
-    _logger.debug("br = %r" % br)
-    _logger.debug("brs = %r" % brs)
-    _logger.debug("co = %r" % co)
-    _logger.debug("co.to_regxml() = %r" % co.to_regxml())
-
-    coe = co.to_Element()
-    nco = CellObject()
-    nco.populate_from_Element(coe)
-    _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
-
-    nco.name = "(Doubled)"
-    nco.root = False
-
-    _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
-
-    nco.original_cellobject = co
-    nco.compare_to_original()
-    _logger.debug("nco.diffs = %r" % nco.diffs)
-
-    ro = RegXMLObject(version="2.0")
-    ho = HiveObject()
-    ho.append(co)
-    ho.append(nco)
-    ro.append(ho)
-    ro.print_regxml()
 
     print("Unit tests passed.")

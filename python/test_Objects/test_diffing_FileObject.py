@@ -41,12 +41,12 @@ f0.libmagic = "Some kind of compressed"
 f0.sha1 = "7d97e98f8af710c7e7fe703abc8f639e0ee507c4"
 f0.md5 = "2b00042f7481c7b056c4b410d28f33cf"
 #fo.brs = brs #TODO
+_logger.debug("f0 = %r" % f0)
 _logger.debug("f0.to_dfxml() = %r" % f0.to_dfxml())
 
 e0 = f0.to_Element()
 _logger.debug("e0 = %r" % e0)
 
-_logger.debug(repr(f0))
 #f1 = eval(repr(f0)) #TODO The recursive evals cause namespace confusion (Objects.foo); replace the next two lines when that's settled.
 f1 = Objects.FileObject()
 f1.populate_from_Element(e0)
@@ -62,6 +62,7 @@ f2.mtime = "2999-12-31T12:34:56Z"
 f2.sha1 = "447d306060631570b7713ea48e74103c68eab0a3"
 f2.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
 
+_logger.debug("f1 = %r" % f1)
 d01 = f0.compare_to_other(f1)
 _logger.debug("d01 = %r" % d01)
 assert d01 == set(["alloc"]) or d01 == set(["alloc", "unalloc"])
