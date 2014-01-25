@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.41"
+__version__ = "0.0.42"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -182,15 +182,14 @@ class DFXMLObject(object):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-
-        #If there are no children, this (trivial) document needs only a simpler printing.
-        if len(pe) == 0 and len(self._volumes) == 0 and len(self._files) == 0:
-            _logger.debug("This DFXML document has no children.  An empty tree is being printed with a code shortcut.")
-            output_fh.write(dfxml_wrapper)
-            return
-
         dfxml_foot = "</dfxml>"
-        dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+        #Check for an empty element
+        if dfxml_wrapper.strip()[-3:] == " />":
+            dfxml_head = dfxml_wrapper.strip()[:-3] + ">"
+        elif dfxml_wrapper.strip()[-2:] == "/>":
+            dfxml_head = dfxml_wrapper.strip()[:-2] + ">"
+        else:
+            dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
 
         output_fh.write("""<?xml version="1.0"?>\n""")
         output_fh.write(dfxml_head)
@@ -342,8 +341,15 @@ class RegXMLObject(object):
     def print_regxml(self, output_fh=sys.stdout):
         """Serializes and prints the entire object, without constructing the whole tree."""
         regxml_wrapper = _ET_tostring(self.to_partial_Element())
+        _logger.debug("regxml_wrapper = %r." % regxml_wrapper)
         regxml_foot = "</regxml>"
-        regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
+        #Check for an empty element
+        if regxml_wrapper.strip()[-3:] == " />":
+            regxml_head = regxml_wrapper.strip()[:-3] + ">"
+        elif regxml_wrapper.strip()[-2:] == "/>":
+            regxml_head = regxml_wrapper.strip()[:-2] + ">"
+        else:
+            regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
 
         output_fh.write(regxml_head)
         output_fh.write("\n")
