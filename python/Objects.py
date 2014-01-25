@@ -106,12 +106,6 @@ def _typecheck(obj, classinfo):
         else:
             raise TypeError("Expecting object to be of type %r." % classinfo)
 
-class DFXMLBaseObject(object):
-    "Coming soon."
-
-    def __init__(self, *args, **kwargs):
-        pass
-
 class DFXMLObject(object):
     def __init__(self, *args, **kwargs):
         self.command_line = kwargs.get("command_line")
@@ -212,7 +206,7 @@ class DFXMLObject(object):
         return outel
 
     def to_dfxml(self):
-        """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive."""
+        """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive.  Most will want to use print_dfxml() instead"""
         return ET.tostring(self.to_Element(), encoding="unicode")
 
     def to_partial_Element(self):
@@ -268,7 +262,7 @@ class DFXMLObject(object):
 
     @property
     def dc(self):
-        """The Dublin Core dictionary of key-value pairs for this document.  Typically, "type" is  "Hash List", or "Disk Image".  Keys should be strings not containing colons, values should be strings.  If this causes an issue for you, please report it as a bug.."""
+        """The Dublin Core dictionary of key-value pairs for this document.  Typically, "type" is  "Hash List", or "Disk Image".  Keys should be strings not containing colons, values should be strings.  If this causes an issue for you, please report it as a bug."""
         return self._dc
 
     @dc.setter
@@ -361,7 +355,7 @@ class RegXMLObject(object):
 
     def to_partial_Element(self):
         """
-        Creates the wrapping RegXML text.  No hives, no cells.  Saves on creating an entire element tree in memory.
+        Creates the wrapping RegXML element.  No hives, no cells.  Saves on creating an entire Element tree in memory.
         """
         outel = ET.Element("regxml")
 
@@ -371,7 +365,7 @@ class RegXMLObject(object):
         return outel
 
     def to_regxml(self):
-        """Serializes the entire RegXML document tree into a string.  Returns that string.  RAM-intensive.  You probably want print_regxml()."""
+        """Serializes the entire RegXML document tree into a string.  Returns that string.  RAM-intensive.  Most will want to use print_regxml() instead."""
         return ET.tostring(self.to_Element(), encoding="unicode")
 
 
