@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.40"
+__version__ = "0.0.41"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -27,6 +27,18 @@ _warned_elements = set([])
 #Issue some log statements only once per program invocation.
 _nagged_alloc = False
 _warned_byterun_badtypecomp = False
+
+def _ET_tostring(e):
+    """Between Python 2 and 3, there are some differences in the ElementTree library's tostring() behavior.  One, the method balks at the "unicode" encoding in 2.  Two, in 2, the XML prototype's output with every invocation.  This method serves as a wrapper to deal with those issues."""
+    if sys.version_info[0] < 3:
+        tmp = ET.tostring(e, encoding="UTF-8")
+        if tmp[0:2] == "<?":
+            #Trim away first line; it's an XML prototype.  This only appears in Python 2's ElementTree output.
+            return tmp[ tmp.find("?>\n")+3 : ]
+        else:
+            return tmp
+    else:
+        return ET.tostring(e, encoding="unicode")
 
 def _boolcast(val):
     """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
@@ -169,7 +181,7 @@ class DFXMLObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
         pe = self.to_partial_Element()
-        dfxml_wrapper = ET.tostring(pe, encoding="unicode")
+        dfxml_wrapper = _ET_tostring(pe)
 
         #If there are no children, this (trivial) document needs only a simpler printing.
         if len(pe) == 0 and len(self._volumes) == 0 and len(self._files) == 0:
@@ -190,7 +202,7 @@ class DFXMLObject(object):
         _logger.debug("Writing %d file objects." % len(self._files))
         for f in self._files:
             e = f.to_Element()
-            output_fh.write(ET.tostring(e, encoding="unicode"))
+            output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
         output_fh.write(dfxml_foot)
         output_fh.write("\n")
@@ -207,7 +219,7 @@ class DFXMLObject(object):
 
     def to_dfxml(self):
         """Serializes the entire DFXML document tree into a string.  Then returns that string.  RAM-intensive.  Most will want to use print_dfxml() instead"""
-        return ET.tostring(self.to_Element(), encoding="unicode")
+        return _ET_tostring(self.to_Element())
 
     def to_partial_Element(self):
         outel = ET.Element("dfxml")
@@ -329,7 +341,7 @@ class RegXMLObject(object):
 
     def print_regxml(self, output_fh=sys.stdout):
         """Serializes and prints the entire object, without constructing the whole tree."""
-        regxml_wrapper = ET.tostring(self.to_partial_Element(), encoding="unicode")
+        regxml_wrapper = _ET_tostring(self.to_partial_Element())
         regxml_foot = "</regxml>"
         regxml_head = regxml_wrapper.strip()[:-len(regxml_foot)]
 
@@ -366,7 +378,7 @@ class RegXMLObject(object):
 
     def to_regxml(self):
         """Serializes the entire RegXML document tree into a string.  Returns that string.  RAM-intensive.  Most will want to use print_regxml() instead."""
-        return ET.tostring(self.to_Element(), encoding="unicode")
+        return _ET_tostring(self.to_Element())
 
 
 class VolumeObject(object):
@@ -492,7 +504,7 @@ class VolumeObject(object):
 
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
-        dfxml_wrapper = ET.tostring(pe, encoding="unicode")
+        dfxml_wrapper = _ET_tostring(pe)
 
         if len(pe) == 0 and len(self._files) == 0:
             output_fh.write(dfxml_wrapper)
@@ -512,7 +524,7 @@ class VolumeObject(object):
         _logger.debug("Writing %d file objects for this volume." % len(self._files))
         for f in self._files:
             e = f.to_Element()
-            output_fh.write(ET.tostring(e, encoding="unicode"))
+            output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
         output_fh.write(dfxml_foot)
         output_fh.write("\n")
@@ -1568,7 +1580,7 @@ class FileObject(object):
         return outel
 
     def to_dfxml(self):
-        return ET.tostring(self.to_Element(), encoding="unicode")
+        return _ET_tostring(self.to_Element())
 
     @property
     def alloc(self):
@@ -2081,7 +2093,7 @@ class CellObject(object):
         return outel
 
     def to_regxml(self):
-        return ET.tostring(self.to_Element(), encoding="unicode")
+        return _ET_tostring(self.to_Element())
 
     @property
     def alloc(self):
@@ -2243,7 +2255,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
         #View the object event stream in debug mode
         #_logger.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
         #if ETevent in ("start", "end"):
-        #    _logger.debug("ET.tostring(elem) = %r" % ET.tostring(elem))
+        #    _logger.debug("_ET_tostring(elem) = %r" % _ET_tostring(elem))
 
         #Track namespaces
         if ETevent == "start-ns":
