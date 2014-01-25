@@ -8,6 +8,12 @@ check: \
   check-Objects
 	@echo "Tests passed!"
 
+doc: \
+  Objects.html
+
+Objects.html: Objects.py
+	python3.3 -m pydoc -w Objects
+
 check-dfxml:
 	./test_dfxml.sh
 
