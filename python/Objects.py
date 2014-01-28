@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.42"
+__version__ = "0.0.43"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -602,10 +602,10 @@ class VolumeObject(object):
         if not self.original_volume is None or "original_volume" in diffs_whittle_set:
             #Skip FileObject list, if any
             if self.original_volume is None:
-                tmpel = ET.Element()
+                tmpel = ET.Element("delta:original_volume")
             else:
                 tmpel = self.original_volume.to_partial_Element()
-            tmpel.tag = "delta:original_volume"
+                tmpel.tag = "delta:original_volume"
 
             if "original_volume" in diffs_whittle_set:
                 tmpel.attrib["delta:changed_property"] = "1"
@@ -1527,7 +1527,7 @@ class FileObject(object):
                 if obj:
                     tmpel = obj.to_Element()
                 else:
-                    tmpel = ET.Element()
+                    tmpel = ET.Element(name)
                 #Set the tag name here for properties like parent_object, a FileObject without being wholly a FileObject.
                 if namespace_prefix:
                     tmpel.tag = namespace_prefix + name
