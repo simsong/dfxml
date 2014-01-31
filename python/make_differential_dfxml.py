@@ -436,8 +436,9 @@ if __name__ == "__main__":
     parser.add_argument("infiles", nargs="+")
     args = parser.parse_args()
 
-    #TODO Allow --ignore to ignore ftype_str, to compare only file system offsets for partitions
-    #TODO Add --ignore-volumes.  It should (probably) strip all volume information from each file.
+    #TODO Add --vignore to ignore volume properties, like ftype_str to compare only file system offsets for partitions
+    #TODO Switch --ignore to --fignore
+#TODO Add --ignore-volumes.  It should (probably) strip all volume information from each file.
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
