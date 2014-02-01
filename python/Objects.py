@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.43"
+__version__ = "0.0.44"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -86,15 +86,17 @@ def _read_differential_annotations(annodict, element, annoset):
     """
     Uses the shorthand-to-attribute mappings of annodict to translate attributes of element into annoset.
     """
+    #_logger.debug("annoset, before: %r." % annoset)
     #Start with inverting the dictionary
     _d = { annodict[k].replace("delta:",""):k for k in annodict }
     #_logger.debug("Inverted dictionary: _d = %r" % _d)
     for attr in element.attrib:
-        #_logger.debug("Looking for differential annotations: %r" % e.attrib)
+        #_logger.debug("Looking for differential annotations: %r" % element.attrib)
         (ns, an) = _qsplit(attr)
         if an in _d and ns == dfxml.XMLNS_DELTA:
-            #_logger.debug("Found; adding _d[an]=%r." % _d[an])
+            #_logger.debug("Found; adding %r." % _d[an])
             annoset.add(_d[an])
+    #_logger.debug("annoset, after: %r." % annoset)
 
 def _qsplit(tagname):
     """Requires string input.  Returns namespace and local tag name as a pair.  I could've sworn this was a basic implementation gimme, but ET.QName ain't it."""
@@ -1406,17 +1408,28 @@ class FileObject(object):
         assert tn in ["fileobject", "original_fileobject", "parent_object"]
 
         #Map "delta:" attributes of <fileobject>s into the self.annos set
+        #_logger.debug("self.annos, before: %r." % self.annos)
         _read_differential_annotations(FileObject._diff_attr_names, e, self.annos)
+        #_logger.debug("self.annos, after: %r." % self.annos)
 
         #Look through direct-child elements for other properties
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
+            #_logger.debug("Populating from child element: %r." % ce.tag)
 
             #Inherit any marked changes
-            for attr in e.attrib:
+            for attr in ce.attrib:
+                #_logger.debug("Inspecting attr for diff. annos: %r." % attr)
                 (ns, an) = _qsplit(attr)
                 if an == "changed_property" and ns == dfxml.XMLNS_DELTA:
-                    self.diffs.add(ctn)
+                    #_logger.debug("Identified changed property: %r." % ctn)
+                    #TODO There may be a more elegant way of handling the hashes and any other attribute-dependent element-to-property mapping.  Probably involving XPath.
+                    if ctn == "hashdigest":
+                        if "type" not in ce.attrib:
+                            raise AttributeError("Attribute 'type' not found.  Every hashdigest element should have a 'type' attribute to identify the hash type.")
+                        self.diffs.add(ce.attrib["type"].lower())
+                    else:
+                        self.diffs.add(ctn)
 
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
