@@ -19,9 +19,10 @@ check:
 	  $$PY test_FileObject_from_stat.py ; \
 	  $$PY test_RegXMLObject.py ; \
 	  $$PY test_VolumeObject_hash.py ; \
-	  $$PY verify_differential_dfxml.py ; \
+	  $$PY verify_differential_dfxml_01.py ; \
+	  $$PY verify_differential_dfxml_23.py ; \
 	done
 
 clean:
-	rm verify_differential_dfxml.py-test[12].xml
+	rm verify_differential_dfxml_{01,23}.py-test[12].xml
 
