@@ -6,7 +6,9 @@ check: \
   check-idifference-dfxml \
   check-mac_timelines \
   check-Objects
+	@echo ""
 	@echo "Tests passed!"
+	@echo "Clean up the test results with 'make clean'."
 
 doc: \
   Objects.html
