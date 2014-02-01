@@ -3,6 +3,7 @@
 import sys
 import os
 import logging
+import argparse
 
 sys.path.append("..")
 import Objects
@@ -11,7 +12,11 @@ import make_differential_dfxml
 _logger = logging.getLogger(os.path.basename(__file__))
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action="store_true")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
     thisdir = os.path.dirname(__file__)
     tempxml1_path = __file__ + "-test1.xml"
@@ -54,3 +59,14 @@ if __name__ == "__main__":
                     _logger.info("Received diffs: %r." % o.diffs)
                     assert False
                 _logger.info("PASSED: %r." % _name)
+
+    #TODO Write a report() function in summarize_differential_dfxml, so the program can be called without this 'args' hack.
+    #TODO Once the old idifference.py is retired, remove the Python3-only bit.
+    if sys.version_info >= (3,1):
+        import summarize_differential_dfxml
+        summarize_differential_dfxml.args = args
+        args.infile = tempxml2_path
+        for sortby in "times", "path":
+            _logger.info("Summarizing, sorting by %s." % sortby)
+            args.sort_by = sortby
+            summarize_differential_dfxml.main()

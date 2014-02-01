@@ -29,7 +29,8 @@ if __name__=="__main__":
     parser.add_argument("-d","--debug",help="debug",action='store_true')
     parser.add_argument("-T","--tararchive",help="create tar archive file of new/changed files",dest="tarfile")
     parser.add_argument("-Z","--zipfile",help="create ZIP64 archive file of new/changed files",dest="zipfile")
-    parser.add_argument("--include-dotdirs",help="include files with names ending in '/.' and '/..'",action="store_true", dest="include_dotdirs", default=False)
+    parser.add_argument("--include-dotdirs",help="include files with names ending in '/.' and '/..'",action="store_true", default=False)
+    parser.add_argument("--sort-by", help="Sorts reported file lists.  Pass one of these arguments: \"times\" or \"paths\".")
     parser.add_argument("--summary",help="output summary statistics of file system changes",action="store_true", default=False)
     parser.add_argument("--timestamp",help="output all times in Unix timestamp format; otherwise use ISO 8601",action="store_true")
     parser.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
@@ -56,12 +57,14 @@ if __name__=="__main__":
     if args.summary:
         raise NotImplementedError("Sorry, but the tabular-summary argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 
+    if args.noatime:
+        raise NotImplementedError("Sorry, but the ignore-atime argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
+
     if args.timestamp:
         raise NotImplementedError("Sorry, but the tabular-summary argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 #TODO Interpret these old flags
 #    parser.add_argument("-n","--notimeline",help="do not generate a timeline",action="store_true")
 #    parser.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
-#    parser.add_argument("--noatime",help="Do not include atime changes",action="store_true")
 
     if args.xmlfilename is None:
         #TODO Expose a report() function in summarize_differential_dfxml.
@@ -85,7 +88,7 @@ if __name__=="__main__":
             if args.xmlfilename:
                 _logger.debug("Opening temp file for writing.")
                 with open(args.xmlfilename, "w") as fh:
-                    fh.write(diffdfxml.to_dfxml())
+                    diffdfxml.print_dfxml(output_fh=fh)
                 #TODO Expose a report() function in summarize_differential_dfxml, that can take a DFXML file path, or the diffdfxml object.
                 #TODO Because these next three lines are a hack.
                 _logger.debug("Temp file written.")

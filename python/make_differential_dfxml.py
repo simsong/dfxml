@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 
 import Objects
 import logging
@@ -53,7 +53,7 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
     if diff_mode == "idifference":
         diff_mask_set |= set([
           "atime",
-          "byte_runs"
+          "byte_runs",
           "crtime",
           "ctime",
           "filename",
@@ -200,9 +200,12 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
                 new_obj.original_fileobject = old_obj
                 new_obj.compare_to_original()
 
+                #_logger.debug("Diffs: %r." % _diffs)
                 _diffs = new_obj.diffs - diff_ignore_set
+                #_logger.debug("Diffs after ignore-set: %r." % _diffs)
                 if diff_mask_set:
                     _diffs &= diff_mask_set
+                    #_logger.debug("Diffs after mask-set: %r." % _diffs)
 
                 if len(_diffs) > 0:
                     #_logger.debug("Remaining diffs: " + repr(_diffs))
@@ -308,8 +311,12 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
                     #The file might not have changed.  It's interesting if it did, though.
 
                     _diffs = new_obj.diffs - diff_mask_set
+                    #_logger.debug("Diffs: %r." % _diffs)
+                    _diffs = new_obj.diffs - diff_ignore_set
+                    #_logger.debug("Diffs after ignore-set: %r." % _diffs)
                     if diff_mask_set:
                         _diffs &= diff_mask_set
+                        #_logger.debug("Diffs after mask-set: %r." % _diffs)
                     if len(_diffs) > 0:
                         _logger.debug("Remaining diffs: " + repr(_diffs))
                         fileobjects_changed.append(new_obj)
@@ -438,7 +445,7 @@ if __name__ == "__main__":
 
     #TODO Add --vignore to ignore volume properties, like ftype_str to compare only file system offsets for partitions
     #TODO Switch --ignore to --fignore
-#TODO Add --ignore-volumes.  It should (probably) strip all volume information from each file.
+    #TODO Add --ignore-volumes.  It should (probably) strip all volume information from each file.
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 

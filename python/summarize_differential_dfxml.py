@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 import os
 import logging
@@ -9,17 +9,9 @@ import idifference
 import copy
 import collections
 import make_differential_dfxml
+import operator
 
 _logger = logging.getLogger(os.path.basename(__file__))
-
-def enumerated_changes(filelist):
-    res = set()
-    for fi in filelist:
-        diffs_remaining = copy.copy(fi.diffs)
-        if "filename" in diffs_remaining:
-            diffs_remaining.pop("filename")
-        res.add((fi.original_fileobject.filename, "renamed to", fi.filename))
-    return sorted(res)
 
 class FOCounter(object):
     "Counter for FileObjects.  Does not count differences (differential annotations)."
@@ -98,24 +90,24 @@ def main():
     matched_files_tally = 0
 
     def _is_matched(obj):
-        _matched = "_matched" in obj.diffs
+        _matched = "matched" in obj.annos
         return _matched
 
     for (event, obj) in Objects.iterparse(args.infile):
         if isinstance(obj, Objects.FileObject):
-            if "_matched" in obj.diffs:
+            if "matched" in obj.annos:
                 matched_files_tally += 1
 
             #_logger.debug("Inspecting %s for changes" % obj)
-            if "_new" in obj.diffs:
+            if "new" in obj.annos:
                 new_files.append(obj)
-            elif "_deleted" in obj.diffs:
+            elif "deleted" in obj.annos:
                 deleted_files.append(obj)
                 if _is_matched(obj):
                     deleted_files_matched.append(obj)
                 else:
                     deleted_files_unmatched.append(obj)
-            elif "_renamed" in obj.diffs:
+            elif "renamed" in obj.annos:
                 #Count content matches
                 if obj.original_fileobject.sha1 == obj.sha1:
                     renamed_files_content_matches.append(obj)
@@ -130,15 +122,15 @@ def main():
                     renamed_files_directory.append(obj)
                 else:
                     renamed_files_other.append(obj)
-            elif "_modified" in obj.diffs:
+            elif "modified" in obj.annos:
                 modified_files.append(obj)
-            elif "_changed" in obj.diffs:
+            elif "changed" in obj.annos:
                 changed_files.append(obj)
             else:
                 unchanged_files.append(obj)
 
             #Count files of the post image
-            if "_deleted" in obj.diffs:
+            if "deleted" in obj.annos:
                 #Don't count the "Ghost" files created for deleted files that weren't matched between images
                 if _is_matched(obj):
                     obj_alloc_counters[1].add(obj)
@@ -151,16 +143,107 @@ def main():
             #TODO
             pass
 
+    def _sortkey_singlefi():
+        """Return a sorting key function, fit for use in sorted() on a list of FileObjects."""
+        def _key_by_path(fi):
+            return (
+              fi.filename or "",
+              str(fi.mtime) or "n/a",
+              (fi.original_fileobject and fi.original_fileobject.filename) or "",
+              (fi.original_fileobject and str(fi.original_fileobject.mtime)) or "n/a"
+            )
+        def _key_by_times(fi):
+            return (
+              str(fi.mtime) or "n/a",
+              str(fi.crtime) or "n/a",
+              fi.filename,
+              (fi.original_fileobject and str(fi.original_fileobject.mtime)) or "n/a",
+              (fi.original_fileobject and str(fi.original_fileobject.crtime)) or "n/a",
+              (fi.original_fileobject and fi.original_fileobject.filename) or ""
+            )
+        if args.sort_by == "path":
+            return _key_by_path
+        else: #Default: "times"
+            return _key_by_times
+
     idifference.h2("New files:")
-    res = [(obj.mtime, obj.filename or "", obj.filesize) for obj in new_files]
-    idifference.table(sorted(res))
+    new_files_sorted = sorted(new_files, key=_sortkey_singlefi())
+    res = [(str(obj.mtime) or "n/a", obj.filename or "", obj.filesize) for obj in new_files_sorted]
+    idifference.table(res)
 
     idifference.h2("Deleted files:")
-    res = [(obj.original_fileobject.mtime, obj.original_fileobject.filename or "", obj.original_fileobject.filesize) for obj in deleted_files]
-    idifference.table(sorted(res))
+    deleted_files_sorted = sorted(deleted_files, key=_sortkey_singlefi())
+    res = [(
+      obj.original_fileobject.mtime,
+      obj.original_fileobject.filename or "",
+      obj.original_fileobject.filesize
+    ) for obj in deleted_files_sorted]
+    idifference.table(res)
+
+    def _sortkey_renames():
+        def _key_by_path(fi):
+            return (
+              fi.original_fileobject.filename or "",
+              fi.filename or "",
+              str(fi.mtime) or "",
+              str(fi.original_fileobject.mtime) or ""
+            )
+        def _key_by_times(fi):
+            return (
+              str(fi.mtime) or "n/a",
+              str(fi.ctime) or "n/a",
+              str(fi.atime) or "n/a",
+              str(fi.dtime) or "n/a",
+              str(fi.crtime) or "n/a",
+              fi.original_fileobject.filename or "",
+              fi.filename or ""
+            )
+        if args.sort_by == "path":
+            return _key_by_path
+        else: #Default: "times"
+            return _key_by_times
+
+    def _enumerated_changes(filelist):
+        res = []
+        for fi in filelist:
+            diffs_remaining = copy.deepcopy(fi.diffs)
+            if "filename" in diffs_remaining:
+                diffs_remaining -= {"filename"}
+                res.add(("Renamed", "", fi.original_fileobject.filename, "renamed to", fi.filename))
+            for timeattr in Objects.TimestampObject.timestamp_name_list:
+                if timeattr in diffs_remaining:
+                    diffs_remaining -= {timeattr}
+                    res.append((
+                      fi.filename or "",
+                      "%s changed, " % timeattr, 
+                      getattr(fi.original_fileobject, timeattr) or ""
+                      "->", 
+                      getattr(fi, timeattr) or "", 
+                    ))
+            for diff in sorted(diffs_remaining):
+                diffs_remaining -= {diff}
+                res.append((
+                  fi.filename or "",
+                  "%s changed, " % diff, 
+                  getattr(fi.original_fileobject, diff) or ""
+                  "->", 
+                  getattr(fi, diff) or "", 
+                ))
+        return res
 
     idifference.h2("Renamed files:")
-    res = enumerated_changes(renamed_files)
+    renamed_files_sorted = sorted(renamed_files, key=_sortkey_renames())
+    res = _enumerated_changes(renamed_files_sorted)
+    idifference.table(res, break_on_change=True)
+
+    idifference.h2("Files with modified contents:")
+    modified_files_sorted = sorted(modified_files, key=_sortkey_singlefi())
+    res = _enumerated_changes(modified_files_sorted)
+    idifference.table(res, break_on_change=True)
+
+    idifference.h2("Files with changed properties:")
+    changed_files_sorted = sorted(changed_files, key=_sortkey_singlefi())
+    res = _enumerated_changes(changed_files_sorted)
     idifference.table(res, break_on_change=True)
 
     idifference.h2("Summary:")
@@ -214,6 +297,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--sort-by", help="Sorts file lists.  Pass one of these arguments: \"times\" or \"path\".")
     parser.add_argument("infile", help="A differential DFXML file.  Should include the optional 'delta:matched' attributes for counts to work correctly.")
     args = parser.parse_args()
 
