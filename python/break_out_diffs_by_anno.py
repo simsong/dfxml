@@ -7,7 +7,7 @@ Columns: FileObject annotation (is it a new file? renamed? etc.).
 Rows: Counts of instances of a property being changed per FileObject annotation.  One row per FileObject direct-child element.
 """
 
-__version__ = "0.0.2"
+__version__ = "0.1.0"
 
 import Objects
 import sys
@@ -30,9 +30,10 @@ def main():
 <table>
   <thead>
     <tr>
+      <th>Property</th>
 """)
     for anno in annos:
-        print("      <th>%s</th>" % anno[1:])
+        print("      <th>%s</th>" % anno)
     print("""
     </tr>
   </thead>
@@ -43,6 +44,7 @@ def main():
         print("    <tr>")
         if diff in Objects.FileObject._incomparable_properties:
             continue
+        print("      <th style='text-align:left;'>%s</th>" % diff)
         for anno in annos:
             print("      <td>%d</td>" % hist[(anno,diff)])
         print("    </tr>")
@@ -53,5 +55,3 @@ def main():
             
 if __name__ == "__main__":
     main()
-
-raise NotImplementedError("TODO: Implement difference and annotation reading in Objects.py.")
