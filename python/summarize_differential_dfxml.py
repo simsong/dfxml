@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 import os
 import logging
@@ -69,7 +69,7 @@ class FOCounter(object):
     def fo_tally_unalloc_name(self):
         return self._fo_allocation_tallies_name[False]
 
-def report(dfxmlobject, sort_by=None):
+def report(dfxmlobject, sort_by=None, summary=None):
     new_files = []
     deleted_files = []
     deleted_files_matched = []
@@ -246,62 +246,64 @@ def report(dfxmlobject, sort_by=None):
     res = _enumerated_changes(changed_files_sorted)
     idifference.table(res, break_on_change=True)
 
-    idifference.h2("Summary:")
-    summ_recs = [
-      ("Prior image's file (file object) tally", str(obj_alloc_counters[0].fo_tally)),
-      ("  Inode allocation", ""),
-      ("    Allocated", str(obj_alloc_counters[0].fo_tally_alloc_inode)),
-      ("    Unallocated", str(obj_alloc_counters[0].fo_tally_unalloc_inode)),
-      ("    Unknown", str(obj_alloc_counters[0].fo_tally_nullalloc_inode)),
-      ("  Name allocation", ""),
-      ("    Allocated", str(obj_alloc_counters[0].fo_tally_alloc_name)),
-      ("    Unallocated", str(obj_alloc_counters[0].fo_tally_unalloc_name)),
-      ("    Unknown", str(obj_alloc_counters[0].fo_tally_nullalloc_name)),
-      ("  Unallocated, unmatched", obj_alloc_counters[0].fo_unalloc_unmatch_tally),
-      ("Prior image's file (inode) tally", str(obj_alloc_counters[0].inode_tally)),
-      ("Current image's file (file object) tally", str(obj_alloc_counters[1].fo_tally)),
-      ("  Inode allocation", ""),
-      ("    Allocated", str(obj_alloc_counters[1].fo_tally_alloc_inode)),
-      ("    Unallocated", str(obj_alloc_counters[1].fo_tally_unalloc_inode)),
-      ("    Unknown", str(obj_alloc_counters[1].fo_tally_nullalloc_inode)),
-      ("  Name allocation", ""),
-      ("    Allocated", str(obj_alloc_counters[1].fo_tally_alloc_name)),
-      ("    Unallocated", str(obj_alloc_counters[1].fo_tally_unalloc_name)),
-      ("    Unknown", str(obj_alloc_counters[1].fo_tally_nullalloc_name)),
-      ("  Unallocated, unmatched", obj_alloc_counters[1].fo_unalloc_unmatch_tally),
-      ("Current image's file (inode) tally", str(obj_alloc_counters[1].inode_tally)),
-      ("Matched files", str(matched_files_tally)),
-      ("", ""),
-      ("New files", str(len(new_files))),
-      ("Deleted files", str(len(deleted_files))),
-      ("  Unmatched", str(len(deleted_files_unmatched))),
-      ("  Matched", str(len(deleted_files_matched))),
-      ("Renamed files", str(len(renamed_files))),
-      ("  Directories", str(len(renamed_files_directory))),
-      ("  Regular files", str(len(renamed_files_regular))),
-      ("  Other", str(len(renamed_files_other))),
-      ("  Type changed", str(len(renamed_files_type_changed))),
-    ]
-    for key in sorted(renamed_files_type_changes.keys()):
-        summ_recs.append(("    %s -> %s" % key, str(renamed_files_type_changes[key])))
-    summ_recs += [
-      ("  Content matches", str(len(renamed_files_content_matches))),
-      ("Files with modified content", str(len(modified_files))),
-      ("Files with changed file properties", str(len(changed_files)))
-    ]
+    if summary:
+        idifference.h2("Summary:")
+        summ_recs = [
+          ("Prior image's file (file object) tally", str(obj_alloc_counters[0].fo_tally)),
+          ("  Inode allocation", ""),
+          ("    Allocated", str(obj_alloc_counters[0].fo_tally_alloc_inode)),
+          ("    Unallocated", str(obj_alloc_counters[0].fo_tally_unalloc_inode)),
+          ("    Unknown", str(obj_alloc_counters[0].fo_tally_nullalloc_inode)),
+          ("  Name allocation", ""),
+          ("    Allocated", str(obj_alloc_counters[0].fo_tally_alloc_name)),
+          ("    Unallocated", str(obj_alloc_counters[0].fo_tally_unalloc_name)),
+          ("    Unknown", str(obj_alloc_counters[0].fo_tally_nullalloc_name)),
+          ("  Unallocated, unmatched", obj_alloc_counters[0].fo_unalloc_unmatch_tally),
+          ("Prior image's file (inode) tally", str(obj_alloc_counters[0].inode_tally)),
+          ("Current image's file (file object) tally", str(obj_alloc_counters[1].fo_tally)),
+          ("  Inode allocation", ""),
+          ("    Allocated", str(obj_alloc_counters[1].fo_tally_alloc_inode)),
+          ("    Unallocated", str(obj_alloc_counters[1].fo_tally_unalloc_inode)),
+          ("    Unknown", str(obj_alloc_counters[1].fo_tally_nullalloc_inode)),
+          ("  Name allocation", ""),
+          ("    Allocated", str(obj_alloc_counters[1].fo_tally_alloc_name)),
+          ("    Unallocated", str(obj_alloc_counters[1].fo_tally_unalloc_name)),
+          ("    Unknown", str(obj_alloc_counters[1].fo_tally_nullalloc_name)),
+          ("  Unallocated, unmatched", obj_alloc_counters[1].fo_unalloc_unmatch_tally),
+          ("Current image's file (inode) tally", str(obj_alloc_counters[1].inode_tally)),
+          ("Matched files", str(matched_files_tally)),
+          ("", ""),
+          ("New files", str(len(new_files))),
+          ("Deleted files", str(len(deleted_files))),
+          ("  Unmatched", str(len(deleted_files_unmatched))),
+          ("  Matched", str(len(deleted_files_matched))),
+          ("Renamed files", str(len(renamed_files))),
+          ("  Directories", str(len(renamed_files_directory))),
+          ("  Regular files", str(len(renamed_files_regular))),
+          ("  Other", str(len(renamed_files_other))),
+          ("  Type changed", str(len(renamed_files_type_changed))),
+        ]
+        for key in sorted(renamed_files_type_changes.keys()):
+            summ_recs.append(("    %s -> %s" % key, str(renamed_files_type_changes[key])))
+        summ_recs += [
+          ("  Content matches", str(len(renamed_files_content_matches))),
+          ("Files with modified content", str(len(modified_files))),
+          ("Files with changed file properties", str(len(changed_files)))
+        ]
 
-    idifference.table(summ_recs)
+        idifference.table(summ_recs)
 
 def main():
     global args
     dfxmlobject = Objects.parse(args.infile)
-    report(dfxmlobject, sort_by=args.sort_by)
+    report(dfxmlobject, sort_by=args.sort_by, summary=args.summary)
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("--sort-by", help="Sorts file lists.  Pass one of these arguments: \"times\" or \"path\".")
+    parser.add_argument("--summary",help="output summary statistics of file system changes",action="store_true", default=False)
     parser.add_argument("infile", help="A differential DFXML file.  Should include the optional 'delta:matched' attributes for counts to work correctly.")
     args = parser.parse_args()
 
