@@ -57,9 +57,6 @@ if __name__=="__main__":
     if args.html:
         raise NotImplementedError("Sorry, but the HTML output argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 
-    if args.summary:
-        raise NotImplementedError("Sorry, but the tabular-summary argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
-
     if args.noatime:
         raise NotImplementedError("Sorry, but the ignore-atime argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 
@@ -91,4 +88,8 @@ if __name__=="__main__":
                 _logger.debug("Opening temp file for writing.")
                 with open(args.xmlfilename, "w") as fh:
                     diffdfxml.print_dfxml(output_fh=fh)
-            summarize_differential_dfxml.report(diffdfxml)
+            summarize_differential_dfxml.report(
+              diffdfxml,
+              sort_by=args.sort_by,
+              summary=args.summary
+            )
