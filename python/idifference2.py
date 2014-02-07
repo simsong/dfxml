@@ -22,19 +22,22 @@ def ignorable_name(fn):
 if __name__=="__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='%prog [options] file1 file2 [file3...]  (files can be xml or image files)')
-    parser.add_argument("-x","--xml",help="specify output file for XML",dest="xmlfilename")
-    parser.add_argument("--html",help="specify output in HTML",action="store_true")
-    parser.add_argument("-n","--notimeline",help="do not generate a timeline",action="store_true")
-    parser.add_argument("-d","--debug",help="debug",action='store_true')
-    parser.add_argument("-T","--tararchive",help="create tar archive file of new/changed files",dest="tarfile")
-    parser.add_argument("-Z","--zipfile",help="create ZIP64 archive file of new/changed files",dest="zipfile")
-    parser.add_argument("--include-dotdirs",help="include files with names ending in '/.' and '/..'",action="store_true", default=False)
+    parser = argparse.ArgumentParser(description='%prog [options] file1 file2  (files can be xml or image files)')
+    returningsoon = parser.add_argument_group("Returning soon", "Some of the options in idifference were not carried forward in the reimplementation.  Please feel free to request these features be re-implemented if you need them.")
+    parser.add_argument("-d","--debug",help="Enable debug printing",action='store_true')
+    parser.add_argument("-x","--xml",help="Specify output file for DFXML manifest of differences",dest="xmlfilename")
+    parser.add_argument("--include-dotdirs",help="Include files with names ending in '/.' and '/..'",action="store_true", default=False)
     parser.add_argument("--sort-by", help="Sorts reported file lists.  Pass one of these arguments: \"times\" or \"paths\".")
-    parser.add_argument("--summary",help="output summary statistics of file system changes",action="store_true", default=False)
-    parser.add_argument("--timestamp",help="output all times in Unix timestamp format; otherwise use ISO 8601",action="store_true")
-    parser.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
-    parser.add_argument("--noatime",help="Do not include atime changes",action="store_true")
+
+    returningsoon.add_argument("-n","--notimeline",help="do not generate a timeline",action="store_true")
+    returningsoon.add_argument("-T","--tararchive",help="create tar archive file of new/changed files",dest="tarfile")
+    returningsoon.add_argument("-Z","--zipfile",help="create ZIP64 archive file of new/changed files",dest="zipfile")
+    returningsoon.add_argument("--html",help="specify output in HTML",action="store_true")
+    returningsoon.add_argument("--summary",help="output summary statistics of file system changes",action="store_true", default=False)
+    returningsoon.add_argument("--noatime",help="Do not include atime changes",action="store_true")
+    returningsoon.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
+    returningsoon.add_argument("--timestamp",help="output all times in Unix timestamp format; otherwise use ISO 8601",action="store_true")
+
     parser.add_argument("infiles", nargs="+")
 
     args = parser.parse_args()
@@ -61,7 +64,7 @@ if __name__=="__main__":
         raise NotImplementedError("Sorry, but the ignore-atime argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 
     if args.timestamp:
-        raise NotImplementedError("Sorry, but the tabular-summary argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
+        raise NotImplementedError("Sorry, but the timestamp argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 #TODO Interpret these old flags
 #    parser.add_argument("-n","--notimeline",help="do not generate a timeline",action="store_true")
 #    parser.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
