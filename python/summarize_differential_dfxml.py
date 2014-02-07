@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 import os
 import logging
@@ -12,6 +12,9 @@ import make_differential_dfxml
 import operator
 
 _logger = logging.getLogger(os.path.basename(__file__))
+
+#Only issue a potentially verbose warning once
+_nagged_timestamp_format = False
 
 class FOCounter(object):
     "Counter for FileObjects.  Does not count differences (differential annotations)."
@@ -69,7 +72,7 @@ class FOCounter(object):
     def fo_tally_unalloc_name(self):
         return self._fo_allocation_tallies_name[False]
 
-def report(dfxmlobject, sort_by=None, summary=None):
+def report(dfxmlobject, sort_by=None, summary=None, timestamp=None):
     new_files = []
     deleted_files = []
     deleted_files_matched = []
@@ -166,9 +169,24 @@ def report(dfxmlobject, sort_by=None, summary=None):
         else: #Default: "times"
             return _key_by_times
 
+    def _format_timestamp(t):
+        """Takes a timestamp, returns a string."""
+        if t is None:
+            return "n/a"
+        if timestamp:
+            if t.timestamp:
+                return str(t.timestamp)
+            else:
+                if not _nagged_timestamp_format:
+                    _nagged_timestamp_format = True
+                    _logger.warning("Tried to format a Unix timestamp, but failed.")
+                return "n/a"
+        else:
+            return str(t)
+
     idifference.h2("New files:")
     new_files_sorted = sorted(new_files, key=_sortkey_singlefi())
-    res = [(str(obj.mtime) or "n/a", obj.filename or "", obj.filesize) for obj in new_files_sorted]
+    res = [(_format_timestamp(obj.mtime), obj.filename or "", obj.filesize) for obj in new_files_sorted]
     idifference.table(res)
 
     idifference.h2("Deleted files:")
@@ -216,9 +234,9 @@ def report(dfxmlobject, sort_by=None, summary=None):
                     res.append((
                       fi.filename or "",
                       "%s changed, " % timeattr, 
-                      getattr(fi.original_fileobject, timeattr) or ""
+                      _format_timestamp(getattr(fi.original_fileobject, timeattr)),
                       "->", 
-                      getattr(fi, timeattr) or "", 
+                      _format_timestamp(getattr(fi, timeattr))
                     ))
             for diff in sorted(diffs_remaining):
                 diffs_remaining -= {diff}

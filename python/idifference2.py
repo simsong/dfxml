@@ -29,6 +29,7 @@ if __name__=="__main__":
     parser.add_argument("--include-dotdirs",help="Include files with names ending in '/.' and '/..'",action="store_true", default=False)
     parser.add_argument("--sort-by", help="Sorts reported file lists.  Pass one of these arguments: \"times\" or \"paths\".")
     parser.add_argument("--summary",help="output summary statistics of file system changes",action="store_true", default=False)
+    parser.add_argument("--timestamp",help="output all times in Unix timestamp format; otherwise use ISO 8601",action="store_true")
 
     returningsoon.add_argument("-n","--notimeline",help="do not generate a timeline",action="store_true")
     returningsoon.add_argument("-T","--tararchive",help="create tar archive file of new/changed files",dest="tarfile")
@@ -36,7 +37,6 @@ if __name__=="__main__":
     returningsoon.add_argument("--html",help="specify output in HTML",action="store_true")
     returningsoon.add_argument("--noatime",help="Do not include atime changes",action="store_true")
     returningsoon.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
-    returningsoon.add_argument("--timestamp",help="output all times in Unix timestamp format; otherwise use ISO 8601",action="store_true")
 
     parser.add_argument("infiles", nargs="+")
 
@@ -59,9 +59,6 @@ if __name__=="__main__":
 
     if args.noatime:
         raise NotImplementedError("Sorry, but the ignore-atime argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
-
-    if args.timestamp:
-        raise NotImplementedError("Sorry, but the timestamp argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 
     if args.notimeline:
         raise NotImplementedError("Sorry, but the notimeline argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
@@ -91,5 +88,6 @@ if __name__=="__main__":
             summarize_differential_dfxml.report(
               diffdfxml,
               sort_by=args.sort_by,
-              summary=args.summary
+              summary=args.summary,
+              timestamp=args.timestamp
             )
