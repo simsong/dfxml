@@ -43,7 +43,7 @@ clean: clean-Objects
 	rm -f idifference_test.txt
 	rm -f idifference_test*.dfxml
 	rm -f demo_mac_timeline*.txt
-	rm -f differential_dfxml_test_[02].*
+	rm -f differential_dfxml_test_[02]*
 
 clean-Objects:
 	$(MAKE) -C test_Objects clean

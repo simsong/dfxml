@@ -24,5 +24,5 @@ check:
 	done
 
 clean:
-	rm verify_differential_dfxml_{01,23}.py-test[12].xml
-
+	rm -f verify_differential_dfxml_{01,23}.py-test[12].xml
+	rm -f test_difference_counts.py-d*
