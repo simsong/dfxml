@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.44"
+__version__ = "0.0.45"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -1046,6 +1046,8 @@ class TimestampObject(object):
         else:
             raise ValueError("Unexpected arguments.  Whole args tuple: %r." % (args,))
 
+        self._timestamp = None
+
     def __eq__(self, other):
         #Check type
         if other is None:
@@ -1184,6 +1186,13 @@ class TimestampObject(object):
             checked_value = dfxml.dftime(value)
             #_logger.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
             self._time = checked_value
+            #Propagate timestamp value to other formats
+            self._timestamp = self._time.timestamp()
+
+    @property
+    def timestamp(self):
+        """A Unix floating-point timestamp, as time.mktime returns.  Currently, there is no setter for this property."""
+        return self._timestamp
 
 
 class FileObject(object):
