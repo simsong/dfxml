@@ -65,13 +65,12 @@ if __name__=="__main__":
 
     if args.timestamp:
         raise NotImplementedError("Sorry, but the timestamp argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
-#TODO Interpret these old flags
-#    parser.add_argument("-n","--notimeline",help="do not generate a timeline",action="store_true")
-#    parser.add_argument("--imagefile",help="specifies imagefile or file2 is an XML file and you are archiving")
 
-    if args.xmlfilename is None:
-        #TODO Expose a report() function in summarize_differential_dfxml.
-        raise ValueError("This version of idifference currently requires writing an intermediary XML file to disk.  Please supply -x.")
+    if args.notimeline:
+        raise NotImplementedError("Sorry, but the notimeline argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
+
+    if args.imagefile:
+        raise NotImplementedError("Sorry, but the imagefile argument was not carried forward in the re-implementation.  Please feel free to request this feature be re-implemented if you need it.")
 
     pre = None
     post = None
@@ -92,10 +91,4 @@ if __name__=="__main__":
                 _logger.debug("Opening temp file for writing.")
                 with open(args.xmlfilename, "w") as fh:
                     diffdfxml.print_dfxml(output_fh=fh)
-                #TODO Expose a report() function in summarize_differential_dfxml, that can take a DFXML file path, or the diffdfxml object.
-                #TODO Because these next three lines are a hack.
-                _logger.debug("Temp file written.")
-                args.infile = args.xmlfilename
-                summarize_differential_dfxml.args = args
-                summarize_differential_dfxml.main()
-                _logger.debug("Summarizer's main function called.")
+            summarize_differential_dfxml.report(diffdfxml)

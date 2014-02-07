@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 import os
 import logging
@@ -69,8 +69,7 @@ class FOCounter(object):
     def fo_tally_unalloc_name(self):
         return self._fo_allocation_tallies_name[False]
 
-def main():
-    global args
+def report(dfxmlobject, sort_by=None):
     new_files = []
     deleted_files = []
     deleted_files_matched = []
@@ -93,7 +92,8 @@ def main():
         _matched = "matched" in obj.annos
         return _matched
 
-    for (event, obj) in Objects.iterparse(args.infile):
+    #Group objects by differential annotations
+    for obj in dfxmlobject:
         if isinstance(obj, Objects.FileObject):
             if "matched" in obj.annos:
                 matched_files_tally += 1
@@ -161,7 +161,7 @@ def main():
               (fi.original_fileobject and str(fi.original_fileobject.crtime)) or "n/a",
               (fi.original_fileobject and fi.original_fileobject.filename) or ""
             )
-        if args.sort_by == "path":
+        if sort_by == "path":
             return _key_by_path
         else: #Default: "times"
             return _key_by_times
@@ -198,7 +198,7 @@ def main():
               fi.original_fileobject.filename or "",
               fi.filename or ""
             )
-        if args.sort_by == "path":
+        if sort_by == "path":
             return _key_by_path
         else: #Default: "times"
             return _key_by_times
@@ -292,6 +292,10 @@ def main():
 
     idifference.table(summ_recs)
 
+def main():
+    global args
+    dfxmlobject = Objects.parse(args.infile)
+    report(dfxmlobject, sort_by=args.sort_by)
 
 if __name__ == "__main__":
     import argparse
