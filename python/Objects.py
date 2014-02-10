@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.45"
+__version__ = "0.0.46"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -1221,6 +1221,7 @@ class FileObject(object):
       "crtime",
       "ctime",
       "dtime",
+      "error",
       "filename",
       "filesize",
       "gid",
@@ -1569,6 +1570,7 @@ class FileObject(object):
 
         _append_object("parent_object", self.parent_object)
         _append_str("filename", self.filename)
+        _append_str("error", self.error)
         _append_str("partition", self.partition)
         _append_str("id", self.id)
         _append_str("name_type", self.name_type)
@@ -1736,6 +1738,14 @@ class FileObject(object):
         else:
             checked_val = TimestampObject(val, name="dtime")
             self._dtime = checked_val
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, val):
+        self._error = _strcast(val)
 
     @property
     def filesize(self):

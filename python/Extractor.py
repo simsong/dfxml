@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 import Objects
 import os
@@ -46,7 +46,7 @@ def name_with_part_path(fobj):
         retval = os.path.join("partition_" + str(fobj.partition), retval)
     return retval
 
-def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, file_name=name_with_part_path, dry_run=None, out_manifest_path=None, err_manifest_path=None):
+def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, file_name=name_with_part_path, dry_run=None, out_manifest_path=None, err_manifest_path=None, keep_going=False):
     """
     @param file_name Unary function.  Takes a Objects.FileObject; returns the file path to which this file will be extracted, relative to outdir.  So, if outdir="extraction" and the name_with_part_path function of this module is used, the file "/Users/Administrator/ntuser.dat" in partition 1 will be extracted to "extraction/partition_1/Users/Administrator/ntuser.dat".
     """
@@ -104,6 +104,7 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
         extraction_byte_tally += obj.filesize
 
         any_error = None
+        tsk_error = None
         if not dry_run:
             extraction_write_dir = os.path.dirname(extraction_write_path)
             if not os.path.exists(extraction_write_dir):
@@ -120,25 +121,31 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
                     if checked_byte_tally != obj.filesize:
                         any_error = True
                         extraction_entry.filesize = checked_byte_tally
-                        extraction_entry.diffs.append("filesize")
+                        extraction_entry.diffs.add("filesize")
                         _logger.error("File size mismatch on %r." % obj.filename)
                         _logger.info("Recorded filesize = %r" % obj.filesize)
                         _logger.info("Extracted bytes   = %r" % checked_byte_tally)
                     if checker and (obj.sha1 != checker.hexdigest()):
                         any_error = True
                         extraction_entry.sha1 = checker.hexdigest()
-                        extraction_entry.diffs.append("sha1")
+                        extraction_entry.diffs.add("sha1")
                         _logger.error("Hash mismatch on %r." % obj.filename)
                         _logger.info("Recorded SHA-1 = %r" % obj.sha1)
                         _logger.info("Computed SHA-1 = %r" % checker.hexdigest())
-                        _logger.debug("File object: %r." % obj)
-                except:
+                        #_logger.debug("File object: %r." % obj)
+                except Exception as e:
                     any_error = True
-                    extraction_entry.error = traceback.format_stack()
-        if err_manifest and any_error:
-            err_manifest.append(extraction_entry)
+                    tsk_error = True
+                    extraction_entry.error = "".join(traceback.format_stack())
+                    if e.args:
+                        extraction_entry.error += "\n" + str(e.args)
         if out_manifest:
             out_manifest.append(extraction_entry)
+        if err_manifest and any_error:
+            err_manifest.append(extraction_entry)
+        if tsk_error and not keep_going:
+            _logger.warning("Terminating extraction loop early, due to encountered error.")
+            break
 
     #Report
     _logger.info("Estimated extraction: %d bytes." % extraction_byte_tally)
@@ -146,6 +153,11 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
         with open(out_manifest_path, "w") as out_manifest_fh:
             out_manifest.print_dfxml(out_manifest_fh)
     if not err_manifest is None:
+        tally = 0
+        for obj in err_manifest:
+            if isinstance(obj, Objects.FileObject):
+                tally += 1
+        _logger.info("Encountered errors extracting %d files." % tally)
         with open(err_manifest_path, "w") as err_manifest_fh:
             err_manifest.print_dfxml(err_manifest_fh)
         
@@ -155,6 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("--dry-run", action="store_true", help="Do not write files to disk.  Only verifies computed vs. stored checksums of file content.")
     parser.add_argument("-x", "--xml", help="Pre-computed DFXML file.  If not supplied, Fiwalk is called on the image argument.")
+    parser.add_argument("-k", "--keep-going", action="store_true", help="If a SleuthKit process error is encountered in extracting any file (note: this excludes checksum mismatches), the extraction halts unless this flag is passed.")
     parser.add_argument("--output-manifest", help="Path for recording DFXML manifest of all extracted files.")
     parser.add_argument("--error-manifest", help="Path for recording DFXML manifest of only files extracted with errors.")
     parser.add_argument("image", help="Subject disk image from which files will be extracted.")
@@ -163,4 +176,4 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
-    extract_files(args.image, args.output_directory, args.xml, is_file, name_with_part_path, args.dry_run, args.output_manifest, args.error_manifest)
+    extract_files(args.image, args.output_directory, args.xml, is_file, name_with_part_path, args.dry_run, args.output_manifest, args.error_manifest, args.keep_going)
