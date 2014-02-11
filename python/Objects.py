@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.46"
+__version__ = "0.0.47"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -284,6 +284,11 @@ class DFXMLObject(object):
         self._dc = value
 
     @property
+    def files(self):
+        """List of file objects directly attached to this DFXMLObject.  No setter for now."""
+        return self._files
+
+    @property
     def namespaces(self):
         raise AttributeError("The namespaces dictionary should not be directly accessed; instead, use .iter_namespaces().")
 
@@ -304,6 +309,11 @@ class DFXMLObject(object):
     @version.setter
     def version(self, value):
         self._version = _strcast(value)
+
+    @property
+    def volumes(self):
+        """List of volume objects directly attached to this DFXMLObject.  No setter for now."""
+        return self._volumes
 
 
 class RegXMLObject(object):

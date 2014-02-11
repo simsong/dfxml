@@ -22,7 +22,9 @@ check:
 	  $$PY verify_differential_dfxml_01.py && \
 	  $$PY verify_differential_dfxml_23.py ; \
 	done
+	./test_cat_partitions.sh
 
 clean:
 	rm -f verify_differential_dfxml_{01,23}.py-test[12].xml
 	rm -f test_difference_counts.py-d*
+	rm -f test_cat_partitions.sh.dfxml
