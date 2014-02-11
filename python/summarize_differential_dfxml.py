@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 import os
 import logging
@@ -227,7 +227,7 @@ def report(dfxmlobject, sort_by=None, summary=None, timestamp=None):
             diffs_remaining = copy.deepcopy(fi.diffs)
             if "filename" in diffs_remaining:
                 diffs_remaining -= {"filename"}
-                res.add(("Renamed", "", fi.original_fileobject.filename, "renamed to", fi.filename))
+                res.append(("Renamed", "", fi.original_fileobject.filename, "renamed to", fi.filename))
             for timeattr in Objects.TimestampObject.timestamp_name_list:
                 if timeattr in diffs_remaining:
                     diffs_remaining -= {timeattr}
