@@ -60,13 +60,9 @@ if __name__ == "__main__":
                     assert False
                 _logger.info("PASSED: %r." % _name)
 
-    #TODO Write a report() function in summarize_differential_dfxml, so the program can be called without this 'args' hack.
     #TODO Once the old idifference.py is retired, remove the Python3-only bit.
     if sys.version_info >= (3,1):
         import summarize_differential_dfxml
-        summarize_differential_dfxml.args = args
-        args.infile = tempxml2_path
         for sortby in "times", "path":
             _logger.info("Summarizing, sorting by %s." % sortby)
-            args.sort_by = sortby
-            summarize_differential_dfxml.main()
+            summarize_differential_dfxml.report(d_from_disk_again, sort_by=sortby)
