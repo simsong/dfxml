@@ -16,6 +16,7 @@ check:
 	  $$PY test_diffing_ByteRuns.py && \
 	  $$PY test_diffing_TimestampObject.py && \
 	  $$PY test_diffing_VolumeObject.py && \
+	  $$PY test_ByteRun.py && \
 	  $$PY test_FileObject_from_stat.py && \
 	  $$PY test_RegXMLObject.py && \
 	  $$PY test_VolumeObject_hash.py && \

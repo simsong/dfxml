@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.47"
+__version__ = "0.0.48"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -23,6 +23,7 @@ _logger = logging.getLogger(os.path.basename(__file__))
 
 #Contains: (namespace, local name) qualified XML element name pairs
 _warned_elements = set([])
+_warned_byterun_attribs = set([])
 
 #Issue some log statements only once per program invocation.
 _nagged_alloc = False
@@ -764,6 +765,27 @@ class ByteRun(object):
         for prop in ByteRun._all_properties:
             setattr(self, prop, kwargs.get(prop))
 
+    def __add__(self, other):
+        """
+        Joins two ByteRun objects into a single run if possible.  Returns a new object of the concatenation if successful, None if not.
+        """
+        _typecheck(other, ByteRun)
+        #Don't glom fills of different values
+        if self.fill != other.fill:
+            return None
+
+        if None in [self.len, other.len]:
+            return None
+
+        for prop in ["img_offset", "fs_offset", "file_offset"]:
+            if None in [getattr(self, prop), getattr(other, prop)]:
+                continue
+            if getattr(self, prop) + self.len == getattr(other, prop):
+                retval = copy.deepcopy(self)
+                retval.len += other.len
+                return retval
+        return None
+
     def __eq__(self, other):
         #Check type
         if other is None:
@@ -800,11 +822,20 @@ class ByteRun(object):
         (ns, tn) = _qsplit(e.tag)
         assert tn == "byte_run"
 
+        copied_attrib = copy.deepcopy(e.attrib)
+
         #Populate run properties from element attributes
         for prop in ByteRun._all_properties:
-            val = e.attrib.get(prop)
-            if not val is None:
-                setattr(self, prop, val)
+            if prop in copied_attrib:
+                val = copied_attrib.get(prop)
+                if not val is None:
+                    setattr(self, prop, val)
+                del copied_attrib[prop]
+        #Note remaining properties
+        for prop in copied_attrib:
+            if prop not in _warned_byterun_attribs:
+                _warned_byterun_attribs.add(prop)
+                _logger.warning("No instructions present for processing this attribute found on a byte run: %r." % prop)
 
     def to_Element(self):
         outel = ET.Element("byte_run")
@@ -857,11 +888,7 @@ class ByteRun(object):
 
 class ByteRuns(object):
     """
-    An extension to Python lists.
-
-    Refs:
-    http://www.rafekettler.com/magicmethods.html
-    http://stackoverflow.com/a/8841520
+    A list-like object for ByteRun objects.
     """
     #Must define these methods to adhere to the list protocol:
     #__len__
@@ -870,6 +897,10 @@ class ByteRuns(object):
     #__delitem__
     #__iter__
     #append
+    #
+    #Refs:
+    #http://www.rafekettler.com/magicmethods.html
+    #http://stackoverflow.com/a/8841520
 
     def __init__(self, run_list=None):
         self._listdata = []
@@ -923,9 +954,24 @@ class ByteRuns(object):
         self._listdata[key] = value
 
     def append(self, value):
+        """
+        Appends a ByteRun object to this container's list.
+        """
         _typecheck(value, ByteRun)
         self._listdata.append(value)
 
+    def glom(self, value):
+        """
+        Appends a ByteRun object to this container's list, after attempting to join the run with the last run already stored.
+        """
+        _typecheck(value, ByteRun)
+        last_run = self._listdata[-1]
+        maybe_new_run = last_run + value
+        if maybe_new_run is None:
+            self.append(value)
+        else:
+            self._listdata[-1] = maybe_new_run
+        
     def iter_contents(self, raw_image, buffer_size=1048576, sector_size=512, errlog=None, statlog=None):
         """
         Generator.  Yields contents, as byte strings one block at a time, given a backing raw image path.  Relies on The SleuthKit's img_cat, so contents can be extracted from any disk image type that TSK supports.
@@ -2283,7 +2329,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
 
     dobj = dfxmlobject or DFXMLObject()
 
-    #The only way to efficiently populated VolumeObjects is to populate the object when the stream has hit its first FileObject.
+    #The only way to efficiently populate VolumeObjects is to populate the object when the stream has hit its first FileObject.
     vobj = None
 
     #It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first fileobject is hit.
