@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 
 import Objects
 import logging
@@ -34,15 +34,27 @@ def ignorable_name(fn):
         return False
     return os.path.basename(fn) in [".", "..", "$FAT1", "$FAT2", "$OrphanFiles"]
 
-def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, ignore_properties=set(), annotate_matches=False, rename_requires_hash=False, ignore_filename_function=ignorable_name):
+def make_differential_dfxml(pre, post, **kwargs):
     """
     Takes as input two paths to DFXML files.  Returns a DFXMLObject.
     @param pre String.
     @param post String.
     @param diff_mode Optional.  One of "all" or "idifference".
     @param retain_unchanged Optional.  Boolean.
-    @param ignore_properties Optiona.  Must be a Set.
+    @param ignore_properties Optional.  Set.
+    @param annotate_matches Optional.  Boolean.  True -> matched file objects get a "delta:matched='1'" attribute.
+    @param rename_requires_hash Optional.  Boolean.  True -> all matches require matching SHA-1's, if present.
+    @param ignore_filename_function Optional.  Function, string -> Boolean.  Returns True if a file name (which can be null) should be ignored.
+    @param glom_byte_runs Optional.  Boolean.  Joins contiguous-region byte runs together in FileObject byte run lists.
     """
+
+    diff_mode = kwargs.get("diff_mode", "all")
+    retain_unchanged = kwargs.get("retain_unchanged", False)
+    ignore_properties = kwargs.get("ignore_properties", set())
+    annotate_matches = kwargs.get("annotate_matches", False)
+    rename_requires_hash = kwargs.get("rename_requires_hash", False)
+    ignore_filename_function = kwargs.get("ignore_filename_function", ignorable_name)
+    glom_byte_runs = kwargs.get("glom_byte_runs", False)
 
     _expected_diff_modes = ["all", "idifference"]
     if diff_mode not in _expected_diff_modes:
@@ -168,6 +180,14 @@ def make_differential_dfxml(pre, post, diff_mode="all", retain_unchanged=False, 
 
             if ignorable_name(new_obj.filename):
                 continue
+
+            #Simplify byte runs if requested
+            if glom_byte_runs:
+                if new_obj.byte_runs:
+                    temp_byte_runs = Objects.ByteRuns()
+                    for run in new_obj.byte_runs:
+                        temp_byte_runs.glom(run)
+                    new_obj.byte_runs = temp_byte_runs
 
             #Normalize the partition number
             if new_obj.volume_object is None:
@@ -440,6 +460,7 @@ if __name__ == "__main__":
     parser.add_argument("--rename-with-hash", action="store_true", help="Require that renamed files must match on a content hash.")
     parser.add_argument("--retain-unchanged", action="store_true", help="Output unchanged files in the resulting DFXML file.", default=False)
     parser.add_argument("--annotate-matches", action="store_true", help="Add a 'dfxml:matched' Boolean attribute to every produced object.  Useful for some counting purposes, but not always needed.", default=False)
+    parser.add_argument("--simplify-byte-runs", action="store_true", help="Join contiguous byte run elements together, if their attributes align.", default=False)
     parser.add_argument("infiles", nargs="+")
     args = parser.parse_args()
 
