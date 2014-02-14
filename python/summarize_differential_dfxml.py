@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 
 import os
 import logging
@@ -118,7 +118,7 @@ def report(dfxmlobject, sort_by=None, summary=None, timestamp=None):
                 renamed_files.append(obj)
                 if obj.name_type != obj.original_fileobject.name_type:
                     renamed_files_type_changed.append(obj)
-                    renamed_files_type_changes[(obj.original_fileobject.name_type, obj.name_type)] += 1
+                    renamed_files_type_changes[(obj.original_fileobject.name_type or "", obj.name_type or "")] += 1
                 elif obj.name_type == "r":
                     renamed_files_regular.append(obj)
                 elif obj.name_type == "d":
