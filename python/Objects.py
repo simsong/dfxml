@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.48"
+__version__ = "0.0.49"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -965,12 +965,15 @@ class ByteRuns(object):
         Appends a ByteRun object to this container's list, after attempting to join the run with the last run already stored.
         """
         _typecheck(value, ByteRun)
-        last_run = self._listdata[-1]
-        maybe_new_run = last_run + value
-        if maybe_new_run is None:
+        if len(self._listdata) == 0:
             self.append(value)
         else:
-            self._listdata[-1] = maybe_new_run
+            last_run = self._listdata[-1]
+            maybe_new_run = last_run + value
+            if maybe_new_run is None:
+                self.append(value)
+            else:
+                self._listdata[-1] = maybe_new_run
         
     def iter_contents(self, raw_image, buffer_size=1048576, sector_size=512, errlog=None, statlog=None):
         """
