@@ -28,6 +28,15 @@ brs_discontig = Objects.ByteRuns()
 brs_discontig.glom(br0)
 brs_discontig.glom(br2)
 
+brs_backward = Objects.ByteRuns()
+brs_backward.glom(br1)
+brs_backward.glom(br0)
+
 assert len(brs_contiguous) == 3
 assert len(brs_glommed) == 1
 assert len(brs_discontig) == 2
+assert len(brs_backward) == 2
+
+assert brs_glommed[0].len == 70
+assert brs_backward[0].len == 30
+assert brs_backward[1].len == 20
