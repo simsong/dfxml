@@ -1744,6 +1744,16 @@ class FileObject(object):
             self._bkup_time = checked_val
 
     @property
+    def byte_runs(self):
+        return self._byte_runs
+
+    @byte_runs.setter
+    def byte_runs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._byte_runs = val
+
+    @property
     def compressed(self):
         return self._compressed
 
