@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.49"
+__version__ = "0.0.50"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -24,6 +24,9 @@ _logger = logging.getLogger(os.path.basename(__file__))
 #Contains: (namespace, local name) qualified XML element name pairs
 _warned_elements = set([])
 _warned_byterun_attribs = set([])
+
+#Contains: Unexpected 'facet' values on byte_runs elements.
+_warned_byterun_facets = set([])
 
 #Issue some log statements only once per program invocation.
 _nagged_alloc = False
@@ -902,7 +905,10 @@ class ByteRuns(object):
     #http://www.rafekettler.com/magicmethods.html
     #http://stackoverflow.com/a/8841520
 
-    def __init__(self, run_list=None):
+    _facet_values = [None, "data", "meta", "name"]
+
+    def __init__(self, run_list=None, **kwargs):
+        self._facet = kwargs.get("facet")
         self._listdata = []
         if isinstance(run_list, list):
             for run in run_list:
@@ -912,12 +918,15 @@ class ByteRuns(object):
         del self._listdata[key]
 
     def __eq__(self, other):
-        """Compares the byte run lists."""
+        """Compares the byte run lists and the facet (allowing a null facet to match "data")."""
         #Check type
         if other is None:
             return False
         _typecheck(other, ByteRuns)
 
+        if self.facet != other.facet:
+            if set([self.facet, other.facet]) != set([None, "data"]):
+                return False
         if len(self) != len(other):
             #_logger.debug("len(self) = %d" % len(self))
             #_logger.debug("len(other) = %d" % len(other))
@@ -947,7 +956,10 @@ class ByteRuns(object):
         parts = []
         for run in self:
             parts.append(repr(run))
-        return "ByteRuns(run_list=[" + ", ".join(parts) + "])"
+        maybe_facet = ""
+        if self.facet:
+            maybe_facet = "facet=%r, " % repr(self.facet)
+        return "ByteRuns(" + maybe_facet + "run_list=[" + ", ".join(parts) + "])"
 
     def __setitem__(self, key, value):
         _typecheck(value, ByteRun)
@@ -1068,6 +1080,9 @@ class ByteRuns(object):
         (ns, tn) = _qsplit(e.tag)
         assert tn == "byte_runs"
  
+        if "facet" in e.attrib:
+            self.facet = e.attrib["facet"]
+
         #Look through direct-child elements to populate run array
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
@@ -1081,7 +1096,22 @@ class ByteRuns(object):
         for run in self:
             tmpel = run.to_Element()
             outel.append(tmpel)
+        if self.facet:
+            outel.attrib["facet"] = self.facet
         return outel
+
+    @property
+    def facet(self):
+        """Expected to be null, "data", "meta", or "name".  See FileObject.data_brs, FileObject.meta_brs, and FileObject.name_brs."""
+        return self._facet
+
+    @facet.setter
+    def facet(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        if val not in ByteRuns._facet_values:
+            raise ValueError("A ByteRuns facet must be one of these: %r.  Received: %r." % (ByteRuns._facet_values, val))
+        self._facet = val
 
 re_precision = re.compile(r"(?P<num>\d+)(?P<unit>(|m|n)s|d)?")
 class TimestampObject(object):
@@ -1279,6 +1309,7 @@ class FileObject(object):
       "compressed",
       "crtime",
       "ctime",
+      "data_brs",
       "dtime",
       "error",
       "filename",
@@ -1289,9 +1320,11 @@ class FileObject(object):
       "link_target",
       "libmagic",
       "md5",
+      "meta_brs",
       "meta_type",
       "mode",
       "mtime",
+      "name_brs",
       "name_type",
       "nlink",
       "original_fileobject",
@@ -1306,9 +1339,16 @@ class FileObject(object):
       "used"
     ])
 
+    _br_facet_to_property = {
+      "data":"data_brs",
+      "meta":"meta_brs",
+      "name":"name_brs"
+    }
+
     #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
     _incomparable_properties = set([
       "annos",
+      "byte_runs",
       "id",
       "unalloc",
       "unused"
@@ -1350,14 +1390,14 @@ class FileObject(object):
         parts = []
 
         for prop in sorted(FileObject._all_properties):
-            #Save byte runs for the end
-            if prop != "byte_runs":
+            #Save data byte runs for the end, as theirs lists can get really long.
+            if prop not in ["byte_runs", "data_brs"]:
                 value = getattr(self, prop)
                 if not value is None:
                     parts.append("%s=%r" % (prop, value))
 
-        if self.byte_runs:
-            parts.append("byte_runs=%r" % self.byte_runs)
+        if self.data_brs:
+            parts.append("data_brs=%r" % self.byte_runs)
 
         return "FileObject(" + ", ".join(parts) + ")"
 
@@ -1497,12 +1537,27 @@ class FileObject(object):
                         if "type" not in ce.attrib:
                             raise AttributeError("Attribute 'type' not found.  Every hashdigest element should have a 'type' attribute to identify the hash type.")
                         self.diffs.add(ce.attrib["type"].lower())
+                    elif ctn == "byte_runs":
+                        facet = ce.attrib.get("facet")
+                        prop = FileObject._br_facet_to_property.get(facet, "data_brs")
+                        self.diffs.add(prop)
                     else:
                         self.diffs.add(ctn)
 
             if ctn == "byte_runs":
-                self.byte_runs = ByteRuns()
-                self.byte_runs.populate_from_Element(ce)
+                #byte_runs might be for file contents, the inode/MFT entry, or the directory entry naming the file.  Use the facet attribute to determine which.  If facet is absent, assume they're data byte runs.
+                if "facet" in ce.attrib:
+                    if ce.attrib["facet"] not in FileObject._br_facet_to_property:
+                        if not ce.attrib["facet"] in _warned_byterun_facets:
+                            _warned_byterun_facets.add(ce.attrib["facet"])
+                            _logger.warning("byte_runs facet %r was unexpected.  Will not interpret this element.")
+                    else:
+                        brs = ByteRuns()
+                        brs.populate_from_Element(ce)
+                        setattr(self, ce.attrib["facet"])
+                else:
+                    self.byte_runs = ByteRuns()
+                    self.byte_runs.populate_from_Element(ce)
             elif ctn == "hashdigest":
                 if ce.attrib["type"].lower() == "md5":
                     self.md5 = ce.text
@@ -1573,6 +1628,16 @@ class FileObject(object):
                 el.attrib["delta:changed_property"] = "1"
                 diffs_whittle_set.remove(el.attrib["type"])
 
+        def _anno_byte_runs(el):
+            if "facet" in el.attrib:
+                prop = FileObject._br_facet_to_property[el.attrib["facet"]]
+            else:
+                prop = "data_brs"
+            if prop in self.diffs:
+                el.attrib["delta:changed_property"] = "1"
+                _logger.debug("diffs_whittle_set = %r." % diffs_whittle_set)
+                diffs_whittle_set.remove(prop)
+
         #Recall that Element text must be a string
         def _append_str(name, value):
             """Note that empty elements should be created if the element was removed."""
@@ -1600,6 +1665,29 @@ class FileObject(object):
                 if not value is None:
                     tmpel.text = str(1 if value else 0)
                 _anno_change(tmpel)
+                outel.append(tmpel)
+
+        _using_facets = False
+        def _append_byte_runs(name, value):
+            """The complicated part here is setting the "data" facet on the byte runs, because we assume that no facet definitions means that for this file, there's only the one byte_runs list for data."""
+            if value or name in diffs_whittle_set:
+                if value:
+                    tmpel = value.to_Element()
+                    if "facet" in tmpel.attrib:
+                        _using_facets = True
+                else:
+                    tmpel = ET.Element("byte_runs")
+                    propname_to_facet = {
+                      "data_brs": "data",
+                      "meta_brs": "meta",
+                      "name_brs": "name"
+                    }
+                    if name in propname_to_facet:
+                        _using_facets = True
+                        tmpel.attrib["facet"] = propname_to_facet[name]
+                    elif _using_facets:
+                        tmpel.attrib["facet"] = propname_to_facet["data_brs"]
+                _anno_byte_runs(tmpel)
                 outel.append(tmpel)
 
         def _append_object(name, value, namespace_prefix=None):
@@ -1658,7 +1746,9 @@ class FileObject(object):
         _append_time("bkup_time", self.bkup_time)
         _append_str("link_target", self.link_target)
         _append_str("libmagic", self.libmagic)
-        _append_object("byte_runs", self.byte_runs)
+        _append_byte_runs("meta_brs", self.meta_brs)
+        _append_byte_runs("name_brs", self.name_brs)
+        _append_byte_runs("data_brs", self.data_brs)
         _append_hash("md5", self.md5)
         _append_hash("sha1", self.sha1)
         _append_object("original_fileobject", self.original_fileobject, "delta:")
@@ -1745,13 +1835,12 @@ class FileObject(object):
 
     @property
     def byte_runs(self):
-        return self._byte_runs
+        """This property is now a synonym for the data byte runs (.data_brs)."""
+        return self.data_brs
 
     @byte_runs.setter
     def byte_runs(self, val):
-        if not val is None:
-            _typecheck(val, ByteRuns)
-        self._byte_runs = val
+        self.data_brs = val
 
     @property
     def compressed(self):
@@ -1788,6 +1877,17 @@ class FileObject(object):
         else:
             checked_val = TimestampObject(val, name="crtime")
             self._crtime = checked_val
+
+    @property
+    def data_brs(self):
+        """The byte runs that store the file's content."""
+        return self._data_brs
+
+    @data_brs.setter
+    def data_brs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._data_brs = val
 
     @property
     def diffs(self):
@@ -1857,6 +1957,17 @@ class FileObject(object):
         self._libmagic = _strcast(val)
 
     @property
+    def meta_brs(self):
+        """The byte run(s) that represents the file's metadata object (the inode or the MFT entry).  In file systems that do not distinguish between inode and directory entry, e.g. FAT, .meta_brs should be equivalent to .name_brs, if both fields are present."""
+        return self._meta_brs
+
+    @meta_brs.setter
+    def meta_brs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._meta_brs = val
+
+    @property
     def meta_type(self):
         return self._meta_type
 
@@ -1886,6 +1997,17 @@ class FileObject(object):
         else:
             checked_val = TimestampObject(val, name="mtime")
             self._mtime = checked_val
+
+    @property
+    def name_brs(self):
+        """The byte run(s) that represents the file's name object (the directory entry).  In file systems that do not distinguish between inode and directory entry, e.g. FAT, .meta_brs should be equivalent to .name_brs, if both fields are present."""
+        return self._name_brs
+
+    @name_brs.setter
+    def name_brs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._name_brs = val
 
     @property
     def name_type(self):

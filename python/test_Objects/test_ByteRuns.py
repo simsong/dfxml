@@ -40,3 +40,10 @@ assert len(brs_backward) == 2
 assert brs_glommed[0].len == 70
 assert brs_backward[0].len == 30
 assert brs_backward[1].len == 20
+
+br_facet_data = Objects.ByteRuns(facet="data")
+br_facet_name = Objects.ByteRuns(facet="name")
+br_facet_default = Objects.ByteRuns()
+assert br_facet_data == br_facet_default
+assert br_facet_name != br_facet_data
+assert br_facet_name != br_facet_default

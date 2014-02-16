@@ -50,8 +50,8 @@ if __name__ == "__main__":
                 expected_fileobject_diffs = {
                   ("i_am_new.txt"): set([]),
                   ("i_will_be_deleted.txt"): set([]),
-                  ("i_will_be_modified.txt"): set(["filesize","mtime","ctime","atime","byte_runs","md5","sha1"]),
-                  ("i_will_be_accessed.txt"): set(["atime", "byte_runs"])
+                  ("i_will_be_modified.txt"): set(["filesize","mtime","ctime","atime","data_brs","md5","sha1"]),
+                  ("i_will_be_accessed.txt"): set(["atime", "data_brs"])
                 }
                 if o.diffs != expected_fileobject_diffs[_name]:
                     _logger.info("FAILED: %r." % _name)
