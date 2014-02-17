@@ -1554,7 +1554,7 @@ class FileObject(object):
                     else:
                         brs = ByteRuns()
                         brs.populate_from_Element(ce)
-                        setattr(self, ce.attrib["facet"])
+                        brs.facet = ce.attrib["facet"]
                 else:
                     self.byte_runs = ByteRuns()
                     self.byte_runs.populate_from_Element(ce)
