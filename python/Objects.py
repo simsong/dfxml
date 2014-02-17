@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.50"
+__version__ = "0.0.51"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -958,7 +958,7 @@ class ByteRuns(object):
             parts.append(repr(run))
         maybe_facet = ""
         if self.facet:
-            maybe_facet = "facet=%r, " % repr(self.facet)
+            maybe_facet = "facet=%r, " % self.facet
         return "ByteRuns(" + maybe_facet + "run_list=[" + ", ".join(parts) + "])"
 
     def __setitem__(self, key, value):
@@ -1555,6 +1555,7 @@ class FileObject(object):
                         brs = ByteRuns()
                         brs.populate_from_Element(ce)
                         brs.facet = ce.attrib["facet"]
+                        setattr(self, FileObject._br_facet_to_property[brs.facet], brs)
                 else:
                     self.byte_runs = ByteRuns()
                     self.byte_runs.populate_from_Element(ce)
@@ -1670,6 +1671,7 @@ class FileObject(object):
         _using_facets = False
         def _append_byte_runs(name, value):
             """The complicated part here is setting the "data" facet on the byte runs, because we assume that no facet definitions means that for this file, there's only the one byte_runs list for data."""
+            _logger.debug("_append_byte_runs(%r, %r)" % (name, value))
             if value or name in diffs_whittle_set:
                 if value:
                     tmpel = value.to_Element()
