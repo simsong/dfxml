@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.51"
+__version__ = "0.0.52"
 
 #Remaining roadmap to 0.1.0:
 # * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
@@ -1694,7 +1694,7 @@ class FileObject(object):
 
         def _append_object(name, value, namespace_prefix=None):
             """name must be the name of a property that has a to_Element() method.  namespace_prefix will be prepended as-is to the element tag."""
-            obj = getattr(self, name)
+            obj = value
             if obj or name in diffs_whittle_set:
                 if obj:
                     tmpel = obj.to_Element()
@@ -1717,7 +1717,12 @@ class FileObject(object):
                 _anno_hash(tmpel)
                 outel.append(tmpel)
 
-        _append_object("parent_object", self.parent_object)
+        #The parent object is a one-off.  Duplicating the whole parent is wasteful, so create a shadow object that just outputs the important bits.
+        if not self.parent_object is None:
+            parent_object_shadow = FileObject()
+            parent_object_shadow.inode = self.parent_object.inode
+            _append_object("parent_object", parent_object_shadow)
+
         _append_str("filename", self.filename)
         _append_str("error", self.error)
         _append_str("partition", self.partition)
