@@ -1671,7 +1671,7 @@ class FileObject(object):
         _using_facets = False
         def _append_byte_runs(name, value):
             """The complicated part here is setting the "data" facet on the byte runs, because we assume that no facet definitions means that for this file, there's only the one byte_runs list for data."""
-            _logger.debug("_append_byte_runs(%r, %r)" % (name, value))
+            #_logger.debug("_append_byte_runs(%r, %r)" % (name, value))
             if value or name in diffs_whittle_set:
                 if value:
                     tmpel = value.to_Element()
