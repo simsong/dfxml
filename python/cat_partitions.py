@@ -14,7 +14,7 @@ That is, this command:
 will create a single DFXML file with two volumes and their file objects contained.
 """
 
-__version__ = "0.0.4"
+__version__ = "0.1.0"
 
 import Objects
 import logging
@@ -62,11 +62,14 @@ def main():
 
         for obj in pdo:
             #Force-update image offsets in byte runs
-            if hasattr(obj, "byte_runs"):
-                brs = obj.byte_runs
-                for br in brs:
-                    if not br.fs_offset is None:
-                        br.img_offset = br.fs_offset + offset
+            for brs_prop in ["data_brs", "name_brs", "meta_brs"]:
+                if hasattr(obj, brs_prop):
+                    brs = getattr(obj, brs_prop)
+                    if brs is None:
+                        continue
+                    for br in brs:
+                        if not br.fs_offset is None:
+                            br.img_offset = br.fs_offset + offset
             #For files, set partition identifier and attach to partition
             if isinstance(obj, Objects.FileObject):
                 obj.partition = pxml_path_index + 1
