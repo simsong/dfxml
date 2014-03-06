@@ -1,5 +1,5 @@
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import Objects
 import logging
@@ -131,11 +131,21 @@ def is_new_file(fobj):
         return  "new" in fobj.annos
     return None
 
+def is_mod_file(fobj):
+    if not fobj.annos is None:
+        return  "modified" in fobj.annos
+    return None
+
+def is_new_or_mod_file(fobj):
+    return is_new_file(fobj) or is_mod_file(fobj)
+
 def main():
     predicates = {
       "all": (lambda x: True),
       "allocated": is_allocated,
-      "new": is_new_file
+      "new": is_new_file,
+      "mod": is_mod_file,
+      "newormod": is_new_or_mod_file
     }
     if args.predicate is None:
         args.predicate = "new"
@@ -153,7 +163,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Walks a file system and outputs sector hashes of all files matching a predicate.  Can be used as a library for the function write_sector_hashes_to_db.")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-x", "--xml", help="Pre-computed DFXML.")
-    parser.add_argument("-p", "--predicate", help="Condition for selecting files to sector hash.  One of 'new', 'allocated', 'all'.  Default 'allocated'.")
+    parser.add_argument("-p", "--predicate", help="Condition for selecting files to sector hash.  One of 'new', 'allocated', 'all', 'mod'(ified), 'newormod'.  Default 'allocated'.")
     parser.add_argument("disk_image")
     parser.add_argument("db_output")
     args = parser.parse_args()
