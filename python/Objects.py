@@ -1,14 +1,14 @@
 
 """
 This file re-creates the major DFXML classes with an emphasis on type safety, serializability, and de-serializability.
-
-Consider this file highly experimental (read: unstable).
 """
 
-__version__ = "0.0.52"
+__version__ = "0.1.0"
 
-#Remaining roadmap to 0.1.0:
-# * Ensure ctrl-c works in the extraction loops (did it before, in dfxml.py's .contents()?)
+#Remaining roadmap to 1.0.0:
+# * Documentation.
+# * User testing.
+# * Compatibility with the DFXML schema, version >1.1.0.
 
 import logging
 import re
