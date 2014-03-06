@@ -34,13 +34,18 @@ from sys import stderr
 from subprocess import Popen,PIPE
 import base64
 import hashlib
+import os
 
 import datetime
+
+import logging
+_logger = logging.getLogger(os.path.basename(__file__))
 
 __version__ = "1.0.1"
 
 tsk_virtual_filenames = set(['$FAT1','$FAT2'])
 
+XMLNS_DC = "http://purl.org/dc/elements/1.1/"
 XMLNS_DFXML = "http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML"
 XMLNS_DELTA = "http://www.forensicswiki.org/wiki/Forensic_Disk_Differencing"
 
@@ -337,9 +342,9 @@ class dftime(ComparableMixin):
                 #(The check for 13:15 gets the 14th and 15th characters, since the day can be single- or double-digit.)
                 self.datetime_ = rfc822Tdatetime(val)
             else:
-                #Maybe the data are a string-wrapped int?
+                #Maybe the data are a string-wrapped int or float?
                 #If this fails, the string format is completely unexpected, so just raise an error.
-                self.timestamp_ = int(val)
+                self.timestamp_ = float(val)
         elif type(val)==int or type(val)==float:
             self.timestamp_ = val
         elif isinstance(val, datetime.datetime):
@@ -356,7 +361,7 @@ class dftime(ComparableMixin):
     def __str__(self):
         return self.iso8601() or ""
     def __repr__(self):
-        return self.iso8601() or "None"
+        return repr(self.iso8601()) or "None"
     def __le__(self,b):
         if b is None: return None
         return self.iso8601().__le__(b.iso8601())
@@ -601,7 +606,7 @@ class fileobject:
 
     def ext(self):
         """Extension, as a lowercase string without the leading '.'"""
-        import os, string
+        import string
         (base,ext) = os.path.splitext(self.filename())
         if ext == '':
             return None
@@ -699,8 +704,16 @@ class fileobject:
         return self.name_type()=='r' or self.name_type()==None
 
     def inode(self):
-        """Inode; may be a number or SleuthKit x-y-z formatr"""
+        """Inode; may be a number or SleuthKit x-y-z format"""
         return self.tag("inode")
+
+    def allocated_inode(self):
+        """Returns True if the file's inode data structure is allocated, False otherwise.  (Does not return None.)"""
+        return isone(self.tag("alloc_inode"))
+
+    def allocated_name(self):
+        """Returns True if the file's name data structure is allocated, False otherwise.  (Does not return None.)"""
+        return isone(self.tag("alloc_name"))
 
     def allocated(self):
         """Returns True if the file is allocated, False if it was not
@@ -709,7 +722,10 @@ class fileobject:
         We also need to tolerate the case of the unalloc tag being used.
         """
         if self.filename()=="$OrphanFiles": return False
-        return isone(self.tag("alloc")) or isone(self.tag("ALLOC")) or not isone(self.tag("unalloc"))
+        if self.allocated_inode() and self.allocated_name():
+            return True
+        else:
+            return isone(self.tag("alloc")) or isone(self.tag("ALLOC")) or not isone(self.tag("unalloc"))
 
     def compressed(self):
         if not self.has_tag("compressed") and not self.has_tag("compressed") : return False
@@ -1162,10 +1178,28 @@ class fileobject_reader(xml_reader):
         self.imageobject  = imageobject_sax()
         self.imagefile    = imagefile
         self.flags        = flags
+        self._sax_fi_pointer = None
         xml_reader.__init__(self)
+
+    @property
+    def _sax_fi_pointer(self):
+        """
+        This internal field of a fileobject_reader is a simple state machine.  A DFXML stream can contain fileobjects which contain original_fileobjects, which require the same parsing mechanisms.  This pointer saves on duplicating code with the SAX parser.
+
+        Type: None, or dfxml.fileobject.  Type enforced by the setter method.
+        """
+        return self._sax_fi_pointer_ 
+    @_sax_fi_pointer.setter
+    def _sax_fi_pointer(self, val):
+        if val is None:
+            self._sax_fi_pointer_ = None
+        else:
+            assert isinstance(val, fileobject)
+            self._sax_fi_pointer_ = val
         
     def _start_element(self, name, attrs):
         """ Handles the start of an element for the XPAT scanner"""
+        _logger.debug("fileobject_reader._start_element: name = %r" % name)
         self.tagstack.append(name)
         self.cdata = ""          # new element, so reset the data
         if name=="volume":
@@ -1180,6 +1214,12 @@ class fileobject_reader(xml_reader):
         if name=="fileobject":
             self.fileobject = fileobject_sax(imagefile=self.imagefile)
             self.fileobject.volume = self.volumeobject
+            self._sax_fi_pointer = self.fileobject
+            return
+        if name=="original_fileobject":
+            self.fileobject.original_fileobject = fileobject_sax(imagefile=self.imagefile)
+            #self.original_fileobject.volume = self.volumeobject #TODO
+            self._sax_fi_pointer = self.fileobject.original_fileobject
             return
         if name=='hashdigest':
             self.hashdigest_type = attrs['type'] 
@@ -1191,7 +1231,7 @@ class fileobject_reader(xml_reader):
 
 
     def _end_element(self, name):
-        """Handles the end of an eleement for the XPAT scanner"""
+        """Handles the end of an element for the XPAT scanner"""
         assert(self.tagstack.pop()==name) # make sure that the stack matches
         if name=="volume":
             self.volumeobject = None
@@ -1207,18 +1247,22 @@ class fileobject_reader(xml_reader):
                 self.fi_history.append(self.fileobject)
             self.fileobject = None
             return
+        if name=="original_fileobject":
+            self._sax_fi_pointer = self.fileobject
+            return
         if name=='hashdigest' and len(self.tagstack)>0:
             top = self.tagstack[-1]            # what the hash was for
             alg = self.hashdigest_type.lower() # name of the hash algorithm used
             if top=='byte_run':
-                self.fileobject._byte_runs[-1].hashdigest[alg] = self.cdata
-            if top=="fileobject":
-                self.fileobject._tags[alg] = self.cdata # legacy
-                self.fileobject.hashdigest[alg] = self.cdata
+                self._sax_fi_pointer._byte_runs[-1].hashdigest[alg] = self.cdata
+            if top in ["fileobject", "original_fileobject"]:
+                self._sax_fi_pointer._tags[alg] = self.cdata # legacy
+                self._sax_fi_pointer.hashdigest[alg] = self.cdata
             self.cdata = None
             return
-        if self.fileobject:             # in a file object, all tags are remembered
-            self.fileobject._tags[name] = self.cdata
+
+        if self._sax_fi_pointer:             # in file objects, all tags are remembered
+            self._sax_fi_pointer._tags[name] = self.cdata
             self.cdata = None
             return
         # Special case: <source><image_filename>fn</image_filename></source>

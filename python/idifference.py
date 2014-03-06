@@ -18,6 +18,7 @@ __version__ = "0.2.0rfc4"
 
 import sys,fiwalk,dfxml,time
 import copy
+import logging
 if sys.version_info < (3,1):
     raise RuntimeError("idifference.py now requires Python 3.1 or above")
 
@@ -169,16 +170,16 @@ class DiskState:
 
     def process_fi(self,fi):
         global options
+        # Filter out specific filenames create by TSK that are not of use
+        if ignore_filename(fi.filename(), self.include_dotdirs):
+            return 
+
         dprint("processing %s" % str(fi))
         
         # See if the filename changed its hash code
         changed = False
         if not fi.allocated():
             return # only look at allocated files
-
-        # Filter out specific filenames create by TSK that are not of use
-        if ignore_filename(fi.filename(), self.include_dotdirs):
-            return 
 
         # Remember the file for the next generation
         self.new_fnames[fi.filename()] = fi
@@ -576,6 +577,8 @@ if __name__=="__main__":
     parser.add_option("--noatime",help="Do not include atime changes",action="store_true")
 
     (options,args) = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG if options.debug else logging.INFO)
 
     if len(args)<1:
         parser.print_help()
