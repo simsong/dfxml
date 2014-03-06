@@ -1,3 +1,23 @@
+2014-03-06    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Created.  New object-oriented bindings for DFXML.  Primary usage difference is better in-memory manipulation, including entire DFXML document creation without using a DFXML file; property getters and setters, instead of function calls; and a different approach to serializers and de-serializers from DFXML files.
+	* make_differential_dfxml.py: Created.  Revised approach to taking differences of disk images.  Creates a differential DFXML file, or an in-memory DFXML Object if imported as a library.
+	* summarize_differential_dfxml.py: Created.  Reports on disk image differences, as previously done by idifference.py.
+	* idifference2.py: Created.  A re-implementation of idifference.py, using the new Object bindings, make_differential_dfxml.py, and summarize_differential_dfxml.py.
+	* Differential analysis scripts: Created allocation_counter.py, break_out_diffs_by_anno.py, report_silent_changes.py
+	* cat_partitions.py: Created.  Concatenates single-partition DFXML files into one DFXML file.
+	* hash_sectors.py: Created.  Hashes sectors of files, storing output in a SQLite database.
+	* Extractor.py: Created.  Library for general file extraction from a disk image.  A more modular iextract.py.
+	* Makefile: Unit tests added.
+	* test_Objects: Created.  Unit test directory for new Object bindings.
+	* samples: More DFXML samples added for differencing tests.
+	* Logging: Modules using the logging module now report the file that contained the call to each log message.  Previously, all calls were done with the 'root' logger.
+	* dfxml_tool.py: Unit test now runs on a smaller directory tree.
+	* idifference.py: Corrected a counting bug.
+	* dfxml.py: Time objects can now be instantiated from floats.
+	* dfxml.py: Allocation can now be parsed at a more granular level - inode and name, instead of simply "allocated."
+	* dfxml.py: DFXML files with "original_fileobject" elements attached to fileobject elements can now be parsed.
+
 2013-11-02    <a.nelson@prometheuscomputing.com>
 
 	* idifference.py: Imported null-variable tests, and corrected a variable reference, to help idifference to be used as a module
