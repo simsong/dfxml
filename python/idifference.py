@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """idifference.
 
+DEVELOPMENT NOTE: This implementation will soon be replaced by what is currently idifference2.py, after a period of testing by users.  If idifference2.py does not meet your needs, but idifference.py does, please let one of the maintainers know (email addresses in the Git history or the python/ChangeLog file).
+
 Generates a report about what's different between two disk images.
 
 Process:
