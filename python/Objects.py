@@ -357,7 +357,7 @@ class RegXMLObject(object):
     def print_regxml(self, output_fh=sys.stdout):
         """Serializes and prints the entire object, without constructing the whole tree."""
         regxml_wrapper = _ET_tostring(self.to_partial_Element())
-        _logger.debug("regxml_wrapper = %r." % regxml_wrapper)
+        #_logger.debug("regxml_wrapper = %r." % regxml_wrapper)
         regxml_foot = "</regxml>"
         #Check for an empty element
         if regxml_wrapper.strip()[-3:] == " />":
@@ -1636,7 +1636,7 @@ class FileObject(object):
                 prop = "data_brs"
             if prop in self.diffs:
                 el.attrib["delta:changed_property"] = "1"
-                _logger.debug("diffs_whittle_set = %r." % diffs_whittle_set)
+                #_logger.debug("diffs_whittle_set = %r." % diffs_whittle_set)
                 diffs_whittle_set.remove(prop)
 
         #Recall that Element text must be a string
@@ -2528,7 +2528,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
                     if "start" in _events:
                         yield ("start", dobj)
                 elif _state == READING_VOLUMES:
-                    _logger.debug("Encountered a fileobject while reading volume properties.  Yielding volume now.")
+                    #_logger.debug("Encountered a fileobject while reading volume properties.  Yielding volume now.")
                     #Cut; yield VolumeObject now.
                     if volume_proxy is not None:
                         vobj = VolumeObject()
@@ -2579,6 +2579,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
             e.returncode = subp.returncode
             e.cmd = subp_command
             raise e
+        _logger.debug("...Done.")
 
 def parse(filename):
     """Returns a DFXMLObject populated from the contents of filename."""
