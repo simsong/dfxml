@@ -21,26 +21,27 @@
 
 #include "dfxml_reader.h"
 
-std::ostream & operator <<(std::ostream &os,const byte_run &b) {
+std::ostream & operator <<(std::ostream &os,const dfxml::byte_run &b) {
     os << "byte_run[";
     if(b.img_offset) os << "img_offset=" << b.img_offset << ";";
     if(b.file_offset) os << "file_offset=" << b.file_offset << ";";
     if(b.len) os << "len=" << b.len << ";";
     if(b.sector_size) os << "sector_size=" << b.sector_size << ";";
-    os << b.hashdigest << "]";
+    //os << b.hashdigest;
+    os << "]";
     return os;
 };
 
-std::ostream & operator <<(std::ostream &os,const saxobject::hashmap_t &h)
+std::ostream & operator <<(std::ostream &os,const dfxml::saxobject::hashmap_t &h)
 {
-    for(saxobject::hashmap_t::const_iterator it = h.begin(); it!=h.end(); it++){
+    for(dfxml::saxobject::hashmap_t::const_iterator it = h.begin(); it!=h.end(); it++){
 	os << it->first << ":" << it->second << " ";
     }
     return os;
 }
 
 
-std::string dfxml_reader::getattrs(const char **attrs,const std::string &name)
+std::string dfxml::dfxml_reader::getattrs(const char **attrs,const std::string &name)
 {
     for(int i=0;attrs[i];i+=2){
 	if(name==attrs[i]) return std::string(attrs[i+1]);
@@ -57,7 +58,7 @@ static uint64_t atoi64(const char *str)
     return val;
 }
 
-uint64_t dfxml_reader::getattri(const char **attrs,const std::string &name)
+uint64_t dfxml::dfxml_reader::getattri(const char **attrs,const std::string &name)
 {
     std::stringstream ss;
     for(int i=0;attrs[i];i+=2){
@@ -72,7 +73,7 @@ uint64_t dfxml_reader::getattri(const char **attrs,const std::string &name)
 }
 
 
-void file_object_reader::startElement(void *userData, const char *name_, const char **attrs)
+void dfxml::file_object_reader::startElement(void *userData, const char *name_, const char **attrs)
 {
     class file_object_reader &self = *(file_object_reader *)userData;
     std::string name(name_);
@@ -107,7 +108,7 @@ void file_object_reader::startElement(void *userData, const char *name_, const c
     }
 }
 
-void file_object_reader::endElement(void *userData, const char *name_)
+void dfxml::file_object_reader::endElement(void *userData, const char *name_)
 {
     std::string name(name_);
 
@@ -156,13 +157,13 @@ void file_object_reader::endElement(void *userData, const char *name_)
 /**
  * Remember - 's' is NOT null-terminated
  */
-void file_object_reader::characterDataHandler(void *userData,const XML_Char *s,int len)
+void dfxml::file_object_reader::characterDataHandler(void *userData,const XML_Char *s,int len)
 {
     class file_object_reader &self = *(file_object_reader *)userData;
     self.cdata.write(s,len);
 }
 
-void file_object_reader::read_dfxml(const std::string &fname,fileobject_callback_t process)
+void dfxml::file_object_reader::read_dfxml(const std::string &fname,fileobject_callback_t process)
 {
     file_object_reader r;
 

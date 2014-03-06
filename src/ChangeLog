@@ -1,3 +1,7 @@
+2013-12-11  Basic  <simsong@ncr.nps.edu>
+
+	* dfxml_reader.h (dfxml): created a DFXML namespace
+
 2013-07-15  Man Page  <simsong@mncrnpsedu.local>
 
 	* dfxml_writer.cpp (dfxml_writer::xmlmap): now escapes xmlmap

@@ -8,14 +8,15 @@
 #include <time.h>
 #include <netinet/in.h>
 
+#include "config.h"
 #include "dfxml_reader.h"
 
-void process(file_object &fi)
+void process(dfxml::file_object &fi)
 {
     std::cout << "fi.filename: " << fi.filename() << "\n";
     std::cout << "  pieces: " << fi.byte_runs.size() << "\n";
-    for(file_object::byte_runs_t::const_iterator it = fi.byte_runs.begin(); it!=fi.byte_runs.end(); it++){
-	std::cout << "   " << *it  << "\n";
+    for(dfxml::file_object::byte_runs_t::const_iterator it = fi.byte_runs.begin(); it!=fi.byte_runs.end(); it++){
+	//std::cout << "   " << *it  << "\n";
     }
 }
 
@@ -23,7 +24,7 @@ void process(file_object &fi)
 int main(int argc,char **argv)
 {
 
-    file_object_reader::read_dfxml(argv[1],process);
+    dfxml::file_object_reader::read_dfxml(argv[1],process);
     return 0;
 }
 

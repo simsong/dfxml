@@ -15,12 +15,11 @@ AC_LANG_POP()
 # Determine UTC date offset
 CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`date +%z`"
 
-# Get the GIT version
+# Get the GIT commit into the GIT_COMMIT variable
 AC_CHECK_PROG([git],[git],[yes],[no])
 AM_CONDITIONAL([FOUND_GIT],[test "x$git" = xyes])
 AM_COND_IF([FOUND_GIT],
         [GIT_COMMIT=`git describe --dirty --always`
-         CPPFLAGS="$CPPFLAGS -DGIT_COMMIT=$GIT_COMMIT "
          AC_MSG_NOTICE([git commit $GIT_COMMIT])],
         [AC_MSG_WARN([git not found])])
 
