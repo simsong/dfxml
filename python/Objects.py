@@ -3,7 +3,7 @@
 This file re-creates the major DFXML classes with an emphasis on type safety, serializability, and de-serializability.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
