@@ -1,3 +1,7 @@
+2014-03-07    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: API change - switched "meta" byte run facet to "inode", keeping in line with "alloc_inode".  Unit tests updated.
+
 2014-03-06    <a.nelson@prometheuscomputing.com>
 
 	* Objects.py: Created.  New object-oriented bindings for DFXML.  Primary usage difference is better in-memory manipulation, including entire DFXML document creation without using a DFXML file; property getters and setters, instead of function calls; and a different approach to serializers and de-serializers from DFXML files.

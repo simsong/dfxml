@@ -12,24 +12,24 @@ br2 = Objects.ByteRun(img_offset=2, len=2)
 br3 = Objects.ByteRun(img_offset=4, len=3)
 
 dbr = Objects.ByteRuns()
-mbr = Objects.ByteRuns()
+ibr = Objects.ByteRuns()
 nbr = Objects.ByteRuns()
 
 dbr.append(br1)
-mbr.append(br2)
+ibr.append(br2)
 nbr.append(br3)
 
 dbr.facet = "data"
-mbr.facet = "meta"
+ibr.facet = "inode"
 nbr.facet = "name"
 
 f1 = Objects.FileObject()
 f1.data_brs = dbr
-f1.meta_brs = mbr
+f1.inode_brs = ibr
 f1.name_brs = nbr
 
 assert f1.data_brs[0].img_offset == 1
-assert f1.meta_brs[0].img_offset == 2
+assert f1.inode_brs[0].img_offset == 2
 assert f1.name_brs[0].img_offset == 4
 
 e1 = f1.to_Element()
@@ -42,5 +42,5 @@ f2.populate_from_Element(e1)
 #_logger.debug(f2)
 
 assert f2.data_brs[0].img_offset == 1
-assert f2.meta_brs[0].img_offset == 2
+assert f2.inode_brs[0].img_offset == 2
 assert f2.name_brs[0].img_offset == 4

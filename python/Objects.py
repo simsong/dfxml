@@ -905,7 +905,7 @@ class ByteRuns(object):
     #http://www.rafekettler.com/magicmethods.html
     #http://stackoverflow.com/a/8841520
 
-    _facet_values = [None, "data", "meta", "name"]
+    _facet_values = [None, "data", "inode", "name"]
 
     def __init__(self, run_list=None, **kwargs):
         self._facet = kwargs.get("facet")
@@ -1102,7 +1102,7 @@ class ByteRuns(object):
 
     @property
     def facet(self):
-        """Expected to be null, "data", "meta", or "name".  See FileObject.data_brs, FileObject.meta_brs, and FileObject.name_brs."""
+        """Expected to be null, "data", "inode", or "name".  See FileObject.data_brs, FileObject.inode_brs, and FileObject.name_brs."""
         return self._facet
 
     @facet.setter
@@ -1317,10 +1317,10 @@ class FileObject(object):
       "gid",
       "id",
       "inode",
+      "inode_brs",
       "link_target",
       "libmagic",
       "md5",
-      "meta_brs",
       "meta_type",
       "mode",
       "mtime",
@@ -1341,7 +1341,7 @@ class FileObject(object):
 
     _br_facet_to_property = {
       "data":"data_brs",
-      "meta":"meta_brs",
+      "inode":"inode_brs",
       "name":"name_brs"
     }
 
@@ -1681,7 +1681,7 @@ class FileObject(object):
                     tmpel = ET.Element("byte_runs")
                     propname_to_facet = {
                       "data_brs": "data",
-                      "meta_brs": "meta",
+                      "inode_brs": "inode",
                       "name_brs": "name"
                     }
                     if name in propname_to_facet:
@@ -1753,7 +1753,7 @@ class FileObject(object):
         _append_time("bkup_time", self.bkup_time)
         _append_str("link_target", self.link_target)
         _append_str("libmagic", self.libmagic)
-        _append_byte_runs("meta_brs", self.meta_brs)
+        _append_byte_runs("inode_brs", self.inode_brs)
         _append_byte_runs("name_brs", self.name_brs)
         _append_byte_runs("data_brs", self.data_brs)
         _append_hash("md5", self.md5)
@@ -1964,15 +1964,15 @@ class FileObject(object):
         self._libmagic = _strcast(val)
 
     @property
-    def meta_brs(self):
-        """The byte run(s) that represents the file's metadata object (the inode or the MFT entry).  In file systems that do not distinguish between inode and directory entry, e.g. FAT, .meta_brs should be equivalent to .name_brs, if both fields are present."""
-        return self._meta_brs
+    def inode_brs(self):
+        """The byte run(s) that represents the file's metadata object (the inode or the MFT entry).  In file systems that do not distinguish between inode and directory entry, e.g. FAT, .inode_brs should be equivalent to .name_brs, if both fields are present."""
+        return self._inode_brs
 
-    @meta_brs.setter
-    def meta_brs(self, val):
+    @inode_brs.setter
+    def inode_brs(self, val):
         if not val is None:
             _typecheck(val, ByteRuns)
-        self._meta_brs = val
+        self._inode_brs = val
 
     @property
     def meta_type(self):
@@ -2007,7 +2007,7 @@ class FileObject(object):
 
     @property
     def name_brs(self):
-        """The byte run(s) that represents the file's name object (the directory entry).  In file systems that do not distinguish between inode and directory entry, e.g. FAT, .meta_brs should be equivalent to .name_brs, if both fields are present."""
+        """The byte run(s) that represents the file's name object (the directory entry).  In file systems that do not distinguish between inode and directory entry, e.g. FAT, .inode_brs should be equivalent to .name_brs, if both fields are present."""
         return self._name_brs
 
     @name_brs.setter
