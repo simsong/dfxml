@@ -3,7 +3,7 @@
 This file re-creates the major DFXML classes with an emphasis on type safety, serializability, and de-serializability.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -1047,10 +1047,7 @@ class ByteRuns(object):
                         p.wait()
                         last_status = p.returncode
                         if last_status != 0:
-                            e = subprocess.CalledProcessError("img_cat failed.")
-                            e.returncode = last_status
-                            e.cmd = cmd
-                            raise e
+                            raise subprocess.CalledProcessError(last_status, " ".join(cmd), "img_cat failed.")
                     len_to_read -= buffer_size
         except Exception as e:
             #Cleanup in an exception
@@ -1491,10 +1488,7 @@ class FileObject(object):
 
                     #Act on a bad status
                     if last_status != 0:
-                        e = subprocess.CalledProcessError("icat failed.")
-                        e.returncode = last_status
-                        e.cmd = cmd
-                        raise e
+                        raise subprocess.CalledProcessError(last_status, " ".join(cmd), "icat failed.")
                 len_to_read -= buffer_size
 
             #Clean up file handles
