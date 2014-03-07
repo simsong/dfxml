@@ -14,7 +14,7 @@ That is, this command:
 will create a single DFXML file with two volumes and their file objects contained.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import Objects
 import logging
@@ -62,7 +62,7 @@ def main():
 
         for obj in pdo:
             #Force-update image offsets in byte runs
-            for brs_prop in ["data_brs", "name_brs", "meta_brs"]:
+            for brs_prop in ["data_brs", "name_brs", "inode_brs"]:
                 if hasattr(obj, brs_prop):
                     brs = getattr(obj, brs_prop)
                     if brs is None:
