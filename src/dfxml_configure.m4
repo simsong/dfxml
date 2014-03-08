@@ -39,6 +39,12 @@ AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wredundant-decls"],
 	       AC_DEFINE([DFXML_GNUC_HAS_DIAGNOSTIC_PRAGMA],[1],[GCC supports #pragma GCC diagnostic]),
 	       )
 
+################################################################
+## on Win32, crypto requires zlib
+case $host in
+  *mingw32*)
+  AC_CHECK_LIB([z], [gzdopen],[LIBS="-lz $LIBS"], [AC_MSG_ERROR([Could not find zlib library])])
+esac
 
 ################################################################
 ## OpenSSL Support is now required (for hash_t)
