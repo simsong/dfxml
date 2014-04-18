@@ -1,6 +1,8 @@
 
 """
 This file re-creates the major DFXML classes with an emphasis on type safety, serializability, and de-serializability.
+
+With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
 __version__ = "0.2.1"
@@ -2576,7 +2578,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
         _logger.debug("...Done.")
 
 def parse(filename):
-    """Returns a DFXMLObject populated from the contents of filename."""
+    """Returns a DFXMLObject populated from the contents of the (string) filename argument."""
     retval = None
     appender = None
     for (event, obj) in iterparse(filename):
