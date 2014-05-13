@@ -6,7 +6,7 @@
  *
  * Generating a hash:
  * sha1_t val = sha1_generator::hash_buf(buf,bufsize)
- * sha1_1 generator hasher;
+ * sha1_t generator hasher;
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
