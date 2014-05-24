@@ -1,3 +1,8 @@
+/*
+ * Test program for cpustat instruction.
+ */
+
+
 /** cpustat.h -- Header for cpustat.cpp.
  * Copyright (c) 2004 Brad Fish (brad.fish@gmail.com).
  */

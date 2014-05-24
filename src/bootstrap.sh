@@ -1,5 +1,8 @@
 #!/bin/sh
 # have automake do an initial population iff necessary
+#
+# this file is public domain
+#
 if [ ! -e config.guess -o ! -e config.sub -o ! -e install-sh -o ! -e missing ]; then
     autoheader -f
     touch NEWS README AUTHORS ChangeLog

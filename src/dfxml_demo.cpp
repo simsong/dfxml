@@ -11,6 +11,15 @@
 #include "config.h"
 #include "dfxml_reader.h"
 
+/*
+ * DFXML demo program.
+ *
+ * Simson L. Garfinkel
+ * Created for bulk_extractor.
+ * This file is public domain.
+ */
+
+
 void process(dfxml::file_object &fi)
 {
     std::cout << "fi.filename: " << fi.filename() << "\n";

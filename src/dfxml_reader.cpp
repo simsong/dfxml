@@ -1,3 +1,12 @@
+/*
+ * DFXML reader in C++ using SAX.
+ * Revision History:
+ * 2012 - SImson L. Garfinkel - Developed as test program. 
+ *
+ * This file is public domain.
+ */
+
+
 #include <config.h>
 #include <iostream>
 #include <fstream>
@@ -7,6 +16,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdint.h>
+
+
+
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>

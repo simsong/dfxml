@@ -2,6 +2,10 @@
 # mix-ins for dfxml
 # Support for hash_t as well.
 #
+# This file is public domain
+# Revision History:
+# 2012 - Simson Garfinkel - Created for bulk_extractor
+#
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
 AC_CHECK_HEADERS([afflib/afflib.h err.h expat.h libewf.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h ])

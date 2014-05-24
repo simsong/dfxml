@@ -1,6 +1,14 @@
+/*
+ * Revision History:
+ * 2012 - Simson L. Garfinkel - Created for bulk_extractor.
+ *
+ * Test program for cpuid program.
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <limits.h>
+
 
 #define cpuid(id) __asm__( "cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(id), "b"(0), "c"(0), "d"(0))
 #define b(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))

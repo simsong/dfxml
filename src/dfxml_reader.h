@@ -11,6 +11,12 @@
  ** and submit your patch as a pull request on github.  
  **/
  
+/*
+ * Revision History:
+ * 2012 - SImson L. Garfinkel - Developed as test program. 
+ *
+ * This file is public domain.
+ */
 
 
 

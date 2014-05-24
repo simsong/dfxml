@@ -4,6 +4,10 @@
 # See http://autotoolset.sourceforge.net/tutorial.html 
 # and http://www.openismus.com/documents/linux/automake/automake.shtml 
 
+#
+# This file is public domain
+#
+
 AC_PREREQ(2.57)
 AC_INIT(DFXML, 0.0.1, bugs@afflib.org)
 AC_CONFIG_MACRO_DIR(m4)

@@ -6,6 +6,11 @@
  * Create a cppmutex::lock(M) object to get a lock; delete the object to free it.
  *
  * BE SURE THAT HAVE_PTHREAD IS DEFINED BEFORE INCLUDING THIS FILE
+ *
+ * Revision History:
+ * 2012 - Simson L. Garfinkel - Created for bulk_extractor.
+ *
+ * This file is public domain
  */
 
 

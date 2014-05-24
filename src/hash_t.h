@@ -20,8 +20,13 @@
  *
  * This can be updated in the future for Mac so that the hash__ class
  * is then subclassed by a hash__openssl or a hash__commonCrypto class.
+ *
+ *
+ * Revision History:
+ * 2012 - Simson L. Garfinkel - Created for bulk_extractor.
+ *
+ * This file is public domain
  */
-
 
 #ifndef  HASH_T_H
 #define  HASH_T_H
