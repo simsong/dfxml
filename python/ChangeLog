@@ -1,3 +1,7 @@
+2014-05-07    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Corrected buffering return rate for "fill" byte runs.
+
 2014-04-17    <a.nelson@prometheuscomputing.com>
 
 	* Demos: Added a new demonstration program showing construction of a MACCr timeline with the Objects interface.  Unit tests updated.

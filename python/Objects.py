@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -1020,7 +1020,7 @@ class ByteRuns(object):
                 if not run.fill is None and len(run.fill) > 0:
                     while len_to_read > 0:
                         #This multiplication and slice should handle multi-byte fill characters, in case that ever comes up.
-                        yield (run.fill * buffer_size)[:len_to_read]
+                        yield (run.fill * buffer_size)[ : min(len_to_read, buffer_size)]
                         len_to_read -= buffer_size
                     #Next byte run
                     continue
