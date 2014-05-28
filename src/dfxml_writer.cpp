@@ -652,10 +652,6 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <hashdb.hpp>
 #endif
 
-#ifdef HAVE_ZMQ_H
-#include <zmq.h>
-#endif
-
 #ifdef HAVE_AFFLIB_AFFLIB_H
 //#pragma GCC diagnostic ignored "-Wreserved-user-defined-literal"               // required for C11
 #include <afflib/afflib.h>
@@ -722,15 +718,6 @@ void dfxml_writer::add_DFXML_build_environment()
 #endif
 #ifdef SQLITE_VERSION
     xmlout("library", "", "name=\"sqlite\" version=\"" SQLITE_VERSION "\" source_id=\"" SQLITE_SOURCE_ID "\"",false);
-#endif
-#ifdef HAVE_ZMQ_VERSION
-    {
-        int zmq_major, zmq_minor, zmq_patch;
-        zmq_version (&zmq_major, &zmq_minor, &zmq_patch);
-        stringstream zmq_ss;
-        zmq_ss << zmq_major << "." << zmq_minor << "." << zmq_patch;
-        xmlout("library", "", std::string("name=\"zmq\" version=\"") + zmq_ss.str() + "\"",false);
-    }
 #endif
 #ifdef HAVE_GNUEXIF
     // gnuexif does not have a programmatically obtainable version.
