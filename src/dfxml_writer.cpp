@@ -335,7 +335,7 @@ extern "C" {
         int size = vsnprintf(buf,sizeof(buf),fmt,ap);
         if(size<0) return size;
         /* Now allocate the memory */
-        *ret = (char *)strdup(buf);
+        *ret = strcpy((char *) malloc(strlen(buf)+1), buf);
         return size;
     }
 }
