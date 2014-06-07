@@ -166,6 +166,27 @@ typedef hash__<EVP_sha256,32> sha256_t;
 typedef hash__<EVP_sha512,64> sha512_t;
 #endif
 
+template<typename T>
+inline std::string digest_name();
+template<>
+inline std::string digest_name<md5_t>() {
+    return "MD5";
+}
+template<>
+inline std::string digest_name<sha1_t>() {
+    return "SHA1";
+}
+template<>
+inline std::string digest_name<sha256_t>() {
+    return "SHA256";
+}
+#ifdef HAVE_EVP_SHA512
+template<>
+inline std::string digest_name<sha512_t>() {
+    return "SHA512";
+}
+#endif
+
 template<const EVP_MD *md(),size_t SIZE> 
 class hash_generator__ { 			/* generates the hash */
     EVP_MD_CTX mdctx;	     /* the context for computing the value */
