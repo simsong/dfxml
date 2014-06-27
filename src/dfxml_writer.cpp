@@ -648,7 +648,7 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <exiv2/error.hpp>
 #endif
 
-#ifdef HAVE_HASHID
+#ifdef HAVE_HASHDB
 #include <hashdb.hpp>
 #endif
 
@@ -713,7 +713,7 @@ void dfxml_writer::add_DFXML_build_environment()
 #if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
     xmlout("library", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
-#ifdef HAVE_HASHID
+#ifdef HAVE_HASHDB
     xmlout("library", "", std::string("name=\"hashdb\" version=\"") + hashdb_version() + "\"",false);
 #endif
 #ifdef SQLITE_VERSION
