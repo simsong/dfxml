@@ -112,10 +112,10 @@ int mkstemp(char *tmpl)
 #endif
 
 
-std::string dfxml_writer::xml_PRId32("%" PRId32); // gets around compiler bug
-std::string dfxml_writer::xml_PRIu32("%" PRIu32); // gets around compiler bug
-std::string dfxml_writer::xml_PRId64("%" PRId64); // gets around compiler bug
-std::string dfxml_writer::xml_PRIu64("%" PRIu64); // gets around compiler bug
+//std::string dfxml_writer::xml_PRId32("%" PRId32); // gets around compiler bug
+//std::string dfxml_writer::xml_PRIu32("%" PRIu32); // gets around compiler bug
+//std::string dfxml_writer::xml_PRId64("%" PRId64); // gets around compiler bug
+//std::string dfxml_writer::xml_PRIu64("%" PRIu64); // gets around compiler bug
 
 static const char *cstr(const string &str){
     return str.c_str();
