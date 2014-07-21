@@ -188,7 +188,7 @@ public:
     void xmlout( const std::string &tag,const int64_t value){ xmlprintf(tag,"","%" PRId64,value); }
     void xmlout( const std::string &tag,const uint64_t value){ xmlprintf(tag,"","%" PRIu64,value); }
 #ifdef __APPLE__
-    void xmlout( const std::string &tag,const size_t value){ xmlprintf(tag,"","%" PRIu64,value); }
+    void xmlout( const std::string &tag,const size_t value){ xmlprintf(tag,"","%" PRIu64,(unsigned long long)value); }
 #endif
 #endif
     void xmlout( const std::string &tag,const double value){ xmlprintf(tag,"","%f",value); }
