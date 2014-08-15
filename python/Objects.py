@@ -34,6 +34,8 @@ _warned_byterun_facets = set([])
 _nagged_alloc = False
 _warned_byterun_badtypecomp = False
 
+XMLNS_REGXML = "http://www.forensicswiki.org/wiki/RegXML"
+
 def _ET_tostring(e):
     """Between Python 2 and 3, there are some differences in the ElementTree library's tostring() behavior.  One, the method balks at the "unicode" encoding in 2.  Two, in 2, the XML prototype's output with every invocation.  This method serves as a wrapper to deal with those issues."""
     if sys.version_info[0] < 3:
@@ -327,7 +329,7 @@ class RegXMLObject(object):
         self.creator = kwargs.get("creator")
         self.interpreter = kwargs.get("interpreter")
         self.metadata = kwargs.get("metadata")
-        self.source = kwargs.get("source")
+        self.sources = kwargs.get("sources", [])
         self.version = kwargs.get("version")
         self._hives = []
         self._cells = []
@@ -339,6 +341,10 @@ class RegXMLObject(object):
         for cell in input_cells:
             self.append(cells)
 
+        #Add default namespaces
+        #TODO This will cause a problem when the Objects bindings are used for a DFXML document and RegXML document in the same program.
+        self.add_namespace("", XMLNS_REGXML)
+
     def __iter__(self):
         """Yields all HiveObjects, recursively their CellObjects, and the CellObjects directly attached to this RegXMLObject, in that order."""
         for h in self._hives:
@@ -347,6 +353,10 @@ class RegXMLObject(object):
                 yield c
         for c in self._cells:
             yield c
+
+    def add_namespace(self, prefix, url):
+        self._namespaces[prefix] = url
+        ET.register_namespace(prefix, url)
 
     def append(self, value):
         if isinstance(value, HiveObject):
@@ -407,7 +417,7 @@ class RegXMLObject(object):
                 tmpel0.append(tmpel1)
             if self.program_version:
                 tmpel1 = ET.Element("version")
-                tmpel1.text = self.program
+                tmpel1.text = self.program_version
                 tmpel0.append(tmpel1)
             outel.append(tmpel0)
 
@@ -778,6 +788,7 @@ class VolumeObject(object):
 class HiveObject(object):
     def __init__(self, *args, **kwargs):
         self._mtime = None
+        self._original_fileobject = None
         self._cells = []
 
     def __iter__(self):
@@ -790,11 +801,35 @@ class HiveObject(object):
         self._cells.append(value)
 
     def print_regxml(self, output_fh=sys.stdout):
+        pe = self.to_partial_Element()
+        xml_wrapper = _ET_tostring(pe)
+        xml_foot = "</hive>"
+        #Check for an empty element
+        if xml_wrapper.strip()[-3:] == " />":
+            xml_head = xml_wrapper.strip()[:-3] + ">"
+        elif xml_wrapper.strip()[-2:] == "/>":
+            xml_head = xml_wrapper.strip()[:-2] + ">"
+        else:
+            xml_head = xml_wrapper.strip()[:-len(xml_foot)]
+
+        output_fh.write(xml_head)
+        output_fh.write("\n")
+
         for cell in self._cells:
             output_fh.write(cell.to_regxml())
             output_fh.write("\n")
 
+        output_fh.write(xml_foot)
+        output_fh.write("\n")
+
     def to_Element(self):
+        outel = self.to_partial_Element()
+        for cell in self._cells:
+            tmpel = cell.to_Element()
+            outel.append(tmpel)
+        return outel
+
+    def to_partial_Element(self):
         outel = ET.Element("hive")
 
         if self.mtime:
@@ -807,9 +842,6 @@ class HiveObject(object):
             tmpel.tag = "original_fileobject"
             outel.append(tmpel)
 
-        for cell in self._cells:
-            tmpel = cell.to_Element()
-            outel.append(tmpel)
         return outel
 
     @property
@@ -2397,6 +2429,14 @@ class CellObject(object):
                 el.attrib["delta:changed_property"] = "1"
                 diffs_whittle_set.remove("data_encoding")
 
+        def _append_bool(name, value):
+            if not value is None or name in diffs_whittle_set:
+                tmpel = ET.Element(name)
+                if not value is None:
+                    tmpel.text = "1" if value else "0"
+                _anno_change(tmpel)
+                outel.append(tmpel)
+
         #Recall that Element text must be a string
         def _append_str(name, value):
             if not value is None or name in diffs_whittle_set:
@@ -2404,6 +2444,10 @@ class CellObject(object):
                 if not value is None:
                     tmpel.text = str(value)
                 _anno_change(tmpel)
+
+                if name == "data" and not self.data_encoding is None:
+                    tmpel.attrib["encoding"] = self.data_encoding
+
                 outel.append(tmpel)
 
         def _append_object(name, value):
@@ -2423,7 +2467,7 @@ class CellObject(object):
         _append_str("basename", self.basename)
         _append_str("error", self.error)
         _append_str("name_type", self.name_type)
-        _append_str("alloc", self.alloc)
+        _append_bool("alloc", self.alloc)
         _append_object("mtime", self.mtime)
         _append_str("data_type", self.data_type)
         _append_str("data", self.data)
@@ -2449,6 +2493,7 @@ class CellObject(object):
                     tmpel.append(tmpcel)
                     
             _anno_change(tmpel)
+            outel.append(tmpel)
 
         _append_object("byte_runs", self.byte_runs)
         _append_object("original_cellobject", self.original_cellobject)
