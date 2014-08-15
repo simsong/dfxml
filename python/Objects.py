@@ -2215,10 +2215,15 @@ class CellObject(object):
     _all_properties = set([
       "alloc",
       "annos",
+      "basename",
       "byte_runs",
       "cellpath",
+      "data",
+      "data_conversions",
+      "data_encoding",
+      "data_type",
+      "error",
       "mtime",
-      "name",
       "name_type",
       "original_cellobject",
       "parent_object",
@@ -2315,16 +2320,35 @@ class CellObject(object):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "alloc":
                 self.alloc = ce.text
+            elif ctn == "basename":
+                self.basename = ce.text
             elif ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "cellpath":
                 self.cellpath = ce.text
+            elif ctn == "data":
+                self.data = ce.text
+                if ce.attrib.get("encoding"):
+                    self.data_encoding = ce.attrib["encoding"]
+            elif ctn == "data_conversions":
+                self.data_conversions = dict()
+                for cce in ce:
+                    if cce.tag == "int":
+                        self.data_conversions["int"] = int()
+                    elif cce.tag == "string":
+                        self.data_conversions["string"] = cce.text
+                    elif cce.tag == "string_list":
+                        self.data_conversions["string_list"] = []
+                        for ccce in cce:
+                            self.data_conversions["string_list"].append(ccce.text)
+            elif ctn == "data_type":
+                self.data_type = ce.text
+            elif ctn == "error":
+                self.error = ce.text
             elif ctn == "mtime":
                 self.mtime = TimestampObject()
                 self.mtime.populate_from_Element(ce)
-            elif ctn == "name":
-                self.name = ce.text
             elif ctn == "name_type":
                 self.name_type = ce.text
             elif ctn == "original_cellobject":
@@ -2368,6 +2392,10 @@ class CellObject(object):
             if el.tag in self.diffs:
                 el.attrib["delta:changed_property"] = "1"
                 diffs_whittle_set.remove(el.tag)
+            #Do an additional check for data_encoding, which is serialized as an attribute.
+            if el.tag == "data" and "data_encoding" in self.diffs:
+                el.attrib["delta:changed_property"] = "1"
+                diffs_whittle_set.remove("data_encoding")
 
         #Recall that Element text must be a string
         def _append_str(name, value):
@@ -2392,10 +2420,36 @@ class CellObject(object):
             outel.attrib["root"] = str(self.root)
 
         _append_str("cellpath", self.cellpath)
-        _append_str("name", self.name)
+        _append_str("basename", self.basename)
+        _append_str("error", self.error)
         _append_str("name_type", self.name_type)
         _append_str("alloc", self.alloc)
         _append_object("mtime", self.mtime)
+        _append_str("data_type", self.data_type)
+        _append_str("data", self.data)
+
+        #The experimental conversions element needs its own code
+        if not self.data_conversions is None or "data_conversions" in diffs_whittle_set:
+            tmpel = ET.Element("data_conversions")
+            if not self.data_conversions is None:
+                if "int" in self.data_conversions:
+                    tmpcel = ET.Element("int")
+                    tmpcel.text = str(self.data_conversions["int"])
+                    tmpel.append(tmpcel)
+                if "string" in self.data_conversions:
+                    tmpcel = ET.Element("string")
+                    tmpcel.text = str(self.data_conversions["string"])
+                    tmpel.append(tmpcel)
+                if "string_list" in self.data_conversions:
+                    tmpcel = ET.Element("string_list")
+                    for s in self.data_conversions["string"]:
+                        tmpccel = ET.Element("string")
+                        tmpccel.text = s
+                        tmpcel.append(tmpccel)
+                    tmpel.append(tmpcel)
+                    
+            _anno_change(tmpel)
+
         _append_object("byte_runs", self.byte_runs)
         _append_object("original_cellobject", self.original_cellobject)
 
@@ -2426,6 +2480,16 @@ class CellObject(object):
         self._annos = val
 
     @property
+    def basename(self):
+        return self._basename
+
+    @basename.setter
+    def basename(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._basename = val
+
+    @property
     def byte_runs(self):
         return self._byte_runs
 
@@ -2446,6 +2510,49 @@ class CellObject(object):
         self._cellpath = val
 
     @property
+    def data(self):
+        """Expecting a base64-encoded string.  See conversions (according to the Hive parser's library) in data_conversions property."""
+        return self._data
+
+    @data.setter
+    def data(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._data = val
+
+    @property
+    def data_conversions(self):
+        return self._data_conversions
+
+    @data_conversions.setter
+    def data_conversions(self, val):
+        if not val is None:
+            _typecheck(val, dict)
+        self._data_conversions = val
+
+    @property
+    def data_encoding(self):
+        """Expecting a string, typically 'base64'."""
+        return self._data_encoding
+
+    @data_encoding.setter
+    def data_encoding(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._data_encoding = val
+
+    @property
+    def data_type(self):
+        """Expecting a string, e.g. "REG_MULTI_SZ"."""
+        return self._data_type
+
+    @data_type.setter
+    def data_type(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._data_type = val
+
+    @property
     def diffs(self):
         return self._diffs
 
@@ -2453,6 +2560,16 @@ class CellObject(object):
     def diffs(self, value):
         _typecheck(value, set)
         self._diffs = value
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, value):
+        if not value is None:
+            _typecheck(value, str)
+        self._error = value
 
     @property
     def mtime(self):
@@ -2467,16 +2584,6 @@ class CellObject(object):
         else:
             self._mtime = TimestampObject(val, name="mtime")
             self.sanity_check()
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, val):
-        if not val is None:
-            _typecheck(val, str)
-        self._name = val
 
     @property
     def name_type(self):
