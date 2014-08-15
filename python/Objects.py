@@ -324,8 +324,9 @@ class DFXMLObject(object):
 
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
-        self.metadata = kwargs.get("metadata")
         self.creator = kwargs.get("creator")
+        self.interpreter = kwargs.get("interpreter")
+        self.metadata = kwargs.get("metadata")
         self.source = kwargs.get("source")
         self.version = kwargs.get("version")
         self._hives = []
@@ -397,6 +398,49 @@ class RegXMLObject(object):
 
         if self.version:
             outel.attrib["version"] = self.version
+
+        if self.program or self.program_version:
+            tmpel0 = ET.Element("creator")
+            if self.program:
+                tmpel1 = ET.Element("program")
+                tmpel1.text = self.program
+                tmpel0.append(tmpel1)
+            if self.program_version:
+                tmpel1 = ET.Element("version")
+                tmpel1.text = self.program
+                tmpel0.append(tmpel1)
+            outel.append(tmpel0)
+
+        if self.command_line:
+            tmpel0 = ET.Element("execution_environment")
+
+            if self.interpreter:
+                tmpel1 = ET.Element("interpreter")
+                tmpel1.text = self.interpreter
+
+            tmpel1 = ET.Element("command_line")
+            tmpel1.text = self.command_line
+            tmpel0.append(tmpel1)
+
+            #TODO Note libraries used at run-time
+
+            outel.append(tmpel0)
+
+        if len(self.sources) > 0:
+            tmpel0 = ET.Element("source")
+            for source in self.sources:
+                tmpel1 = ET.Element("image_filename")
+                tmpel1.text = source
+                tmpel0.append(tmpel1)
+            outel.append(tmpel0)
+
+        #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of RegXML.
+        #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
+        for prefix in self._namespaces:
+            attrib_name = "xmlns"
+            if prefix != "":
+                attrib_name += ":" + prefix
+            outel.attrib[attrib_name] = self._namespaces[prefix]
 
         return outel
 
@@ -733,10 +777,11 @@ class VolumeObject(object):
 
 class HiveObject(object):
     def __init__(self, *args, **kwargs):
+        self._mtime = None
         self._cells = []
 
     def __iter__(self):
-        """Yields all CellObjects directly attached to this VolumeObject."""
+        """Yields all CellObjects directly attached to this HiveObject."""
         for c in self._cells:
             yield c
 
@@ -751,10 +796,45 @@ class HiveObject(object):
 
     def to_Element(self):
         outel = ET.Element("hive")
+
+        if self.mtime:
+            tmpel = self.mtime.to_Element()
+            outel.append(tmpel)
+
+        if self.original_fileobject:
+            tmpel = self.original_fileobject.to_Element()
+            #NOTE: "delta" namespace intentionally omitted.
+            tmpel.tag = "original_fileobject"
+            outel.append(tmpel)
+
         for cell in self._cells:
             tmpel = cell.to_Element()
             outel.append(tmpel)
         return outel
+
+    @property
+    def mtime(self):
+        return self._mtime
+
+    @mtime.setter
+    def mtime(self, val):
+        if val is None:
+            self._mtime = None
+        elif isinstance(val, TimestampObject):
+            self._mtime = val
+        else:
+            checked_val = TimestampObject(val, name="mtime")
+            self._mtime = checked_val
+
+    @property
+    def original_fileobject(self):
+        return self._original_fileobject
+
+    @original_fileobject.setter
+    def original_fileobject(self, val):
+        if not val is None:
+            _typecheck(val, FileObject)
+        self._original_fileobject = val
 
 class ByteRun(object):
 
