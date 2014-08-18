@@ -2652,13 +2652,28 @@ class CellObject(object):
 
     @property
     def data_type(self):
-        """Expecting a string, e.g. "REG_MULTI_SZ"."""
+        """Expecting a string, e.g. "REG_MULTI_SZ", or an int, because value type is known to be overloaded as an integer storage field in some cells."""
         return self._data_type
 
     @data_type.setter
     def data_type(self, val):
-        if not val is None:
-            _typecheck(val, str)
+        if not val in [
+          None,
+          "REG_NONE",
+          "REG_SZ",
+          "REG_EXPAND_SZ",
+          "REG_BINARY",
+          "REG_DWORD",
+          "REG_DWORD_BIG_ENDIAN",
+          "REG_LINK",
+          "REG_MULTI_SZ",
+          "REG_RESOURCE_LIST",
+          "REG_FULL_RESOURCE_DESCRIPTOR",
+          "REG_RESOURCE_REQUIREMENTS_LIST",
+          "REG_QWORD"
+        ]:
+            if not isinstance(val, int) or (isinstance(val, str) and val.isdigit()):
+                raise ValueError("Unexpected value data type received: %r, type %r." % (val, type(val)))
         self._data_type = val
 
     @property

@@ -19,6 +19,7 @@ check:
 	  $$PY test_diffing_VolumeObject.py && \
 	  $$PY test_ByteRun.py && \
 	  $$PY test_ByteRuns.py && \
+	  $$PY test_CellObject.py && \
 	  $$PY test_FileObject_byte_run_facets.py && \
 	  $$PY test_FileObject_from_stat.py && \
 	  $$PY test_RegXMLObject.py && \
