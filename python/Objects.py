@@ -5,12 +5,12 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
 # * User testing.
-# * Compatibility with the DFXML schema, version >1.1.0.
+# * Compatibility with the DFXML schema, version >1.1.1.
 
 import logging
 import re

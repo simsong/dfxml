@@ -1,3 +1,8 @@
+2014-08-18    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Implement RegXML objects and differencing mechanisms.  Add unit tests.
+	* python: Correct some issues with unit tests.
+
 2014-06-04    <a.nelson@prometheuscomputing.com>
 
 	* hash_sectors.py: Add optional tail padding.
