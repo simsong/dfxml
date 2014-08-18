@@ -14,7 +14,7 @@ _logger.debug("co.to_regxml() = %r" % co.to_regxml())
 
 co.root = 1
 co.cellpath = "\\Deleted_root"
-co.name = "Deleted_root"
+co.basename = "Deleted_root"
 co.name_type = "k"
 co.alloc = 1
 co.mtime = "2009-01-23T01:23:45Z"
@@ -35,11 +35,11 @@ _logger.debug("diffs = %r" % diffs)
 assert co == nco
 
 #Modify
-nco.name = "(Doubled)"
+nco.basename = "(Doubled)"
 nco.root = False
 nco.original_cellobject = co
 nco.compare_to_original()
 _logger.debug("nco.to_regxml() = %r" % nco.to_regxml())
 
 _logger.debug("nco.diffs = %r" % nco.diffs)
-assert nco.diffs == set(["name", "root"])
+assert nco.diffs == set(["basename", "root"])

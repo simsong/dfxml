@@ -326,9 +326,11 @@ class DFXMLObject(object):
 
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
-        self.creator = kwargs.get("creator")
+        self.command_line = kwargs.get("command_line")
         self.interpreter = kwargs.get("interpreter")
         self.metadata = kwargs.get("metadata")
+        self.program = kwargs.get("program")
+        self.program_version = kwargs.get("program_version")
         self.sources = kwargs.get("sources", [])
         self.version = kwargs.get("version")
         self._hives = []
