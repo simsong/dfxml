@@ -1438,7 +1438,7 @@ class TimestampObject(object):
     @property
     def time(self):
         """
-        The actual timestamp.  A DFXML.dftime object.  This class might be superfluous and end up collapsing into that...
+        The actual timestamp.  A dfxml.dftime object.  This class might be superfluous and end up collapsing into that...
         """
         return self._time
 
