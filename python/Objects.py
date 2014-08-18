@@ -788,10 +788,34 @@ class VolumeObject(object):
         self._sector_size = _intcast(val)
 
 class HiveObject(object):
+
+    _all_properties = set([
+      "annos",
+      "mtime",
+      "original_fileobject",
+      "original_hive"
+    ])
+
+    _diff_attr_names = {
+      "new":"delta:new_hive",
+      "deleted":"delta:deleted_hive",
+      "modified":"delta:modified_hive",
+      "matched":"delta:matched"
+    }
+
+    _incomparable_properties = set([
+      "annos"
+    ])
+
     def __init__(self, *args, **kwargs):
-        self._mtime = None
-        self._original_fileobject = None
         self._cells = []
+        self._annos = set()
+        self._diffs = set()
+
+        for prop in HiveObject._all_properties:
+            if prop in ["annos", "cells"]:
+                continue
+            setattr(self, prop, kwargs.get(prop))
 
     def __iter__(self):
         """Yields all CellObjects directly attached to this HiveObject."""
@@ -801,6 +825,24 @@ class HiveObject(object):
     def append(self, value):
         _typecheck(value, CellObject)
         self._cells.append(value)
+
+    def compare_to_original(self):
+        self._diffs = self.compare_to_other(self.original_hive, True)
+
+    def compare_to_other(self, other, ignore_original=False):
+        """Returns a set of all the properties found to differ."""
+        _typecheck(other, HiveObject)
+        diffs = set()
+        for prop in HiveObject._all_properties:
+            if prop in HiveObject._incomparable_properties:
+                continue
+            if ignore_original and prop == "original_hive":
+                continue
+
+            #Allow file system type to be case-insensitive
+            if getattr(self, prop) != getattr(other, prop):
+                diffs.add(prop)
+        return diffs
 
     def print_regxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
@@ -847,6 +889,16 @@ class HiveObject(object):
         return outel
 
     @property
+    def annos(self):
+        """Set of differential annotations.  Expected members are the keys of this class's _diff_attr_names dictionary."""
+        return self._annos
+
+    @annos.setter
+    def annos(self, val):
+        _typecheck(val, set)
+        self._annos = val
+
+    @property
     def mtime(self):
         return self._mtime
 
@@ -869,6 +921,16 @@ class HiveObject(object):
         if not val is None:
             _typecheck(val, FileObject)
         self._original_fileobject = val
+
+    @property
+    def original_hive(self):
+        return self._original_hive
+
+    @original_hive.setter
+    def original_hive(self, val):
+        if not val is None:
+            _typecheck(val, HiveObject)
+        self._original_hive = val
 
 class ByteRun(object):
 
