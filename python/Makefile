@@ -13,7 +13,7 @@ doc: \
   Objects.html
 
 Objects.html: Objects.py
-	python3.3 -m pydoc -w Objects
+	python3 -m pydoc -w Objects
 
 check-dfxml:
 	./test_dfxml.sh

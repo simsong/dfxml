@@ -2,11 +2,12 @@
 SHELL = /bin/bash
 
 PYTHON2 = python2.7
-PYTHON3 = python3.3
+PYTHON3 = python3
 
 all: check
 
 check:
+	set -e; \
 	for PY in "$(PYTHON3)" "$(PYTHON2)"; do \
 	  echo Testing Python: $$PY >&2; \
 	  $$PY Objects.py && \
