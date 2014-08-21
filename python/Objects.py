@@ -1487,6 +1487,7 @@ class FileObject(object):
       "data_brs",
       "dtime",
       "error",
+      "externals",
       "filename",
       "filesize",
       "gid",
@@ -1543,7 +1544,10 @@ class FileObject(object):
         for prop in FileObject._all_properties:
             if prop == "annos":
                 continue
-            setattr(self, prop, kwargs.get(prop))
+            elif prop == "externals":
+                setattr(self, prop, kwargs.get(prop, OtherNSElementList()))
+            else:
+                setattr(self, prop, kwargs.get(prop))
         self._annos = set()
         self._diffs = set()
 
@@ -1747,6 +1751,9 @@ class FileObject(object):
                 getattr(self, ctn).populate_from_Element(ce)
             elif ctn in FileObject._all_properties:
                 setattr(self, ctn, ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
@@ -1864,6 +1871,10 @@ class FileObject(object):
                 _anno_byte_runs(tmpel)
                 outel.append(tmpel)
 
+        def _append_externals():
+            for e in self.externals:
+                outel.append(e)
+
         def _append_object(name, value, namespace_prefix=None):
             """name must be the name of a property that has a to_Element() method.  namespace_prefix will be prepended as-is to the element tag."""
             obj = value
@@ -1925,6 +1936,7 @@ class FileObject(object):
         _append_time("bkup_time", self.bkup_time)
         _append_str("link_target", self.link_target)
         _append_str("libmagic", self.libmagic)
+        _append_externals()
         _append_byte_runs("inode_brs", self.inode_brs)
         _append_byte_runs("name_brs", self.name_brs)
         _append_byte_runs("data_brs", self.data_brs)
@@ -2094,6 +2106,16 @@ class FileObject(object):
     @error.setter
     def error(self, val):
         self._error = _strcast(val)
+
+    @property
+    def externals(self):
+        """This property exposes XML elements of other namespaces.  NOTE:  Diffs are currently NOT computed for external elements.  NOTE:  This property should be considered unstable, as the interface is in an early design phase.  Please notify the maintainers of this library (see the Git history for the Objects.py file) if you are using this interface and wish to be notified of updates."""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
 
     @property
     def filesize(self):
@@ -2305,6 +2327,26 @@ class FileObject(object):
             _typecheck(val, VolumeObject)
         self._volume_object = val
 
+class OtherNSElementList(list):
+    #Note that super() must be called with arguments to work in Python 2.
+
+    @classmethod
+    def _check_qname(cls, tagname):
+        (ns, ln) = _qsplit(tagname)
+        if ns == dfxml.XMLNS_DFXML:
+            raise ValueError("'External' elements must be a non-DFXML namespace.")
+        #Register qname for later output
+        #TODO Devise a module-level interface for namespace abreviations.
+
+    def __setitem__(self, idx, value):
+        _typecheck(value, ET.Element)
+        OtherNSElementList._check_qname(value.tag)
+        super(OtherNSElementList, self).__setitem__(idx, value)
+
+    def append(self, value):
+        _typecheck(value, ET.Element)
+        OtherNSElementList._check_qname(value.tag)
+        super(OtherNSElementList, self).append(value)
 
 class CellObject(object):
 
@@ -2803,6 +2845,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
         #Track namespaces
         if ETevent == "start-ns":
             dobj.add_namespace(*elem)
+            ET.register_namespace(*elem)
             continue
 
         #Split tag name into namespace and local name
