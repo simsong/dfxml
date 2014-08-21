@@ -2109,7 +2109,10 @@ class FileObject(object):
 
     @property
     def externals(self):
-        """This property exposes XML elements of other namespaces.  NOTE:  Diffs are currently NOT computed for external elements.  NOTE:  This property should be considered unstable, as the interface is in an early design phase.  Please notify the maintainers of this library (see the Git history for the Objects.py file) if you are using this interface and wish to be notified of updates."""
+        """
+        This property exposes XML elements of other namespaces.  Since these elements can be of arbitrary complexity, this list is solely comprised ofxml.etree.ElementTree.Element objects.  The tags must be a fully-qualified namespace (of the pattern {URI}localname).  If generating the Elements with a script instead of de-serializing from XML, you should issue an ElementTree register_namespace call with your namespace abbreviation prefix.
+        NOTE:  Diffs are currently NOT computed for external elements.
+        NOTE:  This property should be considered unstable, as the interface is in an early design phase.  Please notify the maintainers of this library (see the Git history for the Objects.py file) if you are using this interface and wish to be notified of updates."""
         return self._externals
 
     @externals.setter
