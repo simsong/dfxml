@@ -1,3 +1,7 @@
+2014-08-21    <a.nelson@prometheuscomputing.com>
+
+	* python: Restore Python-choosing mechanism for OS X.
+
 2014-08-18    <a.nelson@prometheuscomputing.com>
 
 	* Objects.py: Implement RegXML objects and differencing mechanisms.  Add unit tests.
