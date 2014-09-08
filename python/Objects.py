@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -792,6 +792,7 @@ class HiveObject(object):
     _all_properties = set([
       "annos",
       "mtime",
+      "filename",
       "original_fileobject",
       "original_hive"
     ])
@@ -876,6 +877,11 @@ class HiveObject(object):
     def to_partial_Element(self):
         outel = ET.Element("hive")
 
+        if self.filename:
+            tmpel = ET.Element("filename")
+            tmpel.text = self.filename
+            outel.append(tmpel)
+
         if self.mtime:
             tmpel = self.mtime.to_Element()
             outel.append(tmpel)
@@ -897,6 +903,15 @@ class HiveObject(object):
     def annos(self, val):
         _typecheck(val, set)
         self._annos = val
+
+    @property
+    def filename(self):
+        """Path of the hive file within the parent file system."""
+        return self._filename
+
+    @filename.setter
+    def filename(self, val):
+        self._filename = _strcast(val)
 
     @property
     def mtime(self):
@@ -2096,6 +2111,14 @@ class FileObject(object):
         self._error = _strcast(val)
 
     @property
+    def filename(self):
+        return self._filename
+
+    @filename.setter
+    def filename(self, val):
+        self._filename = _strcast(val)
+
+    @property
     def filesize(self):
         return self._filesize
 
@@ -2694,6 +2717,17 @@ class CellObject(object):
         if not value is None:
             _typecheck(value, str)
         self._error = value
+
+    @property
+    def hive_object(self):
+        """Reference to the containing hive object.  Not meant to be propagated with __repr__ or to_Element()."""
+        return self._hive_object
+
+    @hive_object.setter
+    def hive_object(self, val):
+        if not val is None:
+            _typecheck(val, HiveObject)
+        self._hive_object = val
 
     @property
     def mtime(self):

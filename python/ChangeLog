@@ -1,6 +1,7 @@
 2014-09-08    <a.nelson@prometheuscomputing.com>
 
 	* make_differential_dfxml.py: Fix configuration parameter usage.
+	* Objects.py: Define RegXML properties; add 'filename' to FileObject property functions.
 
 2014-08-21    <a.nelson@prometheuscomputing.com>
 
