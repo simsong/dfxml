@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 
 import Objects
 import logging
@@ -178,7 +178,7 @@ def make_differential_dfxml(pre, post, **kwargs):
                 #The rest of this loop compares only file objects.
                 continue
 
-            if ignorable_name(new_obj.filename):
+            if ignore_filename_function(new_obj.filename):
                 continue
 
             #Simplify byte runs if requested

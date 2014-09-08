@@ -1,3 +1,7 @@
+2014-09-08    <a.nelson@prometheuscomputing.com>
+
+	* make_differential_dfxml.py: Fix configuration parameter usage.
+
 2014-08-21    <a.nelson@prometheuscomputing.com>
 
 	* python: Restore Python-choosing mechanism for OS X.
