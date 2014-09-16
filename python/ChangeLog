@@ -1,3 +1,7 @@
+2014-09-16    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Add interface for interacting with external-namespace elements (e.g. antivirus scans per file, slackspace statistics per volume).
+
 2014-08-21    <a.nelson@prometheuscomputing.com>
 
 	* python: Restore Python-choosing mechanism for OS X.
