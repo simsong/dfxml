@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -2834,7 +2834,7 @@ class CellObject(object):
         self._root = _boolcast(val)
 
 
-def iterparse(filename, events=("start","end"), dfxmlobject=None):
+def iterparse(filename, events=("start","end"), **kwargs):
     """
     Generator.  Yields a stream of populated DFXMLObjects, VolumeObjects and FileObjects, paired with an event type ("start" or "end").  The DFXMLObject and VolumeObjects do NOT have their child lists populated with this method - that is left to the calling program.
 
@@ -2843,12 +2843,14 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
     @param filename: A string
     @param events: Events.  Optional.  A tuple of strings, containing "start" and/or "end".
     @param dfxmlobject: A DFXMLObject document.  Optional.  A DFXMLObject is created and yielded in the object stream if this argument is not supplied.
+    @param fiwalk: Optional.  Path to a particular fiwalk build you want to run.
     """
 
     #The DFXML stream file handle.
     fh = None
     subp = None
-    subp_command = ["fiwalk", "-x", filename]
+    fiwalk_path = kwargs.get("fiwalk", "fiwalk")
+    subp_command = [fiwalk_path, "-x", filename]
     if filename.endswith("xml"):
         fh = open(filename, "rb")
     else:
@@ -2861,7 +2863,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
             raise ValueError("Unexpected event type: %r.  Expecting 'start', 'end'." % e)
         _events.add(e)
 
-    dobj = dfxmlobject or DFXMLObject()
+    dobj = kwargs.get("dfxmlobject", DFXMLObject())
 
     #The only way to efficiently populate VolumeObjects is to populate the object when the stream has hit its first FileObject.
     vobj = None

@@ -1,3 +1,7 @@
+2014-09-19    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Allow iterparse() to run a user-specified Fiwalk build.
+
 2014-09-16    <a.nelson@prometheuscomputing.com>
 
 	* Objects.py: Add interface for interacting with external-namespace elements (e.g. antivirus scans per file, slackspace statistics per volume).
