@@ -1,3 +1,7 @@
+2014-09-29    <a.nelson@prometheuscomputing.com>
+
+	* Unit tests: Fix test using an openssl call.
+
 2014-09-19    <a.nelson@prometheuscomputing.com>
 
 	* Objects.py: Allow iterparse() to run a user-specified Fiwalk build.
