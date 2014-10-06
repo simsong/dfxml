@@ -710,7 +710,7 @@ void dfxml_writer::add_DFXML_build_environment()
 #ifdef HAVE_EXIV2
     xmlout("library", "", std::string("name=\"exiv2\" version=\"") + Exiv2::version() + "\"",false);
 #endif
-#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
+#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION) && defined(HAVE_TRE_TRE_H)
     xmlout("library", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
 #ifdef HAVE_HASHDB
