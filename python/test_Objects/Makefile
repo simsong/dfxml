@@ -21,8 +21,10 @@ check:
 	  $$PY test_ByteRuns.py && \
 	  $$PY test_CellObject.py && \
 	  $$PY test_FileObject_byte_run_facets.py && \
+	  $$PY test_FileObject_externals.py && \
 	  $$PY test_FileObject_from_stat.py && \
 	  $$PY test_RegXMLObject.py && \
+	  $$PY test_VolumeObject_externals.py && \
 	  $$PY test_VolumeObject_hash.py && \
 	  $$PY verify_differential_dfxml_01.py && \
 	  $$PY verify_differential_dfxml_23.py ; \

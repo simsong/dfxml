@@ -15,7 +15,11 @@ set -x
 "$PYTHON3" cat_fileobjects.py --debug --cache ../samples/simple.xml >cat_test_cache.dfxml
 
 #This checks that the XML structure wasn't changed by cache cleaning.  Only the tail is hashed because the head contains metadata.
-test "x$(tail -n 10 cat_test_nocache.dfxml | openssl dgst -sha1 -)" == "x$(tail -n 10 cat_test_cache.dfxml | openssl dgst -sha1 -)"
+subj0="x$(tail -n 10 cat_test_nocache.dfxml | openssl dgst -sha1)"
+subj1="x$(tail -n 10 cat_test_cache.dfxml | openssl dgst -sha1)"
+test "$subj0" != "x"
+test "$subj1" != "x"
+test "$subj0" == "$subj1"
 
 if [ -x "$XMLLINT" ]; then
   "$PYTHON3" cat_fileobjects.py ../samples/simple.xml | "$XMLLINT" -

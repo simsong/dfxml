@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.3.1"
+__version__ = "0.4.2"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -134,6 +134,7 @@ class DFXMLObject(object):
         self.version = kwargs.get("version")
         self.sources = kwargs.get("sources", [])
         self.dc = kwargs.get("dc", dict())
+        self.externals = kwargs.get("externals", OtherNSElementList())
 
         self._namespaces = dict()
         self._volumes = []
@@ -181,12 +182,15 @@ class DFXMLObject(object):
         if "version" in e.attrib:
             self.version = e.attrib["version"]
 
-        for elem in e.findall(".//*"):
-            (ns, ln) = _qsplit(elem.tag)
-            if ln == "command_line":
-                self.command_line = elem.text
-            elif ln == "image_filename":
-                self.sources.append(elem.text)
+        for ce in e.findall(".//*"):
+            (cns, cln) = _qsplit(ce.tag)
+            if cln == "command_line":
+                self.command_line = ce.text
+            elif cln == "image_filename":
+                self.sources.append(ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
 
     def print_dfxml(self, output_fh=sys.stdout):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
@@ -218,6 +222,8 @@ class DFXMLObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
+        for e in self.externals:
+            outel.append(e)
         for v in self._volumes:
             tmpel = v.to_Element()
             outel.append(tmpel)
@@ -290,6 +296,16 @@ class DFXMLObject(object):
     def dc(self, value):
         _typecheck(value, dict)
         self._dc = value
+
+    @property
+    def externals(self):
+        """(This property behaves the same as FileObject.externals.)"""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
 
     @property
     def files(self):
@@ -469,6 +485,7 @@ class VolumeObject(object):
       "block_count",
       "block_size",
       "byte_runs",
+      "externals",
       "first_block",
       "ftype",
       "ftype_str",
@@ -498,7 +515,10 @@ class VolumeObject(object):
         for prop in VolumeObject._all_properties:
             if prop in ["annos", "files"]:
                 continue
-            setattr(self, prop, kwargs.get(prop))
+            elif prop == "externals":
+                setattr(self, prop, kwargs.get(prop, OtherNSElementList()))
+            else:
+                setattr(self, prop, kwargs.get(prop))
 
     def __iter__(self):
         """Yields all FileObjects directly attached to this VolumeObject."""
@@ -577,6 +597,9 @@ class VolumeObject(object):
                 #_logger.debug("ce.text = %r" % ce.text)
                 setattr(self, ctn, ce.text)
                 #_logger.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
@@ -611,6 +634,8 @@ class VolumeObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
+        for e in self.externals:
+            outel.append(e)
         for f in self._files:
             tmpel = f.to_Element()
             outel.append(tmpel)
@@ -728,6 +753,16 @@ class VolumeObject(object):
     @property
     def diffs(self):
         return self._diffs
+
+    @property
+    def externals(self):
+        """(This property behaves the same as FileObject.externals.)"""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
 
     @property
     def first_block(self):
@@ -1502,6 +1537,7 @@ class FileObject(object):
       "data_brs",
       "dtime",
       "error",
+      "externals",
       "filename",
       "filesize",
       "gid",
@@ -1558,7 +1594,10 @@ class FileObject(object):
         for prop in FileObject._all_properties:
             if prop == "annos":
                 continue
-            setattr(self, prop, kwargs.get(prop))
+            elif prop == "externals":
+                setattr(self, prop, kwargs.get(prop, OtherNSElementList()))
+            else:
+                setattr(self, prop, kwargs.get(prop))
         self._annos = set()
         self._diffs = set()
 
@@ -1762,6 +1801,9 @@ class FileObject(object):
                 getattr(self, ctn).populate_from_Element(ce)
             elif ctn in FileObject._all_properties:
                 setattr(self, ctn, ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
@@ -1879,6 +1921,10 @@ class FileObject(object):
                 _anno_byte_runs(tmpel)
                 outel.append(tmpel)
 
+        def _append_externals():
+            for e in self.externals:
+                outel.append(e)
+
         def _append_object(name, value, namespace_prefix=None):
             """name must be the name of a property that has a to_Element() method.  namespace_prefix will be prepended as-is to the element tag."""
             obj = value
@@ -1940,6 +1986,7 @@ class FileObject(object):
         _append_time("bkup_time", self.bkup_time)
         _append_str("link_target", self.link_target)
         _append_str("libmagic", self.libmagic)
+        _append_externals()
         _append_byte_runs("inode_brs", self.inode_brs)
         _append_byte_runs("name_brs", self.name_brs)
         _append_byte_runs("data_brs", self.data_brs)
@@ -2117,6 +2164,18 @@ class FileObject(object):
     @filename.setter
     def filename(self, val):
         self._filename = _strcast(val)
+    @property
+    def externals(self):
+        """
+        This property exposes XML elements of other namespaces.  Since these elements can be of arbitrary complexity, this list is solely comprised ofxml.etree.ElementTree.Element objects.  The tags must be a fully-qualified namespace (of the pattern {URI}localname).  If generating the Elements with a script instead of de-serializing from XML, you should issue an ElementTree register_namespace call with your namespace abbreviation prefix.
+        NOTE:  Diffs are currently NOT computed for external elements.
+        NOTE:  This property should be considered unstable, as the interface is in an early design phase.  Please notify the maintainers of this library (see the Git history for the Objects.py file) if you are using this interface and wish to be notified of updates."""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
 
     @property
     def filesize(self):
@@ -2328,6 +2387,31 @@ class FileObject(object):
             _typecheck(val, VolumeObject)
         self._volume_object = val
 
+class OtherNSElementList(list):
+    #Note that super() must be called with arguments to work in Python 2.
+
+    @classmethod
+    def _check_qname(cls, tagname):
+        (ns, ln) = _qsplit(tagname)
+        if ns == dfxml.XMLNS_DFXML:
+            raise ValueError("'External' elements must be a non-DFXML namespace.")
+        #Register qname for later output
+        #TODO Devise a module-level interface for namespace abreviations.
+
+    def __repr__(self):
+        #Unwrap the string representation of this class's type name (necessary because we don't necessarily know if it'll be Objects.Other... or just Other...).
+        _typestr = str(type(self))[ len("<class '") : -len("'>") ]
+        return _typestr + "(" + super(OtherNSElementList, self).__repr__() + ")"
+
+    def __setitem__(self, idx, value):
+        _typecheck(value, ET.Element)
+        OtherNSElementList._check_qname(value.tag)
+        super(OtherNSElementList, self).__setitem__(idx, value)
+
+    def append(self, value):
+        _typecheck(value, ET.Element)
+        OtherNSElementList._check_qname(value.tag)
+        super(OtherNSElementList, self).append(value)
 
 class CellObject(object):
 
@@ -2783,7 +2867,7 @@ class CellObject(object):
         self._root = _boolcast(val)
 
 
-def iterparse(filename, events=("start","end"), dfxmlobject=None):
+def iterparse(filename, events=("start","end"), **kwargs):
     """
     Generator.  Yields a stream of populated DFXMLObjects, VolumeObjects and FileObjects, paired with an event type ("start" or "end").  The DFXMLObject and VolumeObjects do NOT have their child lists populated with this method - that is left to the calling program.
 
@@ -2792,12 +2876,14 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
     @param filename: A string
     @param events: Events.  Optional.  A tuple of strings, containing "start" and/or "end".
     @param dfxmlobject: A DFXMLObject document.  Optional.  A DFXMLObject is created and yielded in the object stream if this argument is not supplied.
+    @param fiwalk: Optional.  Path to a particular fiwalk build you want to run.
     """
 
     #The DFXML stream file handle.
     fh = None
     subp = None
-    subp_command = ["fiwalk", "-x", filename]
+    fiwalk_path = kwargs.get("fiwalk", "fiwalk")
+    subp_command = [fiwalk_path, "-x", filename]
     if filename.endswith("xml"):
         fh = open(filename, "rb")
     else:
@@ -2810,7 +2896,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
             raise ValueError("Unexpected event type: %r.  Expecting 'start', 'end'." % e)
         _events.add(e)
 
-    dobj = dfxmlobject or DFXMLObject()
+    dobj = kwargs.get("dfxmlobject", DFXMLObject())
 
     #The only way to efficiently populate VolumeObjects is to populate the object when the stream has hit its first FileObject.
     vobj = None
@@ -2837,6 +2923,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
         #Track namespaces
         if ETevent == "start-ns":
             dobj.add_namespace(*elem)
+            ET.register_namespace(*elem)
             continue
 
         #Split tag name into namespace and local name
