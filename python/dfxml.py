@@ -1449,7 +1449,7 @@ def read_dfxml(xmlfile=None,imagefile=None,flags=0,callback=None,preserve_fis=Fa
     if not callback:
         raise ValueError("callback must be specified")
     r = fileobject_reader(imagefile=imagefile,flags=flags)
-    if xmlfile and xmlfile.name.endswith(".gz"):
+    if xmlfile and hasattr(xmlfile, "name") and xmlfile.name.endswith(".gz"):
         buf = xmlfile.read(3)
         if buf== b'\x1f\x8b\x08':
             import gzip
