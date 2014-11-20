@@ -2229,6 +2229,14 @@ class FileObject(object):
         self._inode_brs = val
 
     @property
+    def md5(self):
+        return self._md5
+
+    @md5.setter
+    def md5(self, val):
+        self._md5 = _strcast(val)
+
+    @property
     def meta_type(self):
         return self._meta_type
 
@@ -2336,6 +2344,14 @@ class FileObject(object):
     @seq.setter
     def seq(self, val):
         self._seq = _intcast(val)
+
+    @property
+    def sha1(self):
+        return self._sha1
+
+    @sha1.setter
+    def sha1(self, val):
+        self._sha1 = _strcast(val)
 
     @property
     def uid(self):
