@@ -1681,31 +1681,76 @@ class FileObject(object):
 
         return diffs
 
-    def extract_facet(self, facet, image_path=None, buffer_size=1048576, partition_offset=None, sector_size=512, errlog=None, statlog=None, icat_threshold = 268435456):
+    def is_content_resident(self):
+        """
+        Some file systems store small file content directly in the inode (or MFT entry) structure.  Determine if this FileObject is one of those resident files.
+        """
+        if not self.data_brs:
+            return None
+        if len(self.data_brs) == 0:
+            return None
+        return self.data_brs[0].type == "resident"
+
+    def extract_facet(self, facet, image_path=None, **kwargs):
         """
         Generator.  Extracts the facet with a SleuthKit tool, yielding chunks of the data.
 
+        Currently, icat must be used to extract resident files (see function is_content_resident).
+
         @param buffer_size The facet data is yielded in chunks of at most this parameter's size. Default 1MiB.
         @param partition_offset The offset of the file's containing partition, in bytes.  Needed for icat.  If not given, the FileObject's VolumeObject will be used.  If that's also absent, icat can't be used, and img_cat will instead be tried as a fallback (which means byte runs must be in the DFXML).
-        @param icat_threshold icat incurs extensive, non-sequential IO overhead to walk the filesystem to reach the facet's byte runs.  img_cat can be called on each byte run reported in the DFXML file, but on fragmented files this incurs overhead in process spawning.  Facets larger than this threshold are extracted with icat.  Default 256MiB.  Force icat by setting this to -1; force img_cat with infinity (float("inf")).
+        @param icat_threshold icat incurs extensive, non-sequential IO overhead to walk the filesystem to reach the facet's byte runs.  img_cat can be called on each byte run reported in the DFXML file, but on fragmented files this incurs overhead in process spawning.  Facets larger than this threshold parameter are extracted with icat.  Default 256MiB.  Force icat by setting this to -1; force img_cat with infinity (float("inf")).
+        @param errlog String; path to file to contain stderr of the spawned subprocess.  The default file handle that results is sys.stderr.
+        @param statlog String; path to a file to contain the exit status of the spawned subprocess.  The exit status is not logged if this parameter is absent.
         """
 
         _image_path = image_path
         if _image_path is None:
             raise ValueError("The backing image path must be supplied.")
 
-        _partition_offset = partition_offset
-        if _partition_offset is None:
+        partition_offset = kwargs.get("partition_offset")
+        if partition_offset is None:
             if self.volume_object:
-                _partition_offset = self.volume_object.partition_offset
+                partition_offset = self.volume_object.partition_offset
+
+        buffer_size = kwargs.get("buffer_size", 1048576)
+        sector_size = kwargs.get("sector_size", 512)
+        errlog = kwargs.get("errlog")
+        statlog = kwargs.get("statlog")
+        icat_threshold = kwargs.get("icat_threshold", 268435456)
+
+        #Establish conditions for using icat or not, ending with the not's to let them win.
+        use_icat = None
+        icat_yay = None
+        icat_nay = None
+        if self.is_content_resident():
+            icat_yay = True
+        if self.filesize >= icat_threshold:
+            icat_yay = True
+        if facet != "content":
+            icat_nay = True
+        if self.filesize is None:
+            icat_nay = True
+        if self.inode is None:
+            icat_nay = True
+        if partition_offset is None:
+            icat_nay = True
+
+        if icat_yay:
+            if icat_nay:
+                _logger.debug("Some conditions where this file *should* be extracted with icat were met, but necessary conditions to do so weren't.")
+                if self.id:
+                    _logger.debug("id = %r." % self.id)
+                use_icat = False
+            else:
+                use_icat = True
+        else:
+            use_icat = False
 
         #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
+        #TODO Check for compressed files?
         #TODO The icat needs a little more experimentation.
-        if False and facet == "content" and \
-          not self.filesize is None and \
-          self.filesize >= icat_threshold and \
-          not self.inode is None and \
-          not _partition_offset is None:
+        if facet == "content" and \
             _logger.debug("Extracting with icat: %r." % self)
 
             #Set up logging if desired
@@ -1728,6 +1773,7 @@ class FileObject(object):
                 cmd.append(self.volume_object.ftype_str)
             cmd.append(image_path)
             cmd.append(str(self.inode))
+            _logger.debug("cmd = %r." % cmd)
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
 
             #Do a buffered read
