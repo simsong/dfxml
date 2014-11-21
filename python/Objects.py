@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -989,7 +989,9 @@ class ByteRun(object):
       "fs_offset",
       "file_offset",
       "fill",
-      "len"
+      "len",
+      "type",
+      "uncompressed_len"
     ])
 
     def __init__(self, *args, **kwargs):
@@ -1003,6 +1005,14 @@ class ByteRun(object):
         _typecheck(other, ByteRun)
         #Don't glom fills of different values
         if self.fill != other.fill:
+            return None
+
+        #Don't glom typed byte runs (particularly since type has been observed to be 'resident')
+        if self.type != other.type:
+            return None
+
+        #Don't glom compressed runs
+        if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
         if None in [self.len, other.len]:
@@ -1033,7 +1043,9 @@ class ByteRun(object):
           self.fs_offset == other.fs_offset and \
           self.file_offset == other.file_offset and \
           self.fill == other.fill and \
-          self.len == other.len
+          self.len == other.len and \
+          self.type == other.type and \
+          self.uncompressed_len == other.uncompressed_len
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1116,6 +1128,22 @@ class ByteRun(object):
     @len.setter
     def len(self, val):
         self._len = _intcast(val)
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, val):
+        self._type = _strcast(val)
+
+    @property
+    def uncompressed_len(self):
+        return self._uncompressed_len
+
+    @uncompressed_len.setter
+    def uncompressed_len(self, val):
+        self._uncompressed_len = _intcast(val)
 
 class ByteRuns(object):
     """
