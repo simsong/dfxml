@@ -20,6 +20,7 @@ import subprocess
 import dfxml
 import os
 import sys
+import struct
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
@@ -1084,8 +1085,15 @@ class ByteRun(object):
         outel = ET.Element("byte_run")
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
-            if not val is None:
+            #Skip null properties
+            if val is None:
+                continue
+
+            if isinstance(val, bytes):
+                outel.attrib[prop] = str(struct.unpack("b", val)[0])
+            else:
                 outel.attrib[prop] = str(val)
+
         return outel
 
     @property
@@ -1098,12 +1106,21 @@ class ByteRun(object):
 
     @property
     def fill(self):
-        """There is an implicit assumption that the fill character is encoded as UTF-8."""
+        """At the moment, the fill value is assumed to be a single byte."""
         return self._fill
 
     @fill.setter
     def fill(self, val):
-        self._fill = _bytecast(val)
+        if val is None:
+            self._fill = val
+        elif val == "0":
+            self._fill = b'\x00'
+        elif isinstance(val, int):
+            #This is the easiest way between Python 2 and 3.  int.to_bytes would be better, but that is only in >=3.2.
+            self._fill = struct.pack("b", val)
+        elif isinstance(val, str) and val.isdigit():
+            #Recurse, changing type
+            self.fill = int(val)
 
     @property
     def fs_offset(self):
