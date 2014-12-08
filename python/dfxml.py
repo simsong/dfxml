@@ -1449,6 +1449,13 @@ def read_dfxml(xmlfile=None,imagefile=None,flags=0,callback=None,preserve_fis=Fa
     if not callback:
         raise ValueError("callback must be specified")
     r = fileobject_reader(imagefile=imagefile,flags=flags)
+    if xmlfile and hasattr(xmlfile, "name") and xmlfile.name.endswith(".gz"):
+        buf = xmlfile.read(3)
+        if buf== b'\x1f\x8b\x08':
+            import gzip
+            xmlfile = gzip.open(xmlfile.name,'rb')
+        else:
+            xmlfile.seek(0,0)   # go back to beginning
     r.process_xml_stream(xmlfile,callback,preserve_fis)
     return r
 

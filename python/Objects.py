@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.1"
+__version__ = "0.4.3"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -827,6 +827,7 @@ class HiveObject(object):
     _all_properties = set([
       "annos",
       "mtime",
+      "filename",
       "original_fileobject",
       "original_hive"
     ])
@@ -911,6 +912,11 @@ class HiveObject(object):
     def to_partial_Element(self):
         outel = ET.Element("hive")
 
+        if self.filename:
+            tmpel = ET.Element("filename")
+            tmpel.text = self.filename
+            outel.append(tmpel)
+
         if self.mtime:
             tmpel = self.mtime.to_Element()
             outel.append(tmpel)
@@ -932,6 +938,15 @@ class HiveObject(object):
     def annos(self, val):
         _typecheck(val, set)
         self._annos = val
+
+    @property
+    def filename(self):
+        """Path of the hive file within the parent file system."""
+        return self._filename
+
+    @filename.setter
+    def filename(self, val):
+        self._filename = _strcast(val)
 
     @property
     def mtime(self):
@@ -974,7 +989,9 @@ class ByteRun(object):
       "fs_offset",
       "file_offset",
       "fill",
-      "len"
+      "len",
+      "type",
+      "uncompressed_len"
     ])
 
     def __init__(self, *args, **kwargs):
@@ -988,6 +1005,14 @@ class ByteRun(object):
         _typecheck(other, ByteRun)
         #Don't glom fills of different values
         if self.fill != other.fill:
+            return None
+
+        #Don't glom typed byte runs (particularly since type has been observed to be 'resident')
+        if self.type != other.type:
+            return None
+
+        #Don't glom compressed runs
+        if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
         if None in [self.len, other.len]:
@@ -1018,7 +1043,9 @@ class ByteRun(object):
           self.fs_offset == other.fs_offset and \
           self.file_offset == other.file_offset and \
           self.fill == other.fill and \
-          self.len == other.len
+          self.len == other.len and \
+          self.type == other.type and \
+          self.uncompressed_len == other.uncompressed_len
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1101,6 +1128,22 @@ class ByteRun(object):
     @len.setter
     def len(self, val):
         self._len = _intcast(val)
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, val):
+        self._type = _strcast(val)
+
+    @property
+    def uncompressed_len(self):
+        return self._uncompressed_len
+
+    @uncompressed_len.setter
+    def uncompressed_len(self, val):
+        self._uncompressed_len = _intcast(val)
 
 class ByteRuns(object):
     """
@@ -2143,6 +2186,13 @@ class FileObject(object):
         self._error = _strcast(val)
 
     @property
+    def filename(self):
+        return self._filename
+
+    @filename.setter
+    def filename(self, val):
+        self._filename = _strcast(val)
+    @property
     def externals(self):
         """
         This property exposes XML elements of other namespaces.  Since these elements can be of arbitrary complexity, this list is solely comprised ofxml.etree.ElementTree.Element objects.  The tags must be a fully-qualified namespace (of the pattern {URI}localname).  If generating the Elements with a script instead of de-serializing from XML, you should issue an ElementTree register_namespace call with your namespace abbreviation prefix.
@@ -2205,6 +2255,14 @@ class FileObject(object):
         if not val is None:
             _typecheck(val, ByteRuns)
         self._inode_brs = val
+
+    @property
+    def md5(self):
+        return self._md5
+
+    @md5.setter
+    def md5(self, val):
+        self._md5 = _strcast(val)
 
     @property
     def meta_type(self):
@@ -2314,6 +2372,14 @@ class FileObject(object):
     @seq.setter
     def seq(self, val):
         self._seq = _intcast(val)
+
+    @property
+    def sha1(self):
+        return self._sha1
+
+    @sha1.setter
+    def sha1(self, val):
+        self._sha1 = _strcast(val)
 
     @property
     def uid(self):
@@ -2779,6 +2845,17 @@ class CellObject(object):
         if not value is None:
             _typecheck(value, str)
         self._error = value
+
+    @property
+    def hive_object(self):
+        """Reference to the containing hive object.  Not meant to be propagated with __repr__ or to_Element()."""
+        return self._hive_object
+
+    @hive_object.setter
+    def hive_object(self, val):
+        if not val is None:
+            _typecheck(val, HiveObject)
+        self._hive_object = val
 
     @property
     def mtime(self):

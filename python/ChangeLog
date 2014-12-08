@@ -1,3 +1,12 @@
+2014-10-16    <a.nelson@prometheuscomputing.com>
+
+	* make_differential_dfxml.py: Fix configuration parameter usage.
+	* Objects.py: Define RegXML properties; add 'filename' to FileObject property functions.
+
+2014-09-29    <a.nelson@prometheuscomputing.com>
+
+	* Unit tests: Fix test using an openssl call.
+
 2014-09-19    <a.nelson@prometheuscomputing.com>
 
 	* Objects.py: Allow iterparse() to run a user-specified Fiwalk build.

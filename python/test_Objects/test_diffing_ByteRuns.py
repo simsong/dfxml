@@ -12,12 +12,16 @@ br.len = 133
 brs = Objects.ByteRuns()
 brs.append(br)
 
-cbrs = copy.deepcopy(brs)
+cbrs1 = copy.deepcopy(brs)
 
 _logger.debug("brs  = %r." % brs)
-_logger.debug("cbrs = %r." % cbrs)
-assert cbrs == brs
+_logger.debug("cbrs1 = %r." % cbrs1)
+assert cbrs1 == brs
 
-cbrs[0].file_offset += 133
-_logger.debug("cbrs = %r." % cbrs)
-assert cbrs != brs
+cbrs1[0].file_offset += 133
+_logger.debug("cbrs1 = %r." % cbrs1)
+assert cbrs1 != brs
+
+cbrs2 = copy.deepcopy(brs)
+cbrs2[0].type = "unknown"
+assert cbrs2 != brs

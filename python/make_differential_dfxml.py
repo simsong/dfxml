@@ -9,7 +9,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 
 import Objects
 import logging
@@ -178,7 +178,7 @@ def make_differential_dfxml(pre, post, **kwargs):
                 #The rest of this loop compares only file objects.
                 continue
 
-            if ignorable_name(new_obj.filename):
+            if ignore_filename_function(new_obj.filename):
                 continue
 
             #Simplify byte runs if requested
@@ -379,10 +379,11 @@ def make_differential_dfxml(pre, post, **kwargs):
         appenders = dict()
         for volume_dict in [new_volumes, matched_volumes, old_volumes]:
             for (offset, ftype_str) in volume_dict:
-                    if (offset, ftype_str) in appenders:
-                        raise ValueError("This pair is already in the appenders dictionary, which was supposed to be distinct: " + repr((offset, ftype_str)) + ".")
+                    veo = volumes_encounter_order[(offset, ftype_str)]
+                    if veo in appenders:
+                        raise ValueError("This pair is already in the appenders dictionary, which was supposed to be distinct: " + repr((offset, ftype_str)) + ", encounter order " + str(veo) + ".")
                     v = volume_dict[(offset, ftype_str)]
-                    appenders[volumes_encounter_order[(offset, ftype_str)]] = v
+                    appenders[veo] = v
                     d.append(v)
 
         #Add in the default appender, the DFXML Document itself.
@@ -460,7 +461,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--ignore", action="append", help="Object property to ignore in all difference operations.  E.g. pass '-i inode' to ignore inode differences when comparing directory trees on the same file system.")
     parser.add_argument("--rename-with-hash", action="store_true", help="Require that renamed files must match on a content hash.")
     parser.add_argument("--retain-unchanged", action="store_true", help="Output unchanged files in the resulting DFXML file.", default=False)
-    parser.add_argument("--annotate-matches", action="store_true", help="Add a 'dfxml:matched' Boolean attribute to every produced object.  Useful for some counting purposes, but not always needed.", default=False)
+    parser.add_argument("--annotate-matches", action="store_true", help="Add a 'delta:matched' Boolean attribute to every produced object.  Useful for some counting purposes, but not always needed.", default=False)
     parser.add_argument("--simplify-byte-runs", action="store_true", help="Join contiguous byte run elements together, if their attributes align.", default=False)
     parser.add_argument("infiles", nargs="+")
     args = parser.parse_args()
