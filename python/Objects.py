@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -1759,6 +1759,18 @@ class FileObject(object):
             for chunk in self.byte_runs.iter_contents(_image_path, buffer_size, sector_size, errlog, statlog):
                 yield chunk
 
+    def is_allocated(self):
+        """Collapse potentially-partial allocation information into a yes, no, or unknown answer."""
+        if self.alloc_inode == True and self.alloc_name == True:
+            return True
+        if self.alloc_inode is None and self.alloc_name is None:
+            if self.alloc is None:
+                return None
+            else:
+                return self.alloc
+        #Partial allocation information at this point is assumed False.  In some file systems, like FAT, we only need one of alloc_inode and alloc_name for allocation status.  Guidelines on which should win out haven't been set yet, though, so wait on this.
+        return False
+
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
@@ -2035,7 +2047,8 @@ class FileObject(object):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         global _nagged_alloc
         if not _nagged_alloc:
-            _logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
+            #alloc isn't deprecated yet.
+            #_logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
             _nagged_alloc = True
         if self.alloc_inode and self.alloc_name:
             return True

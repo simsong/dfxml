@@ -1,3 +1,7 @@
+2015-01-13    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Add FileObject.is_allocated()
+
 2014-10-16    <a.nelson@prometheuscomputing.com>
 
 	* make_differential_dfxml.py: Fix configuration parameter usage.
