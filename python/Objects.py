@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -1106,7 +1106,11 @@ class ByteRun(object):
 
     @property
     def fill(self):
-        """At the moment, the fill value is assumed to be a single byte."""
+        """
+        At the moment, the fill value is assumed to be a single byte.  The value you receive from this property wll be None or a byte.  Setting fill to the string "0" will return the null byte when retrieved later.
+
+        For now, setting to any digital string (e.g. "41") will return a byte representing the integer casting string (e.g. the number 41), but this is subject to change pending some discussion.
+        """
         return self._fill
 
     @fill.setter
@@ -1115,6 +1119,10 @@ class ByteRun(object):
             self._fill = val
         elif val == "0":
             self._fill = b'\x00'
+        elif isinstance(val, bytes):
+            if len(val) != 1:
+                raise NotImplementedError("Received a %d-length fill byte string for a byte run.  Only 1-byte fill strings are accepted for now, pending further discussion.")
+            self._fill = val
         elif isinstance(val, int):
             #This is the easiest way between Python 2 and 3.  int.to_bytes would be better, but that is only in >=3.2.
             self._fill = struct.pack("b", val)
