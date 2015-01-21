@@ -1,10 +1,14 @@
+2015-01-21    <a.nelson@prometheuscomputing.com>
+
+	* Python: Prevent accidental error conditions on missing a Python 3 version.
+
 2015-01-20    <a.nelson@prometheuscomputing.com>
 
-	* Objects.py: Fix extraction of fill bytes
+	* Objects.py: Fix extraction of fill bytes.
 
 2015-01-13    <a.nelson@prometheuscomputing.com>
 
-	* Objects.py: Add FileObject.is_allocated()
+	* Objects.py: Add FileObject.is_allocated().
 
 2014-10-16    <a.nelson@prometheuscomputing.com>
 
