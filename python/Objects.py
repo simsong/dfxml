@@ -1775,7 +1775,7 @@ class FileObject(object):
         #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
         #TODO Check for compressed files?
         #TODO The icat needs a little more experimentation.
-        if facet == "content" and \
+        if facet == "content":
             _logger.debug("Extracting with icat: %r." % self)
 
             #Set up logging if desired
