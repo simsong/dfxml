@@ -1273,7 +1273,7 @@ class ByteRuns(object):
         Generator.  Yields contents, as byte strings one block at a time, given a backing raw image path.  Relies on The SleuthKit's img_cat, so contents can be extracted from any disk image type that TSK supports.
         @param buffer_size The maximum size of the byte strings yielded.
         @param sector_size The size of a disk sector in the raw image.  Required by img_cat.
-        @param errlog Path to error log file for extracting this byte run.
+        @param errlog String path to error log file for extracting this byte run.  Pass None to disable stderr logging.  By default, error logging is done to sys.stderr.
         @param statlog Path to exit status log file for extracting this byte run.  The status log is the first unsuccessful subprocess status, or 0 in case of success.
         @param skip Bytes to skip from the beginning of the byte run list.
         """
@@ -1282,14 +1282,16 @@ class ByteRuns(object):
 
         sector_size = kwargs.get("sector_size", 512)
         buffer_size = kwargs.get("buffer_size", 1048576)
-        errlog = kwargs.get("errlog")
+        errlog = kwargs.get("errlog", sys.stderr)
         statlog = kwargs.get("statlog")
         skip_bytes = kwargs.get("skip", 0)
 
         #This value whittles down as the list goes on
         bytes_to_skip = skip_bytes
 
-        stderr_fh = None if errlog  is None else open(errlog, "wb")
+        stderr_fh = sys.stderr
+        if errlog != sys.stderr:
+            stderr_fh = None if errlog is None else open(errlog, "wb")
         status_fh = None if statlog is None else open(statlog, "w")
 
         #The exit status of the last img_cat.
@@ -1753,7 +1755,7 @@ class FileObject(object):
         @param buffer_size The facet data is yielded in chunks of at most this parameter's size. Default 1MiB.
         @param partition_offset The offset of the file's containing partition, in bytes.  Needed for icat.  If not given, the FileObject's VolumeObject will be used.  If that's also absent, icat can't be used, and img_cat will instead be tried as a fallback (which means byte runs must be in the DFXML).
         @param icat_threshold icat incurs extensive, non-sequential IO overhead to walk the filesystem to reach the facet's byte runs.  img_cat can be called on each byte run reported in the DFXML file, but on fragmented files this incurs overhead in process spawning.  Facets larger than this threshold parameter are extracted with icat.  Default 256MiB.  Force icat by setting this to -1; force img_cat with infinity (float("inf")).
-        @param errlog String; path to file to contain stderr of the spawned subprocess.  The default file handle that results is sys.stderr.
+        @param errlog String; path to error log file for extracting this byte run.  Pass None to disable stderr logging.  By default, error logging is done to sys.stderr.
         @param statlog String; path to a file to contain the exit status of the spawned subprocess.  The exit status is not logged if this parameter is absent.
         @param skip Integer; number of bytes to skip from the beginning of the input.
         """
@@ -1769,7 +1771,7 @@ class FileObject(object):
 
         buffer_size = kwargs.get("buffer_size", 1048576)
         sector_size = kwargs.get("sector_size", 512)
-        errlog = kwargs.get("errlog")
+        errlog = kwargs.get("errlog", sys.stderr)
         statlog = kwargs.get("statlog")
         icat_threshold = kwargs.get("icat_threshold", 268435456)
         skip_bytes = kwargs.get("skip", 0)
@@ -1817,8 +1819,10 @@ class FileObject(object):
             _logger.debug("Extracting with icat: %r." % self)
 
             #Set up logging if desired
-            stderr_fh = sys.stderr if errlog  is None else open(errlog, "wb")
-            status_fh = None       if statlog is None else open(statlog, "w")
+            stderr_fh = sys.stderr
+            if errlog != sys.stderr:
+                stderr_fh = None if errlog is None else open(errlog, "wb")
+            status_fh = None if statlog is None else open(statlog, "w")
 
             #Set up icat process
             cmd = ["icat"]
@@ -1863,9 +1867,9 @@ class FileObject(object):
                         raise subprocess.CalledProcessError(last_status, " ".join(cmd), "icat failed.")
                 len_to_read -= buffer_size
 
-            #Clean up file handles
+            #Clean up file handles (but don't close sys.stderr)
             if status_fh: status_fh.close()
-            if stderr_fh: stderr_fh.close()
+            if stderr_fh and stderr_fh != sys.stderr: stderr_fh.close()
             
         elif not self.byte_runs is None:
             for chunk in self.byte_runs.iter_contents(_image_path, buffer_size=buffer_size, sector_size=sector_size, errlog=errlog, statlog=statlog, skip=skip):
