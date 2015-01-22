@@ -1268,22 +1268,29 @@ class ByteRuns(object):
             else:
                 self._listdata[-1] = maybe_new_run
         
-    def iter_contents(self, raw_image, buffer_size=1048576, sector_size=512, errlog=None, statlog=None):
+    def iter_contents(self, raw_image, **kwargs):
         """
         Generator.  Yields contents, as byte strings one block at a time, given a backing raw image path.  Relies on The SleuthKit's img_cat, so contents can be extracted from any disk image type that TSK supports.
         @param buffer_size The maximum size of the byte strings yielded.
         @param sector_size The size of a disk sector in the raw image.  Required by img_cat.
+        @param errlog Path to error log file for extracting this byte run.
+        @param statlog Path to exit status log file for extracting this byte run.  The status log is the first unsuccessful subprocess status, or 0 in case of success.
+        @param skip Bytes to skip from the beginning of the byte run list.
         """
         if not isinstance(raw_image, str):
             raise TypeError("iter_contents needs the string path to the image file.  Received: %r." % raw_image)
 
-        stderr_fh = None
-        if not errlog is None:
-            stderr_fh = open(errlog, "wb")
+        sector_size = kwargs.get("sector_size", 512)
+        buffer_size = kwargs.get("buffer_size", 1048576)
+        errlog = kwargs.get("errlog")
+        statlog = kwargs.get("statlog")
+        skip_bytes = kwargs.get("skip", 0)
 
-        status_fh = None
-        if not statlog is None:
-            status_fh = open(errlog, "wb")
+        #This value whittles down as the list goes on
+        bytes_to_skip = skip_bytes
+
+        stderr_fh = None if errlog  is None else open(errlog, "wb")
+        status_fh = None if statlog is None else open(statlog, "w")
 
         #The exit status of the last img_cat.
         last_status = None
@@ -1294,6 +1301,11 @@ class ByteRuns(object):
                     raise AttributeError("Byte runs can't be extracted if a run length is undefined.")
 
                 len_to_read = run.len
+
+                #Skip bytes if any skipping requested; potentially we skip this whole byte run.
+                if bytes_to_skip >= len_to_read:
+                    bytes_to_skip -= len_to_read
+                    continue
 
                 #If we have a fill character, just pump out that character
                 if not run.fill is None and len(run.fill) > 0:
@@ -1306,6 +1318,14 @@ class ByteRuns(object):
 
                 if run.img_offset is None:
                     raise AttributeError("Byte runs can't be extracted if missing a fill character and image offset.")
+
+                start_offset = run.img_offset
+                #Skip sectors if any skipping requested
+                if bytes_to_skip // sector_size > 0:
+                    bytes_skipped_from_sectors = sector_size * (bytes_to_skip // sector_size)
+                    start_offset += bytes_skipped_from_sectors
+                    len_to_read -= bytes_skipped_from_sectors
+                    bytes_to_skip -= bytes_skipped_from_sectors
 
                 cmd = ["img_cat"]
                 cmd.append("-b")
@@ -1320,6 +1340,14 @@ class ByteRuns(object):
                 #Do the buffered read
                 while len_to_read > 0:
                     buffer_data = p.stdout.read(buffer_size)
+
+                    #Handle the last byte skips according to read buffer size
+                    if bytes_to_skip > 0:
+                        bytes_to_skip = max(0, bytes_to_skip-buffer_size) #bytes_to_skip is used as an indexing variable, so don't drop below 0.
+                        buffer_data = buffer_data[bytes_to_skip:]
+                        if len(buffer_data) == 0:
+                            continue
+
                     yield_data = buffer_data[ : min(len_to_read, buffer_size)]
                     if len(yield_data) > 0:
                         yield yield_data
@@ -1727,6 +1755,7 @@ class FileObject(object):
         @param icat_threshold icat incurs extensive, non-sequential IO overhead to walk the filesystem to reach the facet's byte runs.  img_cat can be called on each byte run reported in the DFXML file, but on fragmented files this incurs overhead in process spawning.  Facets larger than this threshold parameter are extracted with icat.  Default 256MiB.  Force icat by setting this to -1; force img_cat with infinity (float("inf")).
         @param errlog String; path to file to contain stderr of the spawned subprocess.  The default file handle that results is sys.stderr.
         @param statlog String; path to a file to contain the exit status of the spawned subprocess.  The exit status is not logged if this parameter is absent.
+        @param skip Integer; number of bytes to skip from the beginning of the input.
         """
 
         _image_path = image_path
@@ -1743,6 +1772,15 @@ class FileObject(object):
         errlog = kwargs.get("errlog")
         statlog = kwargs.get("statlog")
         icat_threshold = kwargs.get("icat_threshold", 268435456)
+        skip_bytes = kwargs.get("skip", 0)
+
+        if not self.filesize is None:
+            if skip_bytes >= self.filesize:
+                _logger.debug("'Skip' parameter skips all file content (%d bytes skipped >= %d bytes available)." % (skip_bytes, self.filesize))
+                return
+
+        #This value whittles down as the list goes on
+        bytes_to_skip = skip_bytes
 
         #Establish conditions for using icat or not, ending with the not's to let them win.
         use_icat = None
@@ -1779,13 +1817,8 @@ class FileObject(object):
             _logger.debug("Extracting with icat: %r." % self)
 
             #Set up logging if desired
-            stderr_fh = sys.stderr
-            if not errlog is None:
-                stderr_fh = open(errlog, "wb")
-
-            status_fh = None
-            if not statlog is None:
-                status_fh = open(errlog, "w")
+            stderr_fh = sys.stderr if errlog  is None else open(errlog, "wb")
+            status_fh = None       if statlog is None else open(statlog, "w")
 
             #Set up icat process
             cmd = ["icat"]
@@ -1802,9 +1835,17 @@ class FileObject(object):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
 
             #Do a buffered read
-            len_to_read = self.filesize
+            len_to_read = self.filesize - bytes_to_skip
             while len_to_read > 0:
                 buffer_data = p.stdout.read(buffer_size)
+
+                #Handle the byte skips according to read buffer size
+                if bytes_to_skip > 0:
+                    bytes_to_skip = max(0, bytes_to_skip-buffer_size) #bytes_to_skip is used as an indexing variable, so don't drop below 0.
+                    buffer_data = buffer_data[bytes_to_skip:]
+                    if len(buffer_data) == 0:
+                        continue
+
                 yield_data = buffer_data[ : min(len_to_read, buffer_size)]
                 if len(yield_data) > 0:
                     yield yield_data
@@ -1827,7 +1868,7 @@ class FileObject(object):
             if stderr_fh: stderr_fh.close()
             
         elif not self.byte_runs is None:
-            for chunk in self.byte_runs.iter_contents(_image_path, buffer_size, sector_size, errlog, statlog):
+            for chunk in self.byte_runs.iter_contents(_image_path, buffer_size=buffer_size, sector_size=sector_size, errlog=errlog, statlog=statlog, skip=skip):
                 yield chunk
 
     def is_allocated(self):
