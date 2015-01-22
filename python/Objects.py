@@ -5,7 +5,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.3"
+__version__ = "0.4.5"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -20,6 +20,7 @@ import subprocess
 import dfxml
 import os
 import sys
+import struct
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
@@ -1084,8 +1085,15 @@ class ByteRun(object):
         outel = ET.Element("byte_run")
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
-            if not val is None:
+            #Skip null properties
+            if val is None:
+                continue
+
+            if isinstance(val, bytes):
+                outel.attrib[prop] = str(struct.unpack("b", val)[0])
+            else:
                 outel.attrib[prop] = str(val)
+
         return outel
 
     @property
@@ -1098,12 +1106,29 @@ class ByteRun(object):
 
     @property
     def fill(self):
-        """There is an implicit assumption that the fill character is encoded as UTF-8."""
+        """
+        At the moment, the fill value is assumed to be a single byte.  The value you receive from this property wll be None or a byte.  Setting fill to the string "0" will return the null byte when retrieved later.
+
+        For now, setting to any digital string (e.g. "41") will return a byte representing the integer casting string (e.g. the number 41), but this is subject to change pending some discussion.
+        """
         return self._fill
 
     @fill.setter
     def fill(self, val):
-        self._fill = _bytecast(val)
+        if val is None:
+            self._fill = val
+        elif val == "0":
+            self._fill = b'\x00'
+        elif isinstance(val, bytes):
+            if len(val) != 1:
+                raise NotImplementedError("Received a %d-length fill byte string for a byte run.  Only 1-byte fill strings are accepted for now, pending further discussion.")
+            self._fill = val
+        elif isinstance(val, int):
+            #This is the easiest way between Python 2 and 3.  int.to_bytes would be better, but that is only in >=3.2.
+            self._fill = struct.pack("b", val)
+        elif isinstance(val, str) and val.isdigit():
+            #Recurse, changing type
+            self.fill = int(val)
 
     @property
     def fs_offset(self):
@@ -1805,6 +1830,18 @@ class FileObject(object):
             for chunk in self.byte_runs.iter_contents(_image_path, buffer_size, sector_size, errlog, statlog):
                 yield chunk
 
+    def is_allocated(self):
+        """Collapse potentially-partial allocation information into a yes, no, or unknown answer."""
+        if self.alloc_inode == True and self.alloc_name == True:
+            return True
+        if self.alloc_inode is None and self.alloc_name is None:
+            if self.alloc is None:
+                return None
+            else:
+                return self.alloc
+        #Partial allocation information at this point is assumed False.  In some file systems, like FAT, we only need one of alloc_inode and alloc_name for allocation status.  Guidelines on which should win out haven't been set yet, though, so wait on this.
+        return False
+
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
@@ -2081,7 +2118,8 @@ class FileObject(object):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         global _nagged_alloc
         if not _nagged_alloc:
-            _logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
+            #alloc isn't deprecated yet.
+            #_logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
             _nagged_alloc = True
         if self.alloc_inode and self.alloc_name:
             return True

@@ -202,7 +202,10 @@ public:
         localtime_r(&ts.tv_sec,&tm);
 #else
         time_t t = ts.tv_sec;
-        tm = *localtime(&t);
+        struct tm *tmp;
+        tmp = localtime(&t);
+        if(!tmp) return std::string("INVALID");
+        tm = *tmp;
 #endif
         strftime(buf,sizeof(buf),"%Y-%m-%dT%H:%M:%S",&tm);
         if(ts.tv_usec>0){
