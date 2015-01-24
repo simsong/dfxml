@@ -1789,16 +1789,22 @@ class FileObject(object):
         icat_yay = None
         icat_nay = None
         if self.is_content_resident():
+            _logger.debug("icat yay: Content is resident.")
             icat_yay = True
         if self.filesize >= icat_threshold:
+            _logger.debug("icat yay: Threshold size (%d) surpassed." % icat_threshold)
             icat_yay = True
         if facet != "content":
+            _logger.debug("icat nay: Not reading primary file content stream.")
             icat_nay = True
         if self.filesize is None:
+            _logger.debug("icat nay: Null recorded filesize.")
             icat_nay = True
         if self.inode is None:
+            _logger.debug("icat nay: Null recorded inode number.")
             icat_nay = True
         if partition_offset is None:
+            _logger.debug("icat nay: Null recorded partition offset.")
             icat_nay = True
 
         if icat_yay:
@@ -1815,8 +1821,8 @@ class FileObject(object):
         #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
         #TODO Check for compressed files?
         #TODO The icat needs a little more experimentation.
-        if facet == "content":
-            _logger.debug("Extracting with icat: %r." % self)
+        if icat_yay:
+            _logger.debug("Extracting with icat.")
 
             #Set up logging if desired
             stderr_fh = sys.stderr
@@ -1872,7 +1878,7 @@ class FileObject(object):
             if stderr_fh and stderr_fh != sys.stderr: stderr_fh.close()
             
         elif not self.byte_runs is None:
-            for chunk in self.byte_runs.iter_contents(_image_path, buffer_size=buffer_size, sector_size=sector_size, errlog=errlog, statlog=statlog, skip=skip):
+            for chunk in self.byte_runs.iter_contents(_image_path, buffer_size=buffer_size, sector_size=sector_size, errlog=errlog, statlog=statlog, skip=skip_bytes):
                 yield chunk
 
     def is_allocated(self):
