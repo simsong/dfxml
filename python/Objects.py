@@ -1367,7 +1367,7 @@ class ByteRuns(object):
 
             if not status_fh is None:
                 if isinstance(e, subprocess.CalledProcessError):
-                    status_fh.write(e.returncode)
+                    status_fh.write(str(e.returncode))
                 else:
                     status_fh.write("1")
                 status_fh.close()
@@ -1376,10 +1376,11 @@ class ByteRuns(object):
         #Cleanup when all's gone well.
         if not status_fh is None:
             if not last_status is None:
-                status_fh.write(last_status)
+                status_fh.write(str(last_status))
             status_fh.close()
         if not stderr_fh is None:
-            stderr_fh.close()
+            if stderr_fh != sys.stderr:
+                stderr_fh.close()
 
     def populate_from_Element(self, e):
         _typecheck(e, (ET.Element, ET.ElementTree))
@@ -1821,8 +1822,8 @@ class FileObject(object):
         #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
         #TODO Check for compressed files?
         #TODO The icat needs a little more experimentation.
-        if icat_yay:
-            _logger.debug("Extracting with icat.")
+        if use_icat:
+            #_logger.debug("Extracting with icat.")
 
             #Set up logging if desired
             stderr_fh = sys.stderr
@@ -1878,6 +1879,7 @@ class FileObject(object):
             if stderr_fh and stderr_fh != sys.stderr: stderr_fh.close()
             
         elif not self.byte_runs is None:
+            #_logger.debug("Extracting with iter_contents loop.")
             for chunk in self.byte_runs.iter_contents(_image_path, buffer_size=buffer_size, sector_size=sector_size, errlog=errlog, statlog=statlog, skip=skip_bytes):
                 yield chunk
 
