@@ -1291,7 +1291,7 @@ class ByteRuns(object):
 
         stderr_fh = sys.stderr
         if errlog != sys.stderr:
-            stderr_fh = None if errlog is None else open(errlog, "wb")
+            stderr_fh = None if errlog is None else open(errlog, "w")
         status_fh = None if statlog is None else open(statlog, "w")
 
         #The exit status of the last img_cat.
@@ -1828,7 +1828,7 @@ class FileObject(object):
             #Set up logging if desired
             stderr_fh = sys.stderr
             if errlog != sys.stderr:
-                stderr_fh = None if errlog is None else open(errlog, "wb")
+                stderr_fh = None if errlog is None else open(errlog, "w")
             status_fh = None if statlog is None else open(statlog, "w")
 
             #Set up icat process
