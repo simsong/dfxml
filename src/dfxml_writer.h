@@ -198,12 +198,12 @@ public:
     static std::string to8601(const struct timeval &ts) {
         struct tm tm;
         char buf[64];
-#ifdef HAVE_LOCALTIME_R
-        localtime_r(&ts.tv_sec,&tm);
+#ifdef HAVE_GMTIME_R
+        gmtime_r(&ts.tv_sec,&tm);
 #else
         time_t t = ts.tv_sec;
         struct tm *tmp;
-        tmp = localtime(&t);
+        tmp = gmtime(&t);
         if(!tmp) return std::string("INVALID");
         tm = *tmp;
 #endif
