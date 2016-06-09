@@ -10,7 +10,7 @@
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
 AC_MSG_NOTICE([Note: checks for afflib/afflib.h and libewf.h should be in the caller, so they can be disabled])
 AC_CHECK_HEADERS([err.h expat.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h winsock2.h ])
-AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf regcomp ])
+AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf ])
 
 AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS([exiv2/image.hpp])
