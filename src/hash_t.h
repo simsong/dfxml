@@ -189,7 +189,7 @@ inline std::string digest_name<sha512_t>() {
 
 template<const EVP_MD *md(),size_t SIZE> 
 class hash_generator__ { 			/* generates the hash */
-    EVP_MD_CTX mdctx;	     /* the context for computing the value */
+    EVP_MD_CTX* mdctx;	     /* the context for computing the value */
     bool initialized;	       /* has the context been initialized? */
     bool finalized;
     /* Static function to determine if something is zero */
@@ -202,21 +202,21 @@ class hash_generator__ { 			/* generates the hash */
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():mdctx(),initialized(false),finalized(false),hashed_bytes(0){ }
+    hash_generator__():mdctx(NULL),initialized(false),finalized(false),hashed_bytes(0){ }
     ~hash_generator__(){
 	release();
     }
     void release(){			/* free allocated memory */
 	if(initialized){
-	    EVP_MD_CTX_cleanup(&mdctx);
+	    EVP_MD_CTX_destroy(mdctx);
 	    initialized = false;
 	    hashed_bytes = 0;
 	}
     }
     void init(){
 	if(initialized==false){
-	    EVP_MD_CTX_init(&mdctx);
-	    EVP_DigestInit_ex(&mdctx, md(), NULL);
+	    mdctx = EVP_MD_CTX_create();
+	    EVP_DigestInit_ex(mdctx, md(), NULL);
 	    initialized = true;
 	    finalized = false;
 	    hashed_bytes = 0;
@@ -228,7 +228,7 @@ public:
 	    std::cerr << "hashgen_t::update called after finalized\n";
 	    exit(1);
 	}
-	EVP_DigestUpdate(&mdctx,buf,bufsize);
+	EVP_DigestUpdate(mdctx,buf,bufsize);
 	hashed_bytes += bufsize;
     }
     hash__<md,SIZE> final() {
@@ -242,7 +242,7 @@ public:
 	}
 	hash__<md,SIZE> val;
 	unsigned int len = sizeof(val.digest);
-	EVP_DigestFinal(&mdctx,val.digest,&len);
+	EVP_DigestFinal(mdctx,val.digest,&len);
 	finalized = true;
 	return val;
     }
