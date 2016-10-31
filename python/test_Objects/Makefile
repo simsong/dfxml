@@ -2,11 +2,12 @@
 SHELL = /bin/bash
 
 PYTHON2 = python2.7
-PYTHON3 = python3.3
+PYTHON3 = python3
 
 all: check
 
 check:
+	set -e; \
 	for PY in "$(PYTHON3)" "$(PYTHON2)"; do \
 	  echo Testing Python: $$PY >&2; \
 	  $$PY Objects.py && \
@@ -18,9 +19,13 @@ check:
 	  $$PY test_diffing_VolumeObject.py && \
 	  $$PY test_ByteRun.py && \
 	  $$PY test_ByteRuns.py && \
+	  $$PY test_CellObject.py && \
+	  $$PY test_FileObject_allocation.py && \
 	  $$PY test_FileObject_byte_run_facets.py && \
+	  $$PY test_FileObject_externals.py && \
 	  $$PY test_FileObject_from_stat.py && \
 	  $$PY test_RegXMLObject.py && \
+	  $$PY test_VolumeObject_externals.py && \
 	  $$PY test_VolumeObject_hash.py && \
 	  $$PY verify_differential_dfxml_01.py && \
 	  $$PY verify_differential_dfxml_23.py ; \

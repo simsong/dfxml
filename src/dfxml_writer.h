@@ -96,10 +96,10 @@ private:
     void  write_dtd();
     void  verify_tag(std::string tag);
     void  spaces();                     // print spaces corresponding to tag stack
-    static std::string xml_PRId32;      // for compiler bug
-    static std::string xml_PRIu32;      // for compiler bug
-    static std::string xml_PRId64;      // for compiler bug
-    static std::string xml_PRIu64;      // for compiler bug
+    //static std::string xml_PRId32;      // for compiler bug
+    //static std::string xml_PRIu32;      // for compiler bug
+    //static std::string xml_PRId64;      // for compiler bug
+    //static std::string xml_PRIu64;      // for compiler bug
     bool oneline;
 public:
     static std::string make_command_line(int argc,char * const *argv){
@@ -183,12 +183,12 @@ public:
     void xmlout( const std::string &tag,const int64_t value){ xmlprintf(tag,"","%I64d",value); }
     void xmlout( const std::string &tag,const uint64_t value){ xmlprintf(tag,"","%I64u",value); }
 #else
-    void xmlout( const std::string &tag,const int32_t value){ xmlprintf(tag,"",xml_PRId32.c_str(),value); }
-    void xmlout( const std::string &tag,const uint32_t value){ xmlprintf(tag,"",xml_PRIu32.c_str(),value); }
-    void xmlout( const std::string &tag,const int64_t value){ xmlprintf(tag,"",xml_PRId64.c_str(),value); }
-    void xmlout( const std::string &tag,const uint64_t value){ xmlprintf(tag,"",xml_PRIu64.c_str(),value); }
+    void xmlout( const std::string &tag,const int32_t value){ xmlprintf(tag,"","%" PRId32,value); }
+    void xmlout( const std::string &tag,const uint32_t value){ xmlprintf(tag,"","%" PRIu32,value); }
+    void xmlout( const std::string &tag,const int64_t value){ xmlprintf(tag,"","%" PRId64,value); }
+    void xmlout( const std::string &tag,const uint64_t value){ xmlprintf(tag,"","%" PRIu64,value); }
 #ifdef __APPLE__
-    void xmlout( const std::string &tag,const size_t value){ xmlprintf(tag,"",xml_PRIu64.c_str(),value); }
+    void xmlout( const std::string &tag,const size_t value){ xmlprintf(tag,"","%" PRIu64,(unsigned long long)value); }
 #endif
 #endif
     void xmlout( const std::string &tag,const double value){ xmlprintf(tag,"","%f",value); }
@@ -198,11 +198,14 @@ public:
     static std::string to8601(const struct timeval &ts) {
         struct tm tm;
         char buf[64];
-#ifdef HAVE_LOCALTIME_R
-        localtime_r(&ts.tv_sec,&tm);
+#ifdef HAVE_GMTIME_R
+        gmtime_r(&ts.tv_sec,&tm);
 #else
         time_t t = ts.tv_sec;
-        tm = *localtime(&t);
+        struct tm *tmp;
+        tmp = gmtime(&t);
+        if(!tmp) return std::string("INVALID");
+        tm = *tmp;
 #endif
         strftime(buf,sizeof(buf),"%Y-%m-%dT%H:%M:%S",&tm);
         if(ts.tv_usec>0){

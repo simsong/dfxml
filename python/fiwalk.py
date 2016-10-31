@@ -116,7 +116,7 @@ def fiwalk_xml_stream(imagefile=None,flags=0,fiwalk="fiwalk",fiwalk_args=""):
     except OSError:
         raise RuntimeError("Cannot execute fiwalk executable: "+fiwalk)
     cmd = [fiwalk,'-x']
-    if fiwalk_args: cmd += [fiwalk_args]
+    if fiwalk_args: cmd += fiwalk_args.split()
     p = Popen(cmd + E01_glob(imagefile.name),stdout=PIPE)
     return p.stdout
 

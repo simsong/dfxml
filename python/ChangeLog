@@ -1,3 +1,41 @@
+2015-01-21    <a.nelson@prometheuscomputing.com>
+
+	* Python: Prevent accidental error conditions on missing a Python 3 version.
+
+2015-01-20    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Fix extraction of fill bytes.
+
+2015-01-13    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Add FileObject.is_allocated().
+
+2014-10-16    <a.nelson@prometheuscomputing.com>
+
+	* make_differential_dfxml.py: Fix configuration parameter usage.
+	* Objects.py: Define RegXML properties; add 'filename' to FileObject property functions.
+
+2014-09-29    <a.nelson@prometheuscomputing.com>
+
+	* Unit tests: Fix test using an openssl call.
+
+2014-09-19    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Allow iterparse() to run a user-specified Fiwalk build.
+
+2014-09-16    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Add interface for interacting with external-namespace elements (e.g. antivirus scans per file, slackspace statistics per volume).
+
+2014-08-21    <a.nelson@prometheuscomputing.com>
+
+	* python: Restore Python-choosing mechanism for OS X.
+
+2014-08-18    <a.nelson@prometheuscomputing.com>
+
+	* Objects.py: Implement RegXML objects and differencing mechanisms.  Add unit tests.
+	* python: Correct some issues with unit tests.
+
 2014-06-04    <a.nelson@prometheuscomputing.com>
 
 	* hash_sectors.py: Add optional tail padding.

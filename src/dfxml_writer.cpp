@@ -112,10 +112,10 @@ int mkstemp(char *tmpl)
 #endif
 
 
-std::string dfxml_writer::xml_PRId32("%" PRId32); // gets around compiler bug
-std::string dfxml_writer::xml_PRIu32("%" PRIu32); // gets around compiler bug
-std::string dfxml_writer::xml_PRId64("%" PRId64); // gets around compiler bug
-std::string dfxml_writer::xml_PRIu64("%" PRIu64); // gets around compiler bug
+//std::string dfxml_writer::xml_PRId32("%" PRId32); // gets around compiler bug
+//std::string dfxml_writer::xml_PRIu32("%" PRIu32); // gets around compiler bug
+//std::string dfxml_writer::xml_PRId64("%" PRId64); // gets around compiler bug
+//std::string dfxml_writer::xml_PRIu64("%" PRIu64); // gets around compiler bug
 
 static const char *cstr(const string &str){
     return str.c_str();
@@ -648,7 +648,7 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <exiv2/error.hpp>
 #endif
 
-#ifdef HAVE_HASHID
+#ifdef HAVE_HASHDB
 #include <hashdb.hpp>
 #endif
 
@@ -710,10 +710,10 @@ void dfxml_writer::add_DFXML_build_environment()
 #ifdef HAVE_EXIV2
     xmlout("library", "", std::string("name=\"exiv2\" version=\"") + Exiv2::version() + "\"",false);
 #endif
-#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION)
+#if defined(HAVE_LIBTRE) && defined(HAVE_TRE_VERSION) && defined(HAVE_TRE_TRE_H)
     xmlout("library", "", std::string("name=\"tre\" version=\"") + tre_version() + "\"",false);
 #endif
-#ifdef HAVE_HASHID
+#ifdef HAVE_HASHDB
     xmlout("library", "", std::string("name=\"hashdb\" version=\"") + hashdb_version() + "\"",false);
 #endif
 #ifdef SQLITE_VERSION

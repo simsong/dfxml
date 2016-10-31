@@ -5,12 +5,12 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.2.2"
+__version__ = "0.4.5"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
 # * User testing.
-# * Compatibility with the DFXML schema, version >1.1.0.
+# * Compatibility with the DFXML schema, version >1.1.1.
 
 import logging
 import re
@@ -20,6 +20,7 @@ import subprocess
 import dfxml
 import os
 import sys
+import struct
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
@@ -33,6 +34,8 @@ _warned_byterun_facets = set([])
 #Issue some log statements only once per program invocation.
 _nagged_alloc = False
 _warned_byterun_badtypecomp = False
+
+XMLNS_REGXML = "http://www.forensicswiki.org/wiki/RegXML"
 
 def _ET_tostring(e):
     """Between Python 2 and 3, there are some differences in the ElementTree library's tostring() behavior.  One, the method balks at the "unicode" encoding in 2.  Two, in 2, the XML prototype's output with every invocation.  This method serves as a wrapper to deal with those issues."""
@@ -132,6 +135,7 @@ class DFXMLObject(object):
         self.version = kwargs.get("version")
         self.sources = kwargs.get("sources", [])
         self.dc = kwargs.get("dc", dict())
+        self.externals = kwargs.get("externals", OtherNSElementList())
 
         self._namespaces = dict()
         self._volumes = []
@@ -179,12 +183,15 @@ class DFXMLObject(object):
         if "version" in e.attrib:
             self.version = e.attrib["version"]
 
-        for elem in e.findall(".//*"):
-            (ns, ln) = _qsplit(elem.tag)
-            if ln == "command_line":
-                self.command_line = elem.text
-            elif ln == "image_filename":
-                self.sources.append(elem.text)
+        for ce in e.findall(".//*"):
+            (cns, cln) = _qsplit(ce.tag)
+            if cln == "command_line":
+                self.command_line = ce.text
+            elif cln == "image_filename":
+                self.sources.append(ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
 
     def print_dfxml(self, output_fh=sys.stdout):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
@@ -216,6 +223,8 @@ class DFXMLObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
+        for e in self.externals:
+            outel.append(e)
         for v in self._volumes:
             tmpel = v.to_Element()
             outel.append(tmpel)
@@ -290,6 +299,16 @@ class DFXMLObject(object):
         self._dc = value
 
     @property
+    def externals(self):
+        """(This property behaves the same as FileObject.externals.)"""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
+
+    @property
     def files(self):
         """List of file objects directly attached to this DFXMLObject.  No setter for now."""
         return self._files
@@ -324,9 +343,12 @@ class DFXMLObject(object):
 
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):
+        self.command_line = kwargs.get("command_line")
+        self.interpreter = kwargs.get("interpreter")
         self.metadata = kwargs.get("metadata")
-        self.creator = kwargs.get("creator")
-        self.source = kwargs.get("source")
+        self.program = kwargs.get("program")
+        self.program_version = kwargs.get("program_version")
+        self.sources = kwargs.get("sources", [])
         self.version = kwargs.get("version")
         self._hives = []
         self._cells = []
@@ -338,6 +360,10 @@ class RegXMLObject(object):
         for cell in input_cells:
             self.append(cells)
 
+        #Add default namespaces
+        #TODO This will cause a problem when the Objects bindings are used for a DFXML document and RegXML document in the same program.
+        self.add_namespace("", XMLNS_REGXML)
+
     def __iter__(self):
         """Yields all HiveObjects, recursively their CellObjects, and the CellObjects directly attached to this RegXMLObject, in that order."""
         for h in self._hives:
@@ -346,6 +372,10 @@ class RegXMLObject(object):
                 yield c
         for c in self._cells:
             yield c
+
+    def add_namespace(self, prefix, url):
+        self._namespaces[prefix] = url
+        ET.register_namespace(prefix, url)
 
     def append(self, value):
         if isinstance(value, HiveObject):
@@ -398,6 +428,49 @@ class RegXMLObject(object):
         if self.version:
             outel.attrib["version"] = self.version
 
+        if self.program or self.program_version:
+            tmpel0 = ET.Element("creator")
+            if self.program:
+                tmpel1 = ET.Element("program")
+                tmpel1.text = self.program
+                tmpel0.append(tmpel1)
+            if self.program_version:
+                tmpel1 = ET.Element("version")
+                tmpel1.text = self.program_version
+                tmpel0.append(tmpel1)
+            outel.append(tmpel0)
+
+        if self.command_line:
+            tmpel0 = ET.Element("execution_environment")
+
+            if self.interpreter:
+                tmpel1 = ET.Element("interpreter")
+                tmpel1.text = self.interpreter
+
+            tmpel1 = ET.Element("command_line")
+            tmpel1.text = self.command_line
+            tmpel0.append(tmpel1)
+
+            #TODO Note libraries used at run-time
+
+            outel.append(tmpel0)
+
+        if len(self.sources) > 0:
+            tmpel0 = ET.Element("source")
+            for source in self.sources:
+                tmpel1 = ET.Element("image_filename")
+                tmpel1.text = source
+                tmpel0.append(tmpel1)
+            outel.append(tmpel0)
+
+        #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of RegXML.
+        #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
+        for prefix in self._namespaces:
+            attrib_name = "xmlns"
+            if prefix != "":
+                attrib_name += ":" + prefix
+            outel.attrib[attrib_name] = self._namespaces[prefix]
+
         return outel
 
     def to_regxml(self):
@@ -413,6 +486,7 @@ class VolumeObject(object):
       "block_count",
       "block_size",
       "byte_runs",
+      "externals",
       "first_block",
       "ftype",
       "ftype_str",
@@ -442,7 +516,10 @@ class VolumeObject(object):
         for prop in VolumeObject._all_properties:
             if prop in ["annos", "files"]:
                 continue
-            setattr(self, prop, kwargs.get(prop))
+            elif prop == "externals":
+                setattr(self, prop, kwargs.get(prop, OtherNSElementList()))
+            else:
+                setattr(self, prop, kwargs.get(prop))
 
     def __iter__(self):
         """Yields all FileObjects directly attached to this VolumeObject."""
@@ -521,6 +598,9 @@ class VolumeObject(object):
                 #_logger.debug("ce.text = %r" % ce.text)
                 setattr(self, ctn, ce.text)
                 #_logger.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
@@ -555,6 +635,8 @@ class VolumeObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
+        for e in self.externals:
+            outel.append(e)
         for f in self._files:
             tmpel = f.to_Element()
             outel.append(tmpel)
@@ -674,6 +756,16 @@ class VolumeObject(object):
         return self._diffs
 
     @property
+    def externals(self):
+        """(This property behaves the same as FileObject.externals.)"""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
+
+    @property
     def first_block(self):
         return self._first_block
 
@@ -732,11 +824,38 @@ class VolumeObject(object):
         self._sector_size = _intcast(val)
 
 class HiveObject(object):
+
+    _all_properties = set([
+      "annos",
+      "mtime",
+      "filename",
+      "original_fileobject",
+      "original_hive"
+    ])
+
+    _diff_attr_names = {
+      "new":"delta:new_hive",
+      "deleted":"delta:deleted_hive",
+      "modified":"delta:modified_hive",
+      "matched":"delta:matched"
+    }
+
+    _incomparable_properties = set([
+      "annos"
+    ])
+
     def __init__(self, *args, **kwargs):
         self._cells = []
+        self._annos = set()
+        self._diffs = set()
+
+        for prop in HiveObject._all_properties:
+            if prop in ["annos", "cells"]:
+                continue
+            setattr(self, prop, kwargs.get(prop))
 
     def __iter__(self):
-        """Yields all CellObjects directly attached to this VolumeObject."""
+        """Yields all CellObjects directly attached to this HiveObject."""
         for c in self._cells:
             yield c
 
@@ -744,17 +863,125 @@ class HiveObject(object):
         _typecheck(value, CellObject)
         self._cells.append(value)
 
+    def compare_to_original(self):
+        self._diffs = self.compare_to_other(self.original_hive, True)
+
+    def compare_to_other(self, other, ignore_original=False):
+        """Returns a set of all the properties found to differ."""
+        _typecheck(other, HiveObject)
+        diffs = set()
+        for prop in HiveObject._all_properties:
+            if prop in HiveObject._incomparable_properties:
+                continue
+            if ignore_original and prop == "original_hive":
+                continue
+
+            #Allow file system type to be case-insensitive
+            if getattr(self, prop) != getattr(other, prop):
+                diffs.add(prop)
+        return diffs
+
     def print_regxml(self, output_fh=sys.stdout):
+        pe = self.to_partial_Element()
+        xml_wrapper = _ET_tostring(pe)
+        xml_foot = "</hive>"
+        #Check for an empty element
+        if xml_wrapper.strip()[-3:] == " />":
+            xml_head = xml_wrapper.strip()[:-3] + ">"
+        elif xml_wrapper.strip()[-2:] == "/>":
+            xml_head = xml_wrapper.strip()[:-2] + ">"
+        else:
+            xml_head = xml_wrapper.strip()[:-len(xml_foot)]
+
+        output_fh.write(xml_head)
+        output_fh.write("\n")
+
         for cell in self._cells:
             output_fh.write(cell.to_regxml())
             output_fh.write("\n")
 
+        output_fh.write(xml_foot)
+        output_fh.write("\n")
+
     def to_Element(self):
-        outel = ET.Element("hive")
+        outel = self.to_partial_Element()
         for cell in self._cells:
             tmpel = cell.to_Element()
             outel.append(tmpel)
         return outel
+
+    def to_partial_Element(self):
+        outel = ET.Element("hive")
+
+        if self.filename:
+            tmpel = ET.Element("filename")
+            tmpel.text = self.filename
+            outel.append(tmpel)
+
+        if self.mtime:
+            tmpel = self.mtime.to_Element()
+            outel.append(tmpel)
+
+        if self.original_fileobject:
+            tmpel = self.original_fileobject.to_Element()
+            #NOTE: "delta" namespace intentionally omitted.
+            tmpel.tag = "original_fileobject"
+            outel.append(tmpel)
+
+        return outel
+
+    @property
+    def annos(self):
+        """Set of differential annotations.  Expected members are the keys of this class's _diff_attr_names dictionary."""
+        return self._annos
+
+    @annos.setter
+    def annos(self, val):
+        _typecheck(val, set)
+        self._annos = val
+
+    @property
+    def filename(self):
+        """Path of the hive file within the parent file system."""
+        return self._filename
+
+    @filename.setter
+    def filename(self, val):
+        self._filename = _strcast(val)
+
+    @property
+    def mtime(self):
+        return self._mtime
+
+    @mtime.setter
+    def mtime(self, val):
+        if val is None:
+            self._mtime = None
+        elif isinstance(val, TimestampObject):
+            self._mtime = val
+        else:
+            checked_val = TimestampObject(val, name="mtime")
+            self._mtime = checked_val
+
+    @property
+    def original_fileobject(self):
+        return self._original_fileobject
+
+    @original_fileobject.setter
+    def original_fileobject(self, val):
+        if not val is None:
+            _typecheck(val, FileObject)
+        self._original_fileobject = val
+
+    @property
+    def original_hive(self):
+        return self._original_hive
+
+    @original_hive.setter
+    def original_hive(self, val):
+        if not val is None:
+            _typecheck(val, HiveObject)
+        self._original_hive = val
 
 class ByteRun(object):
 
@@ -763,7 +990,9 @@ class ByteRun(object):
       "fs_offset",
       "file_offset",
       "fill",
-      "len"
+      "len",
+      "type",
+      "uncompressed_len"
     ])
 
     def __init__(self, *args, **kwargs):
@@ -777,6 +1006,14 @@ class ByteRun(object):
         _typecheck(other, ByteRun)
         #Don't glom fills of different values
         if self.fill != other.fill:
+            return None
+
+        #Don't glom typed byte runs (particularly since type has been observed to be 'resident')
+        if self.type != other.type:
+            return None
+
+        #Don't glom compressed runs
+        if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
         if None in [self.len, other.len]:
@@ -807,7 +1044,9 @@ class ByteRun(object):
           self.fs_offset == other.fs_offset and \
           self.file_offset == other.file_offset and \
           self.fill == other.fill and \
-          self.len == other.len
+          self.len == other.len and \
+          self.type == other.type and \
+          self.uncompressed_len == other.uncompressed_len
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -846,8 +1085,15 @@ class ByteRun(object):
         outel = ET.Element("byte_run")
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
-            if not val is None:
+            #Skip null properties
+            if val is None:
+                continue
+
+            if isinstance(val, bytes):
+                outel.attrib[prop] = str(struct.unpack("b", val)[0])
+            else:
                 outel.attrib[prop] = str(val)
+
         return outel
 
     @property
@@ -860,12 +1106,29 @@ class ByteRun(object):
 
     @property
     def fill(self):
-        """There is an implicit assumption that the fill character is encoded as UTF-8."""
+        """
+        At the moment, the fill value is assumed to be a single byte.  The value you receive from this property wll be None or a byte.  Setting fill to the string "0" will return the null byte when retrieved later.
+
+        For now, setting to any digital string (e.g. "41") will return a byte representing the integer casting string (e.g. the number 41), but this is subject to change pending some discussion.
+        """
         return self._fill
 
     @fill.setter
     def fill(self, val):
-        self._fill = _bytecast(val)
+        if val is None:
+            self._fill = val
+        elif val == "0":
+            self._fill = b'\x00'
+        elif isinstance(val, bytes):
+            if len(val) != 1:
+                raise NotImplementedError("Received a %d-length fill byte string for a byte run.  Only 1-byte fill strings are accepted for now, pending further discussion.")
+            self._fill = val
+        elif isinstance(val, int):
+            #This is the easiest way between Python 2 and 3.  int.to_bytes would be better, but that is only in >=3.2.
+            self._fill = struct.pack("b", val)
+        elif isinstance(val, str) and val.isdigit():
+            #Recurse, changing type
+            self.fill = int(val)
 
     @property
     def fs_offset(self):
@@ -890,6 +1153,22 @@ class ByteRun(object):
     @len.setter
     def len(self, val):
         self._len = _intcast(val)
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, val):
+        self._type = _strcast(val)
+
+    @property
+    def uncompressed_len(self):
+        return self._uncompressed_len
+
+    @uncompressed_len.setter
+    def uncompressed_len(self, val):
+        self._uncompressed_len = _intcast(val)
 
 class ByteRuns(object):
     """
@@ -1262,7 +1541,7 @@ class TimestampObject(object):
     @property
     def time(self):
         """
-        The actual timestamp.  A DFXML.dftime object.  This class might be superfluous and end up collapsing into that...
+        The actual timestamp.  A dfxml.dftime object.  This class might be superfluous and end up collapsing into that...
         """
         return self._time
 
@@ -1311,6 +1590,7 @@ class FileObject(object):
       "data_brs",
       "dtime",
       "error",
+      "externals",
       "filename",
       "filesize",
       "gid",
@@ -1367,7 +1647,10 @@ class FileObject(object):
         for prop in FileObject._all_properties:
             if prop == "annos":
                 continue
-            setattr(self, prop, kwargs.get(prop))
+            elif prop == "externals":
+                setattr(self, prop, kwargs.get(prop, OtherNSElementList()))
+            else:
+                setattr(self, prop, kwargs.get(prop))
         self._annos = set()
         self._diffs = set()
 
@@ -1501,6 +1784,18 @@ class FileObject(object):
             for chunk in self.byte_runs.iter_contents(_image_path, buffer_size, sector_size, errlog, statlog):
                 yield chunk
 
+    def is_allocated(self):
+        """Collapse potentially-partial allocation information into a yes, no, or unknown answer."""
+        if self.alloc_inode == True and self.alloc_name == True:
+            return True
+        if self.alloc_inode is None and self.alloc_name is None:
+            if self.alloc is None:
+                return None
+            else:
+                return self.alloc
+        #Partial allocation information at this point is assumed False.  In some file systems, like FAT, we only need one of alloc_inode and alloc_name for allocation status.  Guidelines on which should win out haven't been set yet, though, so wait on this.
+        return False
+
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
@@ -1571,6 +1866,9 @@ class FileObject(object):
                 getattr(self, ctn).populate_from_Element(ce)
             elif ctn in FileObject._all_properties:
                 setattr(self, ctn, ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
                     _warned_elements.add((cns, ctn))
@@ -1688,6 +1986,10 @@ class FileObject(object):
                 _anno_byte_runs(tmpel)
                 outel.append(tmpel)
 
+        def _append_externals():
+            for e in self.externals:
+                outel.append(e)
+
         def _append_object(name, value, namespace_prefix=None):
             """name must be the name of a property that has a to_Element() method.  namespace_prefix will be prepended as-is to the element tag."""
             obj = value
@@ -1749,6 +2051,7 @@ class FileObject(object):
         _append_time("bkup_time", self.bkup_time)
         _append_str("link_target", self.link_target)
         _append_str("libmagic", self.libmagic)
+        _append_externals()
         _append_byte_runs("inode_brs", self.inode_brs)
         _append_byte_runs("name_brs", self.name_brs)
         _append_byte_runs("data_brs", self.data_brs)
@@ -1769,7 +2072,8 @@ class FileObject(object):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         global _nagged_alloc
         if not _nagged_alloc:
-            _logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
+            #alloc isn't deprecated yet.
+            #_logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
             _nagged_alloc = True
         if self.alloc_inode and self.alloc_name:
             return True
@@ -1920,6 +2224,26 @@ class FileObject(object):
         self._error = _strcast(val)
 
     @property
+    def filename(self):
+        return self._filename
+
+    @filename.setter
+    def filename(self, val):
+        self._filename = _strcast(val)
+    @property
+    def externals(self):
+        """
+        This property exposes XML elements of other namespaces.  Since these elements can be of arbitrary complexity, this list is solely comprised ofxml.etree.ElementTree.Element objects.  The tags must be a fully-qualified namespace (of the pattern {URI}localname).  If generating the Elements with a script instead of de-serializing from XML, you should issue an ElementTree register_namespace call with your namespace abbreviation prefix.
+        NOTE:  Diffs are currently NOT computed for external elements.
+        NOTE:  This property should be considered unstable, as the interface is in an early design phase.  Please notify the maintainers of this library (see the Git history for the Objects.py file) if you are using this interface and wish to be notified of updates."""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
+
+    @property
     def filesize(self):
         return self._filesize
 
@@ -1969,6 +2293,14 @@ class FileObject(object):
         if not val is None:
             _typecheck(val, ByteRuns)
         self._inode_brs = val
+
+    @property
+    def md5(self):
+        return self._md5
+
+    @md5.setter
+    def md5(self, val):
+        self._md5 = _strcast(val)
 
     @property
     def meta_type(self):
@@ -2080,6 +2412,14 @@ class FileObject(object):
         self._seq = _intcast(val)
 
     @property
+    def sha1(self):
+        return self._sha1
+
+    @sha1.setter
+    def sha1(self, val):
+        self._sha1 = _strcast(val)
+
+    @property
     def uid(self):
         return self._uid
 
@@ -2129,16 +2469,46 @@ class FileObject(object):
             _typecheck(val, VolumeObject)
         self._volume_object = val
 
+class OtherNSElementList(list):
+    #Note that super() must be called with arguments to work in Python 2.
+
+    @classmethod
+    def _check_qname(cls, tagname):
+        (ns, ln) = _qsplit(tagname)
+        if ns == dfxml.XMLNS_DFXML:
+            raise ValueError("'External' elements must be a non-DFXML namespace.")
+        #Register qname for later output
+        #TODO Devise a module-level interface for namespace abreviations.
+
+    def __repr__(self):
+        #Unwrap the string representation of this class's type name (necessary because we don't necessarily know if it'll be Objects.Other... or just Other...).
+        _typestr = str(type(self))[ len("<class '") : -len("'>") ]
+        return _typestr + "(" + super(OtherNSElementList, self).__repr__() + ")"
+
+    def __setitem__(self, idx, value):
+        _typecheck(value, ET.Element)
+        OtherNSElementList._check_qname(value.tag)
+        super(OtherNSElementList, self).__setitem__(idx, value)
+
+    def append(self, value):
+        _typecheck(value, ET.Element)
+        OtherNSElementList._check_qname(value.tag)
+        super(OtherNSElementList, self).append(value)
 
 class CellObject(object):
 
     _all_properties = set([
       "alloc",
       "annos",
+      "basename",
       "byte_runs",
       "cellpath",
+      "data",
+      "data_conversions",
+      "data_encoding",
+      "data_type",
+      "error",
       "mtime",
-      "name",
       "name_type",
       "original_cellobject",
       "parent_object",
@@ -2235,16 +2605,35 @@ class CellObject(object):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "alloc":
                 self.alloc = ce.text
+            elif ctn == "basename":
+                self.basename = ce.text
             elif ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "cellpath":
                 self.cellpath = ce.text
+            elif ctn == "data":
+                self.data = ce.text
+                if ce.attrib.get("encoding"):
+                    self.data_encoding = ce.attrib["encoding"]
+            elif ctn == "data_conversions":
+                self.data_conversions = dict()
+                for cce in ce:
+                    if cce.tag == "int":
+                        self.data_conversions["int"] = int()
+                    elif cce.tag == "string":
+                        self.data_conversions["string"] = cce.text
+                    elif cce.tag == "string_list":
+                        self.data_conversions["string_list"] = []
+                        for ccce in cce:
+                            self.data_conversions["string_list"].append(ccce.text)
+            elif ctn == "data_type":
+                self.data_type = ce.text
+            elif ctn == "error":
+                self.error = ce.text
             elif ctn == "mtime":
                 self.mtime = TimestampObject()
                 self.mtime.populate_from_Element(ce)
-            elif ctn == "name":
-                self.name = ce.text
             elif ctn == "name_type":
                 self.name_type = ce.text
             elif ctn == "original_cellobject":
@@ -2288,6 +2677,18 @@ class CellObject(object):
             if el.tag in self.diffs:
                 el.attrib["delta:changed_property"] = "1"
                 diffs_whittle_set.remove(el.tag)
+            #Do an additional check for data_encoding, which is serialized as an attribute.
+            if el.tag == "data" and "data_encoding" in self.diffs:
+                el.attrib["delta:changed_property"] = "1"
+                diffs_whittle_set.remove("data_encoding")
+
+        def _append_bool(name, value):
+            if not value is None or name in diffs_whittle_set:
+                tmpel = ET.Element(name)
+                if not value is None:
+                    tmpel.text = "1" if value else "0"
+                _anno_change(tmpel)
+                outel.append(tmpel)
 
         #Recall that Element text must be a string
         def _append_str(name, value):
@@ -2296,6 +2697,10 @@ class CellObject(object):
                 if not value is None:
                     tmpel.text = str(value)
                 _anno_change(tmpel)
+
+                if name == "data" and not self.data_encoding is None:
+                    tmpel.attrib["encoding"] = self.data_encoding
+
                 outel.append(tmpel)
 
         def _append_object(name, value):
@@ -2312,10 +2717,37 @@ class CellObject(object):
             outel.attrib["root"] = str(self.root)
 
         _append_str("cellpath", self.cellpath)
-        _append_str("name", self.name)
+        _append_str("basename", self.basename)
+        _append_str("error", self.error)
         _append_str("name_type", self.name_type)
-        _append_str("alloc", self.alloc)
+        _append_bool("alloc", self.alloc)
         _append_object("mtime", self.mtime)
+        _append_str("data_type", self.data_type)
+        _append_str("data", self.data)
+
+        #The experimental conversions element needs its own code
+        if not self.data_conversions is None or "data_conversions" in diffs_whittle_set:
+            tmpel = ET.Element("data_conversions")
+            if not self.data_conversions is None:
+                if "int" in self.data_conversions:
+                    tmpcel = ET.Element("int")
+                    tmpcel.text = str(self.data_conversions["int"])
+                    tmpel.append(tmpcel)
+                if "string" in self.data_conversions:
+                    tmpcel = ET.Element("string")
+                    tmpcel.text = str(self.data_conversions["string"])
+                    tmpel.append(tmpcel)
+                if "string_list" in self.data_conversions:
+                    tmpcel = ET.Element("string_list")
+                    for s in self.data_conversions["string"]:
+                        tmpccel = ET.Element("string")
+                        tmpccel.text = s
+                        tmpcel.append(tmpccel)
+                    tmpel.append(tmpcel)
+                    
+            _anno_change(tmpel)
+            outel.append(tmpel)
+
         _append_object("byte_runs", self.byte_runs)
         _append_object("original_cellobject", self.original_cellobject)
 
@@ -2346,6 +2778,16 @@ class CellObject(object):
         self._annos = val
 
     @property
+    def basename(self):
+        return self._basename
+
+    @basename.setter
+    def basename(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._basename = val
+
+    @property
     def byte_runs(self):
         return self._byte_runs
 
@@ -2366,6 +2808,64 @@ class CellObject(object):
         self._cellpath = val
 
     @property
+    def data(self):
+        """Expecting a base64-encoded string.  See conversions (according to the Hive parser's library) in data_conversions property."""
+        return self._data
+
+    @data.setter
+    def data(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._data = val
+
+    @property
+    def data_conversions(self):
+        return self._data_conversions
+
+    @data_conversions.setter
+    def data_conversions(self, val):
+        if not val is None:
+            _typecheck(val, dict)
+        self._data_conversions = val
+
+    @property
+    def data_encoding(self):
+        """Expecting a string, typically 'base64'."""
+        return self._data_encoding
+
+    @data_encoding.setter
+    def data_encoding(self, val):
+        if not val is None:
+            _typecheck(val, str)
+        self._data_encoding = val
+
+    @property
+    def data_type(self):
+        """Expecting a string, e.g. "REG_MULTI_SZ", or an int, because value type is known to be overloaded as an integer storage field in some cells."""
+        return self._data_type
+
+    @data_type.setter
+    def data_type(self, val):
+        if not val in [
+          None,
+          "REG_NONE",
+          "REG_SZ",
+          "REG_EXPAND_SZ",
+          "REG_BINARY",
+          "REG_DWORD",
+          "REG_DWORD_BIG_ENDIAN",
+          "REG_LINK",
+          "REG_MULTI_SZ",
+          "REG_RESOURCE_LIST",
+          "REG_FULL_RESOURCE_DESCRIPTOR",
+          "REG_RESOURCE_REQUIREMENTS_LIST",
+          "REG_QWORD"
+        ]:
+            if not isinstance(val, int) or (isinstance(val, str) and val.isdigit()):
+                raise ValueError("Unexpected value data type received: %r, type %r." % (val, type(val)))
+        self._data_type = val
+
+    @property
     def diffs(self):
         return self._diffs
 
@@ -2373,6 +2873,27 @@ class CellObject(object):
     def diffs(self, value):
         _typecheck(value, set)
         self._diffs = value
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, value):
+        if not value is None:
+            _typecheck(value, str)
+        self._error = value
+
+    @property
+    def hive_object(self):
+        """Reference to the containing hive object.  Not meant to be propagated with __repr__ or to_Element()."""
+        return self._hive_object
+
+    @hive_object.setter
+    def hive_object(self, val):
+        if not val is None:
+            _typecheck(val, HiveObject)
+        self._hive_object = val
 
     @property
     def mtime(self):
@@ -2387,16 +2908,6 @@ class CellObject(object):
         else:
             self._mtime = TimestampObject(val, name="mtime")
             self.sanity_check()
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, val):
-        if not val is None:
-            _typecheck(val, str)
-        self._name = val
 
     @property
     def name_type(self):
@@ -2438,7 +2949,7 @@ class CellObject(object):
         self._root = _boolcast(val)
 
 
-def iterparse(filename, events=("start","end"), dfxmlobject=None):
+def iterparse(filename, events=("start","end"), **kwargs):
     """
     Generator.  Yields a stream of populated DFXMLObjects, VolumeObjects and FileObjects, paired with an event type ("start" or "end").  The DFXMLObject and VolumeObjects do NOT have their child lists populated with this method - that is left to the calling program.
 
@@ -2447,12 +2958,14 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
     @param filename: A string
     @param events: Events.  Optional.  A tuple of strings, containing "start" and/or "end".
     @param dfxmlobject: A DFXMLObject document.  Optional.  A DFXMLObject is created and yielded in the object stream if this argument is not supplied.
+    @param fiwalk: Optional.  Path to a particular fiwalk build you want to run.
     """
 
     #The DFXML stream file handle.
     fh = None
     subp = None
-    subp_command = ["fiwalk", "-x", filename]
+    fiwalk_path = kwargs.get("fiwalk", "fiwalk")
+    subp_command = [fiwalk_path, "-x", filename]
     if filename.endswith("xml"):
         fh = open(filename, "rb")
     else:
@@ -2465,7 +2978,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
             raise ValueError("Unexpected event type: %r.  Expecting 'start', 'end'." % e)
         _events.add(e)
 
-    dobj = dfxmlobject or DFXMLObject()
+    dobj = kwargs.get("dfxmlobject", DFXMLObject())
 
     #The only way to efficiently populate VolumeObjects is to populate the object when the stream has hit its first FileObject.
     vobj = None
@@ -2492,6 +3005,7 @@ def iterparse(filename, events=("start","end"), dfxmlobject=None):
         #Track namespaces
         if ETevent == "start-ns":
             dobj.add_namespace(*elem)
+            ET.register_namespace(*elem)
             continue
 
         #Split tag name into namespace and local name
