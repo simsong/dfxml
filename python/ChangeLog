@@ -1,3 +1,7 @@
+2017-01-23    <alexander.nelson@nist.gov>
+
+	* walk_to_dfxml.py: Add script to walk current directory and render as DFXML.
+
 2015-01-21    <a.nelson@prometheuscomputing.com>
 
 	* Python: Prevent accidental error conditions on missing a Python 3 version.
