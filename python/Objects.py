@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -51,16 +51,30 @@ _warned_byterun_badtypecomp = False
 XMLNS_REGXML = "http://www.forensicswiki.org/wiki/RegXML"
 
 def _ET_tostring(e):
-    """Between Python 2 and 3, there are some differences in the ElementTree library's tostring() behavior.  One, the method balks at the "unicode" encoding in 2.  Two, in 2, the XML prototype's output with every invocation.  This method serves as a wrapper to deal with those issues."""
+    """Between Python v2 and v3, there are some differences in the ElementTree library's tostring() behavior.  One, the method balks at the "unicode" encoding in v2.  Two, in 2, the XML prototypes output with every invocation.  This method serves as a wrapper to deal with those issues, plus another issue where ET.tostring prints repeated xmlns declarations (observed on reading and writing a DFXML file twice in the same process).  The repeated prints appear to be from a lack of inspection of existing namespace declarations in the attributes dictionary."""
+    retval = None
     if sys.version_info[0] < 3:
         tmp = ET.tostring(e, encoding="UTF-8")
         if tmp[0:2] == "<?":
             #Trim away first line; it's an XML prototype.  This only appears in Python 2's ElementTree output.
-            return tmp[ tmp.find("?>\n")+3 : ]
+            retval = tmp[ tmp.find("?>\n")+3 : ]
         else:
-            return tmp
+            retval = tmp
     else:
-        return ET.tostring(e, encoding="unicode")
+        retval = ET.tostring(e, encoding="unicode")
+    container_end = retval.index(">")
+    for (uri, prefix) in list(ET._namespace_map.items()):
+        if prefix == "":
+            xmlns_attr_name = "xmlns"
+        else:
+            xmlns_attr_name = "xmlns:" + prefix
+        xmlns_attr_string = '%s="%s"' % (xmlns_attr_name, uri)
+        xmlns_attr_tally = retval.count(xmlns_attr_string, 0, container_end)
+        if xmlns_attr_tally > 1:
+            _logger.warning("ET.tostring() printed a repeated xmlns declaration: %r.  Trimming %d repetition(s)." % (xmlns_attr_string, xmlns_attr_tally-1))
+            container_string = retval[ : container_end+1 ]
+            retval = container_string.replace(xmlns_attr_string, "", xmlns_attr_tally-1) + retval[ container_end+1 : ]
+    return retval
 
 def _boolcast(val):
     """Takes Boolean values, and 0 or 1 in string or integer form, and casts them all to Boolean.  Preserves nulls.  Balks at everything else."""
@@ -176,8 +190,13 @@ class DFXMLObject(object):
             yield f
 
     def add_namespace(self, prefix, url):
-        self._namespaces[prefix] = url
-        ET.register_namespace(prefix, url)
+        """In case of conflicting namespace definitions, first definition wins."""
+        #_logger.debug("self._namespaces.keys() = %r." % self._namespaces.keys())
+        if prefix not in self._namespaces.keys():
+            #_logger.debug("Registering namespace: %r, %r." % (prefix, url))
+            self._namespaces[prefix] = url
+            ET.register_namespace(prefix, url)
+            #_logger.debug("ET namespaces after registration: %r." % ET._namespace_map)
 
     def append(self, value):
         if isinstance(value, VolumeObject):
@@ -190,7 +209,7 @@ class DFXMLObject(object):
 
     def iter_namespaces(self):
         """Yields (prefix, url) pairs of each namespace registered in this DFXMLObject."""
-        for prefix in self._namespaces:
+        for prefix in sorted(self._namespaces.keys()):
             yield (prefix, self._namespaces[prefix])
 
     def populate_from_Element(self, e):
@@ -213,6 +232,7 @@ class DFXMLObject(object):
         """Memory-efficient DFXML document printer.  However, it assumes the whole element tree is already constructed."""
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
+        #_logger.debug("print_dfxml:dfxml_wrapper = %r." % dfxml_wrapper)
         dfxml_foot = "</dfxml>"
         #Check for an empty element
         if dfxml_wrapper.strip()[-3:] == " />":
@@ -239,8 +259,6 @@ class DFXMLObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
-        for e in self.externals:
-            outel.append(e)
         for v in self._volumes:
             tmpel = v.to_Element()
             outel.append(tmpel)
@@ -260,6 +278,9 @@ class DFXMLObject(object):
             tmpel0 = ET.Element("delta:file_ignore")
             tmpel0.text = diff_file_ignore
             outel.append(tmpel0)
+
+        for e in self.externals:
+            outel.append(e)
 
         tmpel0 = ET.Element("metadata")
         for key in sorted(self.dc):
@@ -293,11 +314,14 @@ class DFXMLObject(object):
 
         #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of DFXML.
         #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
-        for prefix in self._namespaces:
-            attrib_name = "xmlns"
-            if prefix != "":
-                attrib_name += ":" + prefix
-            outel.attrib[attrib_name] = self._namespaces[prefix]
+        for (prefix, url) in self.iter_namespaces():
+            if prefix == "":
+                attrib_name = "xmlns"
+            else:
+                attrib_name = "xmlns:" + prefix
+            outel.attrib[attrib_name] = url
+        #_logger.debug("ET namespaces at outel generation: %r." % ET._namespace_map)
+        #_logger.debug("outel.attrib = %r." % outel.attrib)
 
         return outel
 
@@ -496,10 +520,11 @@ class RegXMLObject(object):
 
         #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of RegXML.
         #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
-        for prefix in self._namespaces:
-            attrib_name = "xmlns"
-            if prefix != "":
-                attrib_name += ":" + prefix
+        for prefix in sorted(self._namespaces.keys()):
+            if prefix == "":
+                attrib_name = "xmlns"
+            else:
+                attrib_name += "xmlns:" + prefix
             outel.attrib[attrib_name] = self._namespaces[prefix]
 
         return outel
@@ -669,8 +694,6 @@ class VolumeObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
-        for e in self.externals:
-            outel.append(e)
         for f in self._files:
             tmpel = f.to_Element()
             outel.append(tmpel)
@@ -690,6 +713,9 @@ class VolumeObject(object):
                 annos_whittle_set.remove(annodiff)
         if len(annos_whittle_set) > 0:
             _logger.warning("Failed to export some differential annotations: %r." % annos_whittle_set)
+
+        for e in self.externals:
+            outel.append(e)
 
         if self.byte_runs:
             outel.append(self.byte_runs.to_Element())
