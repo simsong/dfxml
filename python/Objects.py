@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -604,6 +604,9 @@ class VolumeObject(object):
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
+            elif ctn == "byte_run":
+                #byte_runs' block recursively handles this element.
+                continue
             elif ctn == "original_volume":
                 self.original_volume = VolumeObject()
                 self.original_volume.populate_from_Element(ce)
