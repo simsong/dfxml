@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 """
 make_differential_dfxml.py
 
@@ -9,7 +22,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.10.2"
+__version__ = "0.10.3"
 
 import Objects
 import logging
@@ -60,7 +73,6 @@ def make_differential_dfxml(pre, post, **kwargs):
     if diff_mode not in _expected_diff_modes:
         raise ValueError("Differencing mode should be in: %r." % _expected_diff_modes)
     diff_mask_set = set()
-    diff_ignore_set = set()
 
     if diff_mode == "idifference":
         diff_mask_set |= set([
@@ -74,16 +86,17 @@ def make_differential_dfxml(pre, post, **kwargs):
           "mtime",
           "sha1"
         ])
-    diff_ignore_set |= ignore_properties
     _logger.debug("diff_mask_set = " + repr(diff_mask_set))
-    _logger.debug("diff_ignore_set = " + repr(diff_ignore_set))
-        
 
     #d: The container DFXMLObject, ultimately returned.
     d = Objects.DFXMLObject(version="1.1.0")
     d.command_line = " ".join(sys.argv)
     d.add_namespace("delta", dfxml.XMLNS_DELTA)
     d.dc["type"] = "Disk image difference set"
+
+    #TODO Write unit test that reads back a hand-written file with this property (and maybe another with a non-existent file property).
+    d.diff_file_ignores |= ignore_properties
+    _logger.debug("d.diff_file_ignores = " + repr(d.diff_file_ignores))
 
     #The list most of this function is spent on building
     fileobjects_changed = []
@@ -208,7 +221,7 @@ def make_differential_dfxml(pre, post, **kwargs):
                 new_fis_unalloc[key].append(new_obj)
                 continue
 
-            #The rest of this loop is irrelevant until the second file.
+            #The rest of this loop is irrelevant until the second DFXML file.
             if old_fis is None:
                 new_fis[key] = new_obj
                 continue
@@ -218,10 +231,10 @@ def make_differential_dfxml(pre, post, **kwargs):
                 #Extract the old fileobject and check for changes
                 old_obj = old_fis.pop(key)
                 new_obj.original_fileobject = old_obj
-                new_obj.compare_to_original()
+                new_obj.compare_to_original(file_ignores=d.diff_file_ignores)
 
                 #_logger.debug("Diffs: %r." % _diffs)
-                _diffs = new_obj.diffs - diff_ignore_set
+                _diffs = new_obj.diffs - d.diff_file_ignores
                 #_logger.debug("Diffs after ignore-set: %r." % _diffs)
                 if diff_mask_set:
                     _diffs &= diff_mask_set
@@ -244,7 +257,9 @@ def make_differential_dfxml(pre, post, **kwargs):
 
 
         _logger.debug("len(old_fis) = %d" % len(old_fis))
+        _logger.debug("len(old_fis_unalloc) = %d" % len(old_fis_unalloc))
         _logger.debug("len(new_fis) = %d" % len(new_fis))
+        _logger.debug("len(new_fis_unalloc) = %d" % len(new_fis_unalloc))
         _logger.debug("len(fileobjects_changed) = %d" % len(fileobjects_changed))
 
         #Identify renames - only possible if 1-to-1.  Many-to-many renames are just left as new and deleted files.
@@ -280,7 +295,7 @@ def make_differential_dfxml(pre, post, **kwargs):
             old_obj = old_fis.pop((partition, inode, old_name))
             new_obj = new_fis.pop((partition, inode, new_name))
             new_obj.original_fileobject = old_obj
-            new_obj.compare_to_original()
+            new_obj.compare_to_original(file_ignores=d.diff_file_ignores)
             fileobjects_renamed.append(new_obj)
         _logger.debug("len(old_fis) -> %d" % len(old_fis))
         _logger.debug("len(new_fis) -> %d" % len(new_fis))
@@ -306,7 +321,8 @@ def make_differential_dfxml(pre, post, **kwargs):
             old_obj = old_fis.pop((partition, old_name_inodes[key], name))
             new_obj = new_fis.pop((partition, new_name_inodes[key], name))
             new_obj.original_fileobject = old_obj
-            new_obj.compare_to_original()
+            #TODO Test for what chaos ensues when filename is in the ignore list.
+            new_obj.compare_to_original(file_ignores=d.diff_file_ignores)
             fileobjects_changed.append(new_obj)
         _logger.debug("len(old_fis) -> %d" % len(old_fis))
         _logger.debug("len(new_fis) -> %d" % len(new_fis))
@@ -327,13 +343,11 @@ def make_differential_dfxml(pre, post, **kwargs):
                     old_obj = old_fis_unalloc[key].pop()
                     new_obj = new_fis_unalloc[key].pop()
                     new_obj.original_fileobject = old_obj
-                    new_obj.compare_to_original()
+                    new_obj.compare_to_original(file_ignores=d.diff_file_ignores)
                     #The file might not have changed.  It's interesting if it did, though.
 
                     _diffs = new_obj.diffs - diff_mask_set
                     #_logger.debug("Diffs: %r." % _diffs)
-                    _diffs = new_obj.diffs - diff_ignore_set
-                    #_logger.debug("Diffs after ignore-set: %r." % _diffs)
                     if diff_mask_set:
                         _diffs &= diff_mask_set
                         #_logger.debug("Diffs after mask-set: %r." % _diffs)
@@ -347,10 +361,12 @@ def make_differential_dfxml(pre, post, **kwargs):
                 old_obj = old_fis.pop(key)
                 new_obj = new_fis_unalloc[key].pop()
                 new_obj.original_fileobject = old_obj
-                new_obj.compare_to_original()
+                new_obj.compare_to_original(file_ignores=d.diff_file_ignores)
                 fileobjects_deleted.append(new_obj)
         _logger.debug("len(old_fis) -> %d" % len(old_fis))
+        _logger.debug("len(old_fis_unalloc) -> %d" % len(old_fis_unalloc))
         _logger.debug("len(new_fis) -> %d" % len(new_fis))
+        _logger.debug("len(new_fis_unalloc) -> %d" % len(new_fis_unalloc))
         _logger.debug("len(fileobjects_changed) -> %d" % len(fileobjects_changed))
         _logger.debug("len(fileobjects_deleted) -> %d" % len(fileobjects_deleted))
 
@@ -458,7 +474,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("--idifference-diffs", action="store_true", help="Only consider the modifications idifference had considered (names, hashes, timestamps).")
-    parser.add_argument("-i", "--ignore", action="append", help="Object property to ignore in all difference operations.  E.g. pass '-i inode' to ignore inode differences when comparing directory trees on the same file system.")
+    parser.add_argument("-i", "--ignore", action="append", help="Object property to ignore in all difference operations.  E.g. pass '-i inode' to ignore inode differences when comparing directory trees on the same file system.  Affects annotation attributes placed on the fileobject element and the named property's elements, and also the properties used to determine file identities for matching.")
     parser.add_argument("--rename-with-hash", action="store_true", help="Require that renamed files must match on a content hash.")
     parser.add_argument("--retain-unchanged", action="store_true", help="Output unchanged files in the resulting DFXML file.", default=False)
     parser.add_argument("--annotate-matches", action="store_true", help="Add a 'delta:matched' Boolean attribute to every produced object.  Useful for some counting purposes, but not always needed.", default=False)

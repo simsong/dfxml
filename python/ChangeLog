@@ -5,6 +5,7 @@
 	* Objects.py: Add files getter to VolumeObject.
 	* Objects.py: Silence an errant warning.
 	* walk_to_dfxml.py: Catch exceptions on opening files for reading.
+	* Differential analysis: Add ignored file difference properties to DFXMLObject.
 	* Python unit tests: Run some tests outside of in-Makefile Bash loop.
 	* Python: Add NIST disclaimer to updated scripts.
 

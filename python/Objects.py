@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -149,6 +149,7 @@ class DFXMLObject(object):
         self.sources = kwargs.get("sources", [])
         self.dc = kwargs.get("dc", dict())
         self.externals = kwargs.get("externals", OtherNSElementList())
+        self.diff_file_ignores = kwargs.get("diff_file_ignores", set())
 
         self._namespaces = dict()
         self._volumes = []
@@ -202,6 +203,8 @@ class DFXMLObject(object):
                 self.command_line = ce.text
             elif cln == "image_filename":
                 self.sources.append(ce.text)
+            elif (cns, cln) == (dfxml.XMLNS_DELTA, "file_ignore"):
+                self.diff_file_ignores.append(ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
                 #Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
@@ -252,6 +255,11 @@ class DFXMLObject(object):
 
     def to_partial_Element(self):
         outel = ET.Element("dfxml")
+
+        for diff_file_ignore in sorted(self.diff_file_ignores):
+            tmpel0 = ET.Element("delta:file_ignore")
+            tmpel0.text = diff_file_ignore
+            outel.append(tmpel0)
 
         tmpel0 = ET.Element("metadata")
         for key in sorted(self.dc):
@@ -310,6 +318,16 @@ class DFXMLObject(object):
     def dc(self, value):
         _typecheck(value, dict)
         self._dc = value
+
+    @property
+    def diff_file_ignores(self):
+        """A set of DFXML file properties that are excluded from being flagged as differences.  An example of when one may want to use this is when comparing two file system trees in the same file system: inodes are likely to be a differing factor, best excluded to inspect other changes."""
+        return self._diff_file_ignores
+
+    @diff_file_ignores.setter
+    def diff_file_ignores(self, value):
+        _typecheck(value, set)
+        self._diff_file_ignores = value
 
     @property
     def externals(self):
@@ -1704,15 +1722,18 @@ class FileObject(object):
 
         return "FileObject(" + ", ".join(parts) + ")"
 
-    def compare_to_original(self):
-        self._diffs = self.compare_to_other(self.original_fileobject, True)
+    def compare_to_original(self, **kwargs):
+        file_ignores = kwargs.get("file_ignores", set())
+        self._diffs = self.compare_to_other(self.original_fileobject, True, file_ignores)
 
-    def compare_to_other(self, other, ignore_original=False):
+    def compare_to_other(self, other, ignore_original=False, file_ignores=set()):
         _typecheck(other, FileObject)
 
         diffs = set()
 
         for propname in FileObject._all_properties:
+            if propname in file_ignores:
+                continue
             if propname in FileObject._incomparable_properties:
                 continue
             if ignore_original and propname == "original_fileobject":
