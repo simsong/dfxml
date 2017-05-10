@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 . _pick_pythons.sh
 
 XMLLINT=`which xmllint`
@@ -15,11 +28,11 @@ set -x
 #Generate XML output.
 "$PYTHON3" idifference.py --xml idifference_test.dfxml ../samples/difference_test_[01].xml
 if [ ! -x "$XMLLINT" ]; then
-  echo "Error: xmllint not found.  Can't check for if generated DFXML is valid XML.  Install libxml2 (possibly xmlutils) to complete these unit tests." >&2
+  echo "Error: xmllint not found.  Can't check for whether generated DFXML is valid XML.  Install libxml2 (or possibly xmlutils) to complete these unit tests." >&2
   exit 1
 fi
 
-xmllint --format idifference_test.dfxml >idifference_test_formatted.dfxml
+"$XMLLINT" --format idifference_test.dfxml >idifference_test_formatted.dfxml
 
 _check_counts() {
   #Check expected number of fileobjects appears
@@ -35,5 +48,5 @@ _check_counts idifference_test_formatted.dfxml
 #Check that the differential DFXML is cat'able
 
 "$PYTHON3" cat_fileobjects.py --debug idifference_test.dfxml > idifference_test_cat.dfxml
-xmllint --format idifference_test_cat.dfxml >idifference_test_cat_formatted.dfxml
+"$XMLLINT" --format idifference_test_cat.dfxml >idifference_test_cat_formatted.dfxml
 _check_counts idifference_test_cat_formatted.dfxml

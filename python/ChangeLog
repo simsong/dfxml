@@ -8,6 +8,7 @@
 	* Differential analysis: Add ignored file difference properties to DFXMLObject.
 	* Python unit tests: Run some tests outside of in-Makefile Bash loop.
 	* Objects.py: Fix ElementTree name localization and Volume events in iterparse.
+	* idifference unit test: Use variable for xmllint.
 	* Python: Add NIST disclaimer to updated scripts.
 
 2017-01-23    <alexander.nelson@nist.gov>
