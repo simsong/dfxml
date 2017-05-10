@@ -1,3 +1,8 @@
+2017-05-10    <alexander.nelson@nist.gov>
+
+	* _pick_pythons.sh: Update list of Python 3 versions used in testing.
+	* Python: Add NIST disclaimer to updated scripts.
+
 2017-01-23    <alexander.nelson@nist.gov>
 
 	* walk_to_dfxml.py: Add script to walk current directory and render as DFXML.
