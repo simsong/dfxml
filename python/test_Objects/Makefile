@@ -22,6 +22,8 @@ all: \
   check
 
 .PHONY: \
+  check-diff_file_ignore-py2 \
+  check-diff_file_ignore-py3 \
   check-py2 \
   check-py3 \
   check-versioned
@@ -32,11 +34,27 @@ check: \
 	./test_cat_partitions.sh
 	./test_differential_dfxml.sh
 
+check-diff_file_ignore-py2: \
+  diff_file_ignore_sample-py2.dfxml \
+  test_diff_file_ignore.py
+	$(PYTHON2) test_diff_file_ignore.py --debug diff_file_ignore_sample-py2.dfxml
+
+check-diff_file_ignore-py3: \
+  diff_file_ignore_sample-py3.dfxml \
+  test_diff_file_ignore.py
+	$(PYTHON3) test_diff_file_ignore.py --debug diff_file_ignore_sample-py3.dfxml
+
 check-py2:
-	$(MAKE) PY=$(PYTHON2) check-versioned
+	$(MAKE) \
+	  PY=$(PYTHON2) \
+	  check-diff_file_ignore-py2 \
+	  check-versioned
 
 check-py3:
-	$(MAKE) PY=$(PYTHON3) check-versioned
+	$(MAKE) \
+	  PY=$(PYTHON3) \
+	  check-diff_file_ignore-py3 \
+	  check-versioned
 
 check-versioned:
 	@echo Testing Python: $$PY >&2
@@ -65,3 +83,18 @@ clean:
 	rm -f verify_differential_dfxml_{01,23}.py-test[12].xml
 	rm -f test_difference_counts.py-d*
 	rm -f test_cat_partitions.sh.dfxml
+	rm -f diff_file_ignore_sample-py[23].dfxml
+
+diff_file_ignore_sample-py2.dfxml: \
+  Objects.py \
+  diff_file_ignore_sample_dfxml.py
+	rm -f _$@
+	$(PYTHON2) diff_file_ignore_sample_dfxml.py --debug _$@
+	mv _$@ $@
+
+diff_file_ignore_sample-py3.dfxml: \
+  Objects.py \
+  diff_file_ignore_sample_dfxml.py
+	rm -f _$@
+	$(PYTHON3) diff_file_ignore_sample_dfxml.py --debug _$@
+	mv _$@ $@

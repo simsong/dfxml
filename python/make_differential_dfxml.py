@@ -94,7 +94,6 @@ def make_differential_dfxml(pre, post, **kwargs):
     d.add_namespace("delta", dfxml.XMLNS_DELTA)
     d.dc["type"] = "Disk image difference set"
 
-    #TODO Write unit test that reads back a hand-written file with this property (and maybe another with a non-existent file property).
     d.diff_file_ignores |= ignore_properties
     _logger.debug("d.diff_file_ignores = " + repr(d.diff_file_ignores))
 

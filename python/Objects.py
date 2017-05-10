@@ -225,7 +225,7 @@ class DFXMLObject(object):
             elif cln == "image_filename":
                 self.sources.append(ce.text)
             elif (cns, cln) == (dfxml.XMLNS_DELTA, "file_ignore"):
-                self.diff_file_ignores.append(ce.text)
+                self.diff_file_ignores.add(ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
                 #Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
@@ -276,7 +276,9 @@ class DFXMLObject(object):
     def to_partial_Element(self):
         outel = ET.Element("dfxml")
 
+        _logger.debug("self.diff_file_ignores = %r." % self.diff_file_ignores)
         for diff_file_ignore in sorted(self.diff_file_ignores):
+            self.add_namespace("delta", dfxml.XMLNS_DELTA)
             tmpel0 = ET.Element("delta:file_ignore")
             tmpel0.text = diff_file_ignore
             outel.append(tmpel0)
@@ -3173,7 +3175,11 @@ def iterparse(filename, events=("start","end"), **kwargs):
                 elem.clear()
             elif ln == "dfxml":
                 if "end" in _events:
-                    yield ("end", dobj)
+                    #_logger.debug("end, dfxml, _state=%r" % _state)
+                    if _state == READING_PRESTREAM:
+                        #This DFXML document contains no volumes or files, but may contain other metadata.  Populate (which would normally be done before starting a child Object stream) and yield.
+                        dobj.populate_from_Element(dfxml_proxy)
+                        yield ("end", dobj)
             elif ln == "volume":
                 if _state == READING_VOLUMES:
                     #Create and yield VolumeObject now (because there were no file objects to trigger it in the "start" ElementTree events branch above)
@@ -3189,7 +3195,7 @@ def iterparse(filename, events=("start","end"), **kwargs):
                 if volume_proxy is not None:
                     volume_proxy.append(elem)
             elif _state == READING_PRESTREAM:
-                if ln in ["metadata", "creator", "source"]:
+                if ln in ["metadata", "creator", "source"] or ns != dfxml.XMLNS_DFXML:
                     #This is a direct child of the DFXML document property; glom onto the proxy.
                     if dfxml_proxy is not None:
                         dfxml_proxy.append(elem)
@@ -3218,6 +3224,10 @@ def parse(filename):
                 retval.append(obj)
                 appender = obj
         elif event == "end":
+            if isinstance(obj, DFXMLObject):
+                if retval is None:
+                    retval = obj
+                appender = obj
             if isinstance(obj, VolumeObject):
                 appender = retval
             elif isinstance(obj, FileObject):

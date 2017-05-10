@@ -8,6 +8,7 @@
 	* walk_to_dfxml.py: Catch exceptions on opening files for reading.
 	* Differential analysis: Add ignored file difference properties to DFXMLObject.
 	* Python unit tests: Run some tests outside of in-Makefile Bash loop.
+	* Python unit tests: Test for diff_file_ignores reading and writing.
 	* Objects.py: Fix ElementTree name localization and Volume events in iterparse.
 	* Objects.py: Add error reporting to Volume objects.
 	* idifference unit test: Use variable for xmllint.
