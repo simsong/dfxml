@@ -1,11 +1,24 @@
 
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 """
 This file re-creates the major DFXML classes with an emphasis on type safety, serializability, and de-serializability.
 
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.4.5"
+__version__ = "0.5.0"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -764,6 +777,11 @@ class VolumeObject(object):
     def externals(self, val):
         _typecheck(val, OtherNSElementList)
         self._externals = val
+
+    @property
+    def files(self):
+        """List of file objects directly attached to this VolumeObject.  No setter for now."""
+        return self._files
 
     @property
     def first_block(self):

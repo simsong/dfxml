@@ -2,6 +2,7 @@
 
 	* _pick_pythons.sh: Update list of Python 3 versions used in testing.
 	* Makefile: Note phony-file targets.
+	* Objects.py: Add files getter to VolumeObject.
 	* walk_to_dfxml.py: Catch exceptions on opening files for reading.
 	* Python unit tests: Run some tests outside of in-Makefile Bash loop.
 	* Python: Add NIST disclaimer to updated scripts.
