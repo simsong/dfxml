@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -3105,10 +3105,16 @@ def iterparse(filename, events=("start","end"), **kwargs):
                     yield ("end", fi)
                 #Reset
                 elem.clear()
-            elif elem.tag == "dfxml":
+            elif ln == "dfxml":
                 if "end" in _events:
                     yield ("end", dobj)
-            elif elem.tag == "volume":
+            elif ln == "volume":
+                if _state == READING_VOLUMES:
+                    #Create and yield VolumeObject now (because there were no file objects to trigger it in the "start" ElementTree events branch above)
+                    vobj = VolumeObject()
+                    vobj.populate_from_Element(volume_proxy)
+                    if "start" in _events:
+                        yield ("start", vobj)
                 if "end" in _events:
                     yield ("end", vobj)
                 _state = READING_POSTSTREAM
