@@ -1,6 +1,7 @@
 2017-05-10    <alexander.nelson@nist.gov>
 
 	* _pick_pythons.sh: Update list of Python 3 versions used in testing.
+	* Makefile: Note phony-file targets.
 	* Python: Add NIST disclaimer to updated scripts.
 
 2017-01-23    <alexander.nelson@nist.gov>

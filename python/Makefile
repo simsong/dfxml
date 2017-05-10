@@ -1,3 +1,30 @@
+#!/usr/bin/make -f
+
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
+all: \
+  check
+
+.PHONY: \
+  check-dfxml \
+  check-cat_fileobjects \
+  check-dfxml_tool \
+  check-idifference-dfxml \
+  check-mac_timelines \
+  check-Objects \
+  clean-Objects
+
 check: \
   check-dfxml \
   check-cat_fileobjects \
@@ -12,7 +39,8 @@ check: \
 doc: \
   Objects.html
 
-Objects.html: Objects.py
+Objects.html: \
+  Objects.py
 	python3 -m pydoc -w Objects
 
 check-dfxml:
