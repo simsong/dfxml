@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -47,6 +47,8 @@ _warned_byterun_facets = set([])
 #Issue some log statements only once per program invocation.
 _nagged_alloc = False
 _warned_byterun_badtypecomp = False
+_nagged_volume_error_impldrift = False
+_nagged_volume_error_standin = False
 
 XMLNS_REGXML = "http://www.forensicswiki.org/wiki/RegXML"
 
@@ -542,6 +544,7 @@ class VolumeObject(object):
       "block_count",
       "block_size",
       "byte_runs",
+      "error",
       "externals",
       "first_block",
       "ftype",
@@ -694,9 +697,34 @@ class VolumeObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
+        #If there is an error reported on this volume, pop the element off of the partial element's end.
+        errorel = None
+        if not (self.error is None or self.error == ""):
+            if len(outel) == 0:
+                raise ValueError("Partial volume element has no children, but at least the error property was set.")
+            if _qsplit(outel[-1].tag)[1] == "error":
+                #(ET.Element does not have pop().)
+                errorel = outel[-1]
+                del(outel[-1])
+            else:
+                if outel.find("error"):
+                    global _nagged_volume_error_impldrift
+                    if not _nagged_volume_error_impldrift:
+                        _logger.error("Implementation drift - when this code was initially written, the error element was the last to be appended to the partial element.  Leaving the found error element in place for now, but this may fail validation against the schema because of child ordering.")
+                        _nagged_volume_error_impldrift = True
+                else:
+                    global _nagged_volume_error_standin
+                    if not _nagged_volume_error_standin:
+                        _logger.warning("Could not find 'error' child on partial volume element.  Creating a replacement.")
+                        _nagged_volume_error_standin = True
+                    errorel = ET.Element("error")
+                    errorel.text = str(self.error)
         for f in self._files:
             tmpel = f.to_Element()
             outel.append(tmpel)
+        #The error element comes after the fileobject list in the schema.
+        if not errorel is None:
+            outel.append(errorel)
         return outel
 
     def to_partial_Element(self):
@@ -772,6 +800,10 @@ class VolumeObject(object):
 
             outel.append(tmpel)
 
+        #Output the error property (which will be popped and re-appended after the file list in to_Element)
+        #The error should come last because of the two spots extended elements can be placed; this is to simplify the file-listing VolumeObject.to_Element() method.
+        _append_str("error")
+
         if len(diffs_whittle_set) > 0:
             _logger.warning("Did not annotate all of the differing properties of this volume.  Remaining properties:  %r." % diffs_whittle_set)
 
@@ -814,6 +846,14 @@ class VolumeObject(object):
     @property
     def diffs(self):
         return self._diffs
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, val):
+        self._error = _strcast(val)
 
     @property
     def externals(self):
