@@ -13,7 +13,7 @@
 
 """Walk current directory, writing DFXML to stdout."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import os
 import stat
@@ -71,30 +71,39 @@ def filepath_to_fileobject(filepath):
 
     #Add hashes for regular files.
     if fobj.name_type == "r":
-        with open(filepath, "rb") as in_fh:
-            chunk_size = 2**22
-            md5obj = hashlib.md5()
-            sha1obj = hashlib.sha1()
-            any_error = False
-            while True:
-                buf = b""
-                try:
-                    buf = in_fh.read(chunk_size)
-                except Exception as e:
-                    any_error = True
-                    fobj.error = "".join(traceback.format_stack())
-                    if e.args:
-                        fobj.error += "\n" + str(e.args)
+        try:
+            with open(filepath, "rb") as in_fh:
+                chunk_size = 2**22
+                md5obj = hashlib.md5()
+                sha1obj = hashlib.sha1()
+                any_error = False
+                while True:
                     buf = b""
-                if buf == b"":
-                    break
+                    try:
+                        buf = in_fh.read(chunk_size)
+                    except Exception as e:
+                        any_error = True
+                        fobj.error = "".join(traceback.format_stack())
+                        if e.args:
+                            fobj.error += "\n" + str(e.args)
+                        buf = b""
+                    if buf == b"":
+                        break
 
-                md5obj.update(buf)
-                sha1obj.update(buf)
+                    md5obj.update(buf)
+                    sha1obj.update(buf)
 
-            if not any_error:
-                fobj.md5 = md5obj.hexdigest()
-                fobj.sha1 = sha1obj.hexdigest()
+                if not any_error:
+                    fobj.md5 = md5obj.hexdigest()
+                    fobj.sha1 = sha1obj.hexdigest()
+        except Exception as e:
+            if fobj.error is None:
+                fobj.error = ""
+            else:
+                fobj.error += "\n"
+            fobj.error += "".join(traceback.format_stack())
+            if e.args:
+                fobj.error += "\n" + str(e.args)
     return fobj
 
 def main():
