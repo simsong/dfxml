@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.6.3"
+__version__ = "0.6.4"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -161,6 +161,8 @@ def _typecheck(obj, classinfo):
 class DFXMLObject(object):
     def __init__(self, *args, **kwargs):
         self.command_line = kwargs.get("command_line")
+        self.program = kwargs.get("program")
+        self.program_version = kwargs.get("program_version")
         self.version = kwargs.get("version")
         self.sources = kwargs.get("sources", [])
         self.dc = kwargs.get("dc", dict())
@@ -220,7 +222,11 @@ class DFXMLObject(object):
 
         for ce in e.findall(".//*"):
             (cns, cln) = _qsplit(ce.tag)
-            if cln == "command_line":
+            if cln == "program":
+                self.program = ce.text
+            elif cln == "version":
+                self.program_version = ce.text
+            elif cln == "command_line":
                 self.command_line = ce.text
             elif cln == "image_filename":
                 self.sources.append(ce.text)
@@ -296,13 +302,22 @@ class DFXMLObject(object):
             tmpel0.append(tmpel1)
         outel.append(tmpel0)
 
-        if self.command_line:
+        if self.command_line or self.program or self.program_version:
             tmpel0 = ET.Element("creator")
-            tmpel1 = ET.Element("execution_environment")
-            tmpel2 = ET.Element("command_line")
-            tmpel2.text = self.command_line
-            tmpel1.append(tmpel2)
-            tmpel0.append(tmpel1)
+            if self.program:
+                tmpel1 = ET.Element("program")
+                tmpel1.text = self.program
+                tmpel0.append(tmpel1)
+            if self.program_version:
+                tmpel1 = ET.Element("version")
+                tmpel1.text = self.program_version
+                tmpel0.append(tmpel1)
+            if self.command_line:
+                tmpel1 = ET.Element("execution_environment")
+                tmpel2 = ET.Element("command_line")
+                tmpel2.text = self.command_line
+                tmpel1.append(tmpel2)
+                tmpel0.append(tmpel1)
             outel.append(tmpel0)
 
         if len(self.sources) > 0:
@@ -375,6 +390,24 @@ class DFXMLObject(object):
     @property
     def namespaces(self):
         raise AttributeError("The namespaces dictionary should not be directly accessed; instead, use .iter_namespaces().")
+
+    @property
+    def program(self):
+        """This property becomes the element at dfxml/creator/program."""
+        return self._program
+
+    @program.setter
+    def program(self, value):
+        self._program = _strcast(value)
+
+    @property
+    def program_version(self):
+        """This property becomes the element at dfxml/creator/version."""
+        return self._program_version
+
+    @program_version.setter
+    def program_version(self, value):
+        self._program_version = _strcast(value)
 
     @property
     def sources(self):

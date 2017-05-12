@@ -1,6 +1,7 @@
 2017-05-12    <alexander.nelson@nist.gov>
 
 	* Python: Clean up trailing whitespace.
+	* Objects.py: Add generating-program recorder and unit test.
 
 2017-05-10    <alexander.nelson@nist.gov>
 

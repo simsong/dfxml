@@ -68,6 +68,7 @@ check-versioned:
 	$$PY test_ByteRun.py
 	$$PY test_ByteRuns.py
 	$$PY test_CellObject.py
+	$$PY test_DFXMLObject_program.py ../../samples/difference_test_0.xml vi 8.0
 	$$PY test_FileObject_allocation.py
 	$$PY test_FileObject_byte_run_facets.py
 	$$PY test_FileObject_externals.py
