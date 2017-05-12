@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <dfxml
-  version="1.0"
   xmlns='http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML'
   xmlns:dc='http://purl.org/dc/elements/1.1/'
-  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+  version='1.1.1'>
   <metadata>
     <dc:type>Sample</dc:type>
   </metadata>
   <creator>
     <program>vi</program>
-    <version>7.3</version>
+    <version>8.0</version>
     <execution_environment>
       <command_line>vi post.xml</command_line>
     </execution_environment>
