@@ -1,19 +1,33 @@
 #/usr/bin/env python3
 
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 """
 DEVELOPMENT NOTE: This implementation will soon be replaced by what is currently idifference2.py, after a period of testing by users.  If idifference2.py does not meet your needs, but idifference.py does, please let one of the maintainers know (email addresses in the Git history or the python/ChangeLog file).
 """
 
-__version__ = "2.0.0alpha"
+__version__ = "2.0.0alpha2"
 
-import Objects
-import make_differential_dfxml
-import summarize_differential_dfxml
-
+import sys
 import logging
 import os
 
 _logger = logging.getLogger(os.path.basename(__file__))
+
+import Objects
+import make_differential_dfxml
+import summarize_differential_dfxml
 
 def ignorable_name(fn):
     """Filter out recognized pseudo-file names, accomodating user request for including dotdirs."""
@@ -85,6 +99,8 @@ if __name__=="__main__":
               diff_mode="idifference",
               ignore_filename_function=ignorable_name
             )
+            diffdfxml.program = sys.argv[0]
+            diffdfxml.program_version = __version__
             if args.xmlfilename:
                 _logger.debug("Opening temp file for writing.")
                 with open(args.xmlfilename, "w") as fh:

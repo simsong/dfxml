@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
-#Make a new DFXML file of all fileobjects in an input DFXML file.
 
-__version__ = "0.2.1"
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
+"""
+Make a new DFXML file of all fileobjects in an input DFXML file.
+"""
+
+__version__ = "0.3.0"
 
 import sys
 import xml.etree.ElementTree as ET
@@ -22,7 +38,8 @@ def main():
 <dfxml
   xmlns="%s"
   xmlns:delta="%s"
-  version="1.1.0">
+  version="1.1.1">
+  <metadata/>
   <creator>
     <program>%s</program>
     <version>%s</version>

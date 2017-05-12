@@ -2,6 +2,9 @@
 
 	* Python: Clean up trailing whitespace.
 	* Objects.py: Add generating-program recorder and unit test.
+	* Python: Record generating program in scripts using Objects.py.
+	* Python: Updated DFXML generated with Objects.py to report version 1.1.1.
+	* Python: Add NIST disclaimer to updated scripts.
 
 2017-05-10    <alexander.nelson@nist.gov>
 

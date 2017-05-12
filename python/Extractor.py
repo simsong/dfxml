@@ -1,17 +1,31 @@
 #!/usr/bin/env python3
 
-__version__ = "0.4.0"
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
 
-import Objects
+__version__ = "0.5.0"
+
 import os
 import sys
 import logging
 import hashlib
 import copy
 import traceback
-import dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
+
+import dfxml
+import Objects
 
 XMLNS_EXTRACTOR = "#Extractor.py"
 
@@ -57,8 +71,12 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
 
     #Set up base manifest to track extracted files
     base_manifest = Objects.DFXMLObject()
+    base_manifest.program = sys.argv[0]
+    if sys.argv[0] == os.path.basename(__file__)):
+        base_manifest.program_version = __version__
+        #Otherwise, this DFXMLObject would need to be passed back to the calling function.
     base_manifest.command_line = " ".join(sys.argv)
-    base_manifest.version = "1.1.0+"
+    base_manifest.version = "1.1.1"
     base_manifest.add_namespace("extractor", XMLNS_EXTRACTOR)
     base_manifest.add_namespace("delta", dfxml.XMLNS_DELTA)
     base_manifest.sources.append(image_path)

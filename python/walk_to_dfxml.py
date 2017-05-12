@@ -13,7 +13,7 @@
 
 """Walk current directory, writing DFXML to stdout."""
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 import os
 import stat
@@ -124,6 +124,8 @@ def main():
             _logger.warning("Python queue support not available.  (If running Ubuntu, this is in package python3-queuelib.)  Running in single thread only.")
 
     dobj = Objects.DFXMLObject(version="1.1.1")
+    dobj.program = sys.argv[0]
+    dobj.program_version = __version__
     dobj.command_line = " ".join(sys.argv)
     dobj.dc["type"] = "File system walk"
 
