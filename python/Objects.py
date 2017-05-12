@@ -1374,7 +1374,7 @@ class ByteRuns(object):
                 self.append(value)
             else:
                 self._listdata[-1] = maybe_new_run
-        
+
     def iter_contents(self, raw_image, buffer_size=1048576, sector_size=512, errlog=None, statlog=None):
         """
         Generator.  Yields contents, as byte strings one block at a time, given a backing raw image path.  Relies on The SleuthKit's img_cat, so contents can be extracted from any disk image type that TSK supports.
@@ -1464,7 +1464,7 @@ class ByteRuns(object):
         #Split into namespace and tagname
         (ns, tn) = _qsplit(e.tag)
         assert tn == "byte_runs"
- 
+
         if "facet" in e.attrib:
             self.facet = e.attrib["facet"]
 
@@ -1638,7 +1638,7 @@ class TimestampObject(object):
           isinstance(value[1], str):
             self._prec = value
             return self._prec
-        
+
         m = re_precision.match(value)
         md = m.groupdict()
         tup = (int(md["num"]), md.get("unit") or "s")
@@ -1889,7 +1889,7 @@ class FileObject(object):
             #Clean up file handles
             if status_fh: status_fh.close()
             if stderr_fh: stderr_fh.close()
-            
+
         elif not self.byte_runs is None:
             for chunk in self.byte_runs.iter_contents(_image_path, buffer_size, sector_size, errlog, statlog):
                 yield chunk
@@ -2854,7 +2854,7 @@ class CellObject(object):
                         tmpccel.text = s
                         tmpcel.append(tmpccel)
                     tmpel.append(tmpcel)
-                    
+
             _anno_change(tmpel)
             outel.append(tmpel)
 
@@ -3128,7 +3128,7 @@ def iterparse(filename, events=("start","end"), **kwargs):
                 dfxml_proxy = ET.Element(elem.tag)
                 for k in elem.attrib:
                     #Note that xmlns declarations don't appear in elem.attrib.
-                    dfxml_proxy.attrib[k] = elem.attrib[k] 
+                    dfxml_proxy.attrib[k] = elem.attrib[k]
                 _state = READING_PRESTREAM
             elif ln == "volume":
                 if _state == READING_PRESTREAM:
@@ -3139,7 +3139,7 @@ def iterparse(filename, events=("start","end"), **kwargs):
                 #Start populating a new Volume proxy.
                 volume_proxy = ET.Element(elem.tag)
                 for k in elem.attrib:
-                    volume_proxy.attrib[k] = elem.attrib[k] 
+                    volume_proxy.attrib[k] = elem.attrib[k]
                 _state = READING_VOLUMES
             elif ln == "fileobject":
                 if _state == READING_PRESTREAM:
@@ -3237,7 +3237,7 @@ def parse(filename):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    
+
     logging.basicConfig(level=logging.DEBUG)
     #Run unit tests
 

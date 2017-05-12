@@ -57,7 +57,7 @@ check-idifference-dfxml:
 
 check-mac_timelines:
 	./test_mac_timelines.sh
-	
+
 check-Objects:
 	$(MAKE) -C test_Objects
 
