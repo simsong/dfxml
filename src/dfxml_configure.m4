@@ -18,7 +18,7 @@ AC_LANG_POP()
 
 
 # Determine UTC date offset
-CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`date +%z`"
+CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`TZ=UTC date +%z`"
 
 # Get the GIT commit into the GIT_COMMIT variable
 AC_CHECK_PROG([git],[git],[yes],[no])
