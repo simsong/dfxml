@@ -13,7 +13,7 @@
 
 """Walk current directory, writing DFXML to stdout."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 import os
 import stat
@@ -130,10 +130,16 @@ def main():
     dobj.dc["type"] = "File system walk"
 
     filepaths = set()
+    filepaths.add(".")
     for (dirpath, dirnames, filenames) in os.walk("."):
-        for filename in sorted(filenames):
+        dirent_names = set()
+        for dirname in dirnames:
+            dirent_names.add(dirname)
+        for filename in filenames:
+            dirent_names.add(filename)
+        for dirent_name in sorted(dirent_names):
             #The relpath wrapper removes "./" from the head of the path.
-            filepath = os.path.relpath(os.path.join(dirpath, filename))
+            filepath = os.path.relpath(os.path.join(dirpath, dirent_name))
             filepaths.add(filepath)
 
     fileobjects_by_filepath = dict()

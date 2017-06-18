@@ -1,3 +1,7 @@
+2017-06-18    <alexander.nelson@nist.gov>
+
+	* walk_to_dfxml.py: Report directories.
+
 2017-05-12    <alexander.nelson@nist.gov>
 
 	* Python: Clean up trailing whitespace.
