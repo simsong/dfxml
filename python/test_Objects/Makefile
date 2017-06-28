@@ -59,8 +59,8 @@ check-py3:
 	  check-versioned
 
 check-tcpflow: \
-  ../TCPFlowObjects.py \
   ../../samples/tcpflow_zip_generic_header.xml \
+  ../TCPFlowObjects.py \
   test_TCPFlowObjects.py
 	$(PYTHON2) test_TCPFlowObjects.py ../../samples/tcpflow_zip_generic_header.xml
 	$(PYTHON3) test_TCPFlowObjects.py ../../samples/tcpflow_zip_generic_header.xml

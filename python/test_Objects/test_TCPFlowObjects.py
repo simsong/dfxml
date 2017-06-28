@@ -22,5 +22,5 @@ for (event, obj) in TCPFlowObjects.Objects.iterparse(sys.argv[1]):
     results = TCPFlowObjects.scanner_results_from_FileObject(obj)
     if len(results) > 0:
         print("Flow name: %r." % obj.filename)
-    for result in results.values():
-        result.print_report()
+        for result in results:
+            result.print_report()

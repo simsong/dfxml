@@ -27,7 +27,7 @@ E.g.:
     </tcpflow:scanner_result>
 """
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 import collections
 
@@ -39,6 +39,8 @@ class TCPFlowScannerResult(object):
     """Base class."""
 
     def __init__(self, *args, **kwargs):
+        self.name = kwargs.get("name")
+        self.type = kwargs.get("type")
         self.flow_name = kwargs.get("flow_name")
 
     def populate_from_Element(self, el):
@@ -75,11 +77,9 @@ class TCPFlowScannerResult_ZipGenericHeaderDetector(TCPFlowScannerResult):
 
 def scanner_results_from_FileObject(fobj):
     """
-    Returns an ordered Dictionary of scanner results.
-      Key: the pair (scanner name, scanner type).
-      Value: Subclass of TCPFlowScannerResult.
+    Returns a list of scanner results, each an object, a subclass of TCPFlowScannerResult.
     """
-    scanner_results = collections.OrderedDict()
+    scanner_results = []
 
     #Run through child elements in external namespaces.
     for ce in fobj.externals:
@@ -89,13 +89,18 @@ def scanner_results_from_FileObject(fobj):
         if ctn != "scanner_result":
             _logger.warning("Skipping element in TCPFlow XML namespace (processing not implemented): %r." % ce)
             continue
-        scanner_name = ce.attrib.get("name")
-        scanner_type = ce.attrib.get("type")
+
+        result_kwargs = dict()
+        result_kwargs["name"] = ce.attrib.get("name")
+        result_kwargs["type"] = ce.attrib.get("type")
+        result_kwargs["flow_name"] = fobj.filename
+
         #This clause list could equally well key off the scanner_type.
-        if scanner_name == "zip_generic_header_detector":
-            result_object = TCPFlowScannerResult_ZipGenericHeaderDetector(flow_name=fobj.filename)
+        if result_kwargs["name"] == "zip_generic_header_detector":
+            result_object = TCPFlowScannerResult_ZipGenericHeaderDetector(**result_kwargs)
             result_object.populate_from_Element(ce)
         else:
-            raise NotImplementedError("No implementation yet written for scanner result: %r." % scanner_name)
-        scanner_results[(scanner_name, scanner_type)] = result_object
+            raise NotImplementedError("No implementation yet written for scanner result: %r." % result_kwargs["name"])
+        scanner_results.append(result_object)
+
     return scanner_results
