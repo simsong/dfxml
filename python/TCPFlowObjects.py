@@ -27,7 +27,7 @@ E.g.:
     </tcpflow:scanner_result>
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 import collections
 
@@ -35,70 +35,30 @@ import Objects
 
 XMLNS_TCPFLOW = Objects.dfxml.XMLNS_DFXML + "#tcpflow"
 
-class TCPFlowFileObject(Objects.FileObject):
-    def __init__(self, *args, **kwargs):
-        #Not exposed through API.
-        self._scanner_result_elements = collections.OrderedDict()
-
-        #Exposed through API.
-        self._scanner_results = collections.OrderedDict()
-
-    def populate_from_Element(self, el):
-        super().populate_from_Element(el)
-        #Run through child elements in external namespaces.
-        for ce in self.externals:
-            (cns, ctn) = Objects._qsplit(ce.tag)
-            if cns != XMLNS_TCPFLOW:
-                continue
-            if ctn != "scanner_result":
-                _logger.warning("Skipping element in TCPFlow XML namespace (processing not implemented): %r." % ce)
-                continue
-            scanner_name = ce.attrib.get("name")
-            scanner_type = ce.attrib.get("type")
-            #This clause list could equally well key off the scanner_type.
-            if scanner_name == "zip_generic_header_detector":
-                result_object = TCPFlowScannerResult_ZipGenericHeaderDetector()
-                result_object.populate_from_Element(ce)
-            else:
-                raise NotImplementedError("No implementation yet written for scanner result: %r." % scanner_name)
-            self.scanner_results[(scanner_name, scanner_type)] = result_object
-
-    def to_Element(self):
-        el = super.to_Element()
-        #TODO Some indexing acrobatics may be necessary to flush any runtime updates to the scanner_results dictionary.
-
-    @property
-    def scanner_results(self):
-        """
-        Ordered Dictionary of scanner results.
-          Key: the pair (scanner name, scanner type).
-          Value: Subclass of TCPFlowScannerResult.
-
-        No property setter.
-        """
-        return self._scanner_results
-
 class TCPFlowScannerResult(object):
     """Base class."""
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.flow_name = kwargs.get("flow_name")
 
     def populate_from_Element(self, el):
         (ns, tn) = Objects._qsplit(el.tag)
-        if ns != XMLNS_TCPFLOW:
-            continue
+        if ns != XMLNS_TCPFLOW or tn != "scanner_result":
+            raise ValueError("TCPFlowScannerResult needs to be instantiated from a {%s}scanner_result element." % XMLNS_TCPFLOW)
         #All other work left to subclasses.
+
+    def print_report(self):
+        raise NotImplementedError("Should be implemented in subclass.")
 
 class TCPFlowScannerResult_ZipGenericHeaderDetector(TCPFlowScannerResult):
     """Example."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(TCPFlowScannerResult_ZipGenericHeaderDetector, self).__init__(*args, **kwargs)
         self.byte_runs = Objects.ByteRuns()
 
     def populate_from_Element(self, el):
-        super().populate_from_Element(el)
+        super(TCPFlowScannerResult_ZipGenericHeaderDetector, self).populate_from_Element(el)
         for ce in el.findall("./*"):
             (cns, ctn) = Objects._qsplit(ce.tag)
             if ctn == "byte_runs":
@@ -106,3 +66,36 @@ class TCPFlowScannerResult_ZipGenericHeaderDetector(TCPFlowScannerResult):
             else:
                 #TODO Process anything else reported in the scanner_result element.
                 raise NotImplementedError("Unexpected element: %r." % ce)
+
+    def print_report(self):
+        #print("Flow name: %r." % self.flow_name)
+        print("Zip headers detected.  Locations:")
+        for br in self.byte_runs:
+            print("  * %d, %d" % (br.img_offset, br.len))
+
+def scanner_results_from_FileObject(fobj):
+    """
+    Returns an ordered Dictionary of scanner results.
+      Key: the pair (scanner name, scanner type).
+      Value: Subclass of TCPFlowScannerResult.
+    """
+    scanner_results = collections.OrderedDict()
+
+    #Run through child elements in external namespaces.
+    for ce in fobj.externals:
+        (cns, ctn) = Objects._qsplit(ce.tag)
+        if cns != XMLNS_TCPFLOW:
+            continue
+        if ctn != "scanner_result":
+            _logger.warning("Skipping element in TCPFlow XML namespace (processing not implemented): %r." % ce)
+            continue
+        scanner_name = ce.attrib.get("name")
+        scanner_type = ce.attrib.get("type")
+        #This clause list could equally well key off the scanner_type.
+        if scanner_name == "zip_generic_header_detector":
+            result_object = TCPFlowScannerResult_ZipGenericHeaderDetector(flow_name=fobj.filename)
+            result_object.populate_from_Element(ce)
+        else:
+            raise NotImplementedError("No implementation yet written for scanner result: %r." % scanner_name)
+        scanner_results[(scanner_name, scanner_type)] = result_object
+    return scanner_results
