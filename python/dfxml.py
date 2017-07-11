@@ -257,7 +257,7 @@ class byte_run:
     def has_sector(self,s):
         if self.sector_size==0:
             raise ValueError("%s: sector_size cannot be 0" % (self))
-        if self.img_offset is None:
+        if self.img_offset is None or self.len is None:
             # Sparse files don't have data allocated on disk
             return False
         try:
