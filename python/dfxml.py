@@ -257,6 +257,8 @@ class byte_run:
     def has_sector(self,s):
         if self.sector_size==0:
             raise ValueError("%s: sector_size cannot be 0" % (self))
+        if hasattr(self, 'fill') or hasattr(self, 'uncompressed_len'):
+            return False
         try:
             return self.img_offset <= s * self.sector_size < self.img_offset+self.len
         except AttributeError:
