@@ -259,8 +259,8 @@ class byte_run:
             raise ValueError("%s: sector_size cannot be 0" % (self))
         try:
             return self.img_offset <= s * self.sector_size < self.img_offset+self.len
-        except AttributeError:
-            # Doesn't have necessary attributes to answer true.
+        except (AttributeError, TypeError):
+            # Doesn't have necessary attributes or type to answer true.
             # Usually this happens with runs of a constant value
             return False       
 
