@@ -189,6 +189,7 @@ inline std::string digest_name<sha512_t>() {
 
 template<const EVP_MD *md(),size_t SIZE> 
 class hash_generator__ { 			/* generates the hash */
+ private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
     bool initialized;	       /* has the context been initialized? */
     bool finalized;
@@ -199,6 +200,9 @@ class hash_generator__ { 			/* generates the hash */
 	}
 	return true;
     }
+    /* Not allowed to copy; these are prototyped but not defined, so any attempt to use them will fail, but we won't get the -Weffc++ warnings  */
+    hash_generator__ & operator=(const hash_generator__ &);
+    hash_generator__(const hash_generator__ &);
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
