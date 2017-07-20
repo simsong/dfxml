@@ -212,14 +212,22 @@ public:
     }
     void release(){			/* free allocated memory */
 	if(initialized){
+#ifdef HAVE_EVP_MD_CTX_FREE
+	    EVP_MD_CTX_free(mdctx);
+#else
 	    EVP_MD_CTX_destroy(mdctx);
+#endif
 	    initialized = false;
 	    hashed_bytes = 0;
 	}
     }
     void init(){
 	if(initialized==false){
+#ifdef HAVE_EVP_MD_CTX_NEW
+	    mdctx = EVP_MD_CTX_new();
+#else
 	    mdctx = EVP_MD_CTX_create();
+#endif
 	    EVP_DigestInit_ex(mdctx, md(), NULL);
 	    initialized = true;
 	    finalized = false;
