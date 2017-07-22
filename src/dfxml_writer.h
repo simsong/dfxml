@@ -164,6 +164,7 @@ public:
     }
     void add_rusage();
     void set_oneline(bool v);
+    const std::string &get_outfilename() const {return outfilename; } ;
 
     /********************************
      *** THESE ARE ALL THREADSAFE ***

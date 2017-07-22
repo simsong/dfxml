@@ -1,3 +1,7 @@
+2017-07-22  Basic  <simsong@Dance.hsd1.va.comcast.net>
+
+	* dfxml_writer.h (class dfxml_writer): added get_outfilename() to allow users to get the output file name.
+
 2013-12-11  Basic  <simsong@ncr.nps.edu>
 
 	* dfxml_reader.h (dfxml): created a DFXML namespace
