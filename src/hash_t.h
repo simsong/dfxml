@@ -228,6 +228,7 @@ public:
 #else
 	    mdctx = EVP_MD_CTX_create();
 #endif
+            if (!mdctx) throw std::bad_alloc();
 	    EVP_DigestInit_ex(mdctx, md(), NULL);
 	    initialized = true;
 	    finalized = false;
@@ -247,7 +248,7 @@ public:
 	if(finalized){
 	  std::cerr << "currently friendly_geneator does not cache the final value\n";
 	  assert(0);
-	  /* code below will never be executed after assert(0) */
+          exit(1);                      // in case compiled with assertions disabled
 	}
 	if(!initialized){
 	  init();			/* do it now! */
