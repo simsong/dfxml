@@ -1,5 +1,6 @@
 2017-09-20    <alexander.nelson@nist.gov>
 
+	* Python: Record runtime modules used in Objects.py-based DFXML generators.
 	* Objects.py: Add LibraryObject reading and writing, and unit tests.
 
 2017-06-18    <alexander.nelson@nist.gov>

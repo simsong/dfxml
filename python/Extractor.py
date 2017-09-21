@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 import os
 import sys
@@ -70,18 +70,20 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
     _path_for_iterparse = dfxml_path or image_path
 
     #Set up base manifest to track extracted files
-    base_manifest = Objects.DFXMLObject()
+    base_manifest = Objects.DFXMLObject(version="1.1.1")
     base_manifest.program = sys.argv[0]
     if sys.argv[0] == os.path.basename(__file__)):
         base_manifest.program_version = __version__
         #Otherwise, this DFXMLObject would need to be passed back to the calling function.
     base_manifest.command_line = " ".join(sys.argv)
-    base_manifest.version = "1.1.1"
     base_manifest.add_namespace("extractor", XMLNS_EXTRACTOR)
     base_manifest.add_namespace("delta", dfxml.XMLNS_DELTA)
     base_manifest.sources.append(image_path)
     if dfxml_path:
         base_manifest.sources.append(dfxml_path)
+    base_manifest.add_creator_library("Python", ".".join(map(str, sys.version_info[0:3]))) #A bit of a bend, but gets the major version information out.
+    base_manifest.add_creator_library("Objects.py", Objects.__version__)
+    base_manifest.add_creator_library("dfxml.py", Objects.dfxml.__version__)
 
     #Clone base manifest to all-files' manifest and errors-only manifest
     out_manifest = None

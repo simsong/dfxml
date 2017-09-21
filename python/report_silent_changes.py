@@ -17,10 +17,11 @@
 This program takes a differentially-annotated DFXML file as input, and outputs a DFXML document that contains 'Silent' changes.  For instance, a changed checksum with no changed timestamps would be 'Silent.'
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 import os
 import logging
+import sys
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
@@ -28,10 +29,15 @@ import Objects
 import make_differential_dfxml
 
 def main():
-    d = Objects.DFXMLObject()
+    d = Objects.DFXMLObject("1.1.1")
     d.program = sys.argv[0]
     d.program_version = __version__
-    dobj.command_line = " ".join(sys.argv)
+    d.command_line = " ".join(sys.argv)
+    d.dc["type"] = "File system silent-change report"
+    d.add_creator_library("Python", ".".join(map(str, sys.version_info[0:3]))) #A bit of a bend, but gets the major version information out.
+    d.add_creator_library("Objects.py", Objects.__version__)
+    d.add_creator_library("dfxml.py", Objects.dfxml.__version__)
+
     current_appender = d
     tally = 0
     for (event, obj) in Objects.iterparse(args.infile):

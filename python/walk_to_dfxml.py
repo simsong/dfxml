@@ -13,7 +13,7 @@
 
 """Walk current directory, writing DFXML to stdout."""
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 import os
 import stat
@@ -128,6 +128,9 @@ def main():
     dobj.program_version = __version__
     dobj.command_line = " ".join(sys.argv)
     dobj.dc["type"] = "File system walk"
+    dobj.add_creator_library("Python", ".".join(map(str, sys.version_info[0:3]))) #A bit of a bend, but gets the major version information out.
+    dobj.add_creator_library("Objects.py", Objects.__version__)
+    dobj.add_creator_library("dfxml.py", Objects.dfxml.__version__)
 
     filepaths = set()
     filepaths.add(".")
