@@ -44,16 +44,26 @@ check-diff_file_ignore-py3: \
   test_diff_file_ignore.py
 	$(PYTHON3) test_diff_file_ignore.py --debug diff_file_ignore_sample-py3.dfxml
 
+check-libraries-py2:
+	$(PYTHON2) test_LibraryObject_write.py test_LibraryObject_py2.dfxml
+	$(PYTHON2) test_LibraryObject_read.py test_LibraryObject_py2.dfxml
+
+check-libraries-py3:
+	$(PYTHON3) test_LibraryObject_write.py test_LibraryObject_py3.dfxml
+	$(PYTHON3) test_LibraryObject_read.py test_LibraryObject_py3.dfxml
+
 check-py2:
 	$(MAKE) \
 	  PY=$(PYTHON2) \
 	  check-diff_file_ignore-py2 \
+	  check-libraries-py2 \
 	  check-versioned
 
 check-py3:
 	$(MAKE) \
 	  PY=$(PYTHON3) \
 	  check-diff_file_ignore-py3 \
+	  check-libraries-py3 \
 	  check-versioned
 
 check-versioned:
@@ -85,6 +95,7 @@ clean:
 	rm -f test_difference_counts.py-d*
 	rm -f test_cat_partitions.sh.dfxml
 	rm -f diff_file_ignore_sample-py[23].dfxml
+	rm -f test_LibraryObject_py[23].dfxml
 
 diff_file_ignore_sample-py2.dfxml: \
   Objects.py \

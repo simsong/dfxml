@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.6.4"
+__version__ = "0.7.0"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -173,6 +173,9 @@ class DFXMLObject(object):
         self._volumes = []
         self._files = []
 
+        self._build_libraries = []
+        self._creator_libraries = []
+
         input_volumes = kwargs.get("volumes") or []
         input_files = kwargs.get("files") or []
         for v in input_volumes:
@@ -192,6 +195,25 @@ class DFXMLObject(object):
                 yield f
         for f in self._files:
             yield f
+
+    def _add_library(self, target_list, *args, **kwargs):
+        #_logger.debug("_add_library:args = %r." % (args,))
+        _library = None
+        if len(args) == 1 and isinstance(args[0], LibraryObject):
+            _library = args[0]
+        elif len(args) > 1 and isinstance(args[0], str) and isinstance(args[1], str):
+            _library = LibraryObject(args[0], args[1])
+        else:
+            raise ValueError("Unexpected arguments format (expecting (string, string) or a LibraryObject): %r." % (args,))
+        #_logger.debug("_library = %r." % _library)
+        if not _library is None:
+            target_list.append(_library)
+
+    def add_build_library(self, *args, **kwargs):
+        self._add_library(self.build_libraries, *args, **kwargs)
+
+    def add_creator_library(self, *args, **kwargs):
+        self._add_library(self.creator_libraries, *args, **kwargs)
 
     def add_namespace(self, prefix, url):
         """In case of conflicting namespace definitions, first definition wins."""
@@ -230,6 +252,16 @@ class DFXMLObject(object):
                 self.command_line = ce.text
             elif cln == "image_filename":
                 self.sources.append(ce.text)
+            elif cln in ("creator", "build_environment"):
+                for cce in ce.findall(".//*"):
+                    if _qsplit(cce.tag)[1] != "library":
+                        continue
+                    lobj = LibraryObject()
+                    lobj.populate_from_Element(cce)
+                    if cln == "build_environment":
+                        self.add_build_library(lobj)
+                    elif cln == "creator":
+                        self.add_creator_library(lobj)
             elif (cns, cln) == (dfxml.XMLNS_DELTA, "file_ignore"):
                 self.diff_file_ignores.add(ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
@@ -302,7 +334,11 @@ class DFXMLObject(object):
             tmpel0.append(tmpel1)
         outel.append(tmpel0)
 
-        if self.command_line or self.program or self.program_version:
+        if self.command_line or \
+          self.program or \
+          self.program_version or \
+          0 < len(self.build_libraries) or \
+          0 < len(self.creator_libraries):
             tmpel0 = ET.Element("creator")
             if self.program:
                 tmpel1 = ET.Element("program")
@@ -312,11 +348,20 @@ class DFXMLObject(object):
                 tmpel1 = ET.Element("version")
                 tmpel1.text = self.program_version
                 tmpel0.append(tmpel1)
+            if 0 < len(self.build_libraries):
+                tmpel1 = ET.Element("build_environment")
+                for library in self._build_libraries:
+                    tmpel2 = library.to_Element()
+                    tmpel1.append(tmpel2)
+                tmpel0.append(tmpel1)
             if self.command_line:
                 tmpel1 = ET.Element("execution_environment")
                 tmpel2 = ET.Element("command_line")
                 tmpel2.text = self.command_line
                 tmpel1.append(tmpel2)
+                tmpel0.append(tmpel1)
+            for library in self.creator_libraries:
+                tmpel1 = library.to_Element()
                 tmpel0.append(tmpel1)
             outel.append(tmpel0)
 
@@ -351,6 +396,14 @@ class DFXMLObject(object):
     @command_line.setter
     def command_line(self, value):
         self._command_line = _strcast(value)
+
+    @property
+    def build_libraries(self):
+        return self._build_libraries
+
+    @property
+    def creator_libraries(self):
+        return self._creator_libraries
 
     @property
     def dc(self):
@@ -432,6 +485,75 @@ class DFXMLObject(object):
         """List of volume objects directly attached to this DFXMLObject.  No setter for now."""
         return self._volumes
 
+class LibraryObject(object):
+    def __init__(self, *args, **kwargs):
+        self.name = None
+        self.version = None
+
+        if len(args) >= 1:
+            self.name = args[0]
+        if len(args) >= 2:
+            self.version = args[1]
+
+    def __eq__(self, other):
+        """
+        This equality function tests the name and version values strictly.  For less-strict testing, like allowing matching on missing versions, use relaxed_eq.
+        This function can compare against another LibraryObject.
+        """
+        if not isinstance(other, LibraryObject):
+            return False
+        return self.name == other.name and \
+          self.version == other.version
+
+    def __repr__(self):
+        parts = []
+        if self.name:
+            parts.append("name=%r" % self.name)
+        if self.version:
+            parts.append("version=%r" % self.version)
+        return "LibraryObject(" + ", ".join(parts) + ")"
+
+    def populate_from_Element(self, e):
+        if "name" in e.attrib:
+            self.name = e.attrib["name"]
+        if "version" in e.attrib:
+            self.version = e.attrib["version"]
+
+    def relaxed_eq(self, other):
+        """
+        This function can compare against another LibraryObject.
+        """
+        if not isinstance(other, LibraryObject):
+            return False
+        if self.name != other.name:
+            return False
+        if self.version is None or other.version is None:
+            return True
+        return self.version == other.version
+
+    def to_Element(self):
+        outel = ET.Element("library")
+        if not self.name is None:
+            outel.attrib["name"] = self.name
+        if not self.version is None:
+            outel.attrib["version"] = self.version
+        return outel
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = _strcast(value)
+
+    @property
+    def version(self):
+        return self._version
+
+    @version.setter
+    def version(self, value):
+        self._version = _strcast(value)
 
 class RegXMLObject(object):
     def __init__(self, *args, **kwargs):

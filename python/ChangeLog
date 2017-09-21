@@ -1,3 +1,7 @@
+2017-09-20    <alexander.nelson@nist.gov>
+
+	* Objects.py: Add LibraryObject reading and writing, and unit tests.
+
 2017-06-18    <alexander.nelson@nist.gov>
 
 	* walk_to_dfxml.py: Report directories.
