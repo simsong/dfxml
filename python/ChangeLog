@@ -1,3 +1,7 @@
+2017-10-11    <alexander.nelson@nist.gov>
+
+	* Python: Add hashdigest for SHA256 to core libraries, walk script, unit tests, and sample data.
+
 2017-09-20    <alexander.nelson@nist.gov>
 
 	* Python: Record runtime modules used in Objects.py-based DFXML generators.

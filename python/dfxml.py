@@ -28,6 +28,9 @@ Each object has the attributes:
 where encoding, if present, is 0 for raw, 1 for NTFS compressed.
 
 """
+
+__version__ = "1.0.2"
+
 import sys
 import re
 from sys import stderr
@@ -40,8 +43,6 @@ import datetime
 
 import logging
 _logger = logging.getLogger(os.path.basename(__file__))
-
-__version__ = "1.0.1"
 
 tsk_virtual_filenames = set(['$FAT1','$FAT2'])
 
@@ -551,7 +552,7 @@ class registry_value_object(registry_cell_object):
     def _hash(self, hashfunc):
         """
         Return cached hash, populating cache if necessary.
-        hashfunc expected values: The functions hashlib.sha1, hashlib.md5.
+        hashfunc expected values: The functions hashlib.sha1, hashlib.sha256, hashlib.md5.
         If self.value_data is None, or there are no strings in a "string-list" type, this should return None.
         Interpretation: Registry values of type "string-list" are hashed by feeding each element of the list into the hash .update() function. All other Registry values are fed in the same way, as a 1-element list.
         For example, a string type value cell with data "a" fed into this function returns md5("a") (if hashlib.md5 were requested).  A string-list type value cell with data ["a","b"] returns md5("ab").
@@ -580,6 +581,9 @@ class registry_value_object(registry_cell_object):
 
     def sha1(self):
         return self._hash(hashlib.sha1)
+
+    def sha256(self):
+        return self._hash(hashlib.sha256)
 
     def md5(self):
         return self._hash(hashlib.md5)
@@ -682,6 +686,10 @@ class fileobject:
         """Returns the SHA1 in hex"""
         return self.tag("sha1")
 
+    def sha256(self):
+        """Returns the SHA256 in hex"""
+        return self.tag("sha256")
+
     def md5(self):
         """Returns the MD5 in hex"""
         return self.tag("md5")
@@ -744,7 +752,7 @@ class fileobject:
             return False               # empty files are never present
         if imagefile==None:
             imagefile=self.imagefile # use this one
-        for hashname in ['md5','sha1']:
+        for hashname in ['md5','sha1','sha256']:
             oldhash = self.tag(hashname)
             if oldhash:
                 newhash = hashlib.new(hashname,self.contents(imagefile=imagefile)).hexdigest()
@@ -818,14 +826,16 @@ class fileobject:
             res.append(self.content_for_run(run=run,imagefile=imagefile))
         return "".join(res)
 
-    def tempfile(self,calcMD5=False,calcSHA1=False):
+    def tempfile(self,calcMD5=False,calcSHA1=False,calcSHA256=False):
         """Return the contents of imagefile in a named temporary file. If
-        calcMD5 or calcSHA1 are set TRUE, then the object returned has a
-        haslib object as self.md5 or self.sha1 with the requested hash."""
+        calcMD5, calcSHA1, or calcSHA256 are set TRUE, then the object
+        returned has a hashlib object as self.md5 or self.sha1 with the
+        requested hash."""
         import tempfile
         tf = tempfile.NamedTemporaryFile()
         if calcMD5: tf.md5 = hashlib.md5()
         if calcSHA1: tf.sha1 = hashlib.sha1()
+        if calcSHA256: tf.sha256 = hashlib.sha256()
         for run in self.byte_runs():
             self.imagefile.seek(run.img_offset)
             count = run.len
@@ -836,6 +846,7 @@ class fileobject:
                 tf.write(buf)
                 if calcMD5: tf.md5.update(buf)
                 if calcSHA1: tf.sha1.update(buf)
+                if calcSHA256: tf.sha256.update(buf)
                 count -= xfer_len
         tf.flush()
         return tf

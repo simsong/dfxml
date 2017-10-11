@@ -1,4 +1,17 @@
 
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 import Objects
 import logging
 import os
@@ -38,8 +51,9 @@ f0.dtime = "1995-12-31T12:34:56Z"
 f0.bkup_time = "1994-12-31T12:34:56Z"
 f0.link_target = "Nonexistent file"
 f0.libmagic = "Some kind of compressed"
-f0.sha1 = "7d97e98f8af710c7e7fe703abc8f639e0ee507c4"
-f0.md5 = "2b00042f7481c7b056c4b410d28f33cf"
+f0.md5 = "db72d20e83d0ae39771403bc4cdde040"
+f0.sha1 = "866e1f426b2380aaf74a091aa0f39f62ae8a2de7"
+f0.sha256 = "4bc5996997ab9196b2d998b05ef302ed1dc167d74ec881533ee35008b5168630"
 #fo.brs = brs #TODO
 _logger.debug("f0 = %r" % f0)
 _logger.debug("f0.to_dfxml() = %r" % f0.to_dfxml())
@@ -59,8 +73,9 @@ f1.id = 111
 f1.alloc = False
 
 f2.mtime = "2999-12-31T12:34:56Z"
-f2.sha1 = "447d306060631570b7713ea48e74103c68eab0a3"
-f2.md5 = "b9eb9d6228842aeb05d64f30d56b361e"
+f2.md5 = "593c8fe4a2236f3eeba7f4577b663876"
+f2.sha1 = "0c0c20c03bdb8913da8ea120bd59ba5f596deceb"
+f2.sha256 = "4f6dcb46e0f7b0ad748d083f6e92d7df586d0298a94acc3795287ff156614540"
 
 _logger.debug("f1 = %r" % f1)
 d01 = f0.compare_to_other(f1)
@@ -70,7 +85,7 @@ assert d01 == set(["alloc"]) or d01 == set(["alloc", "unalloc"])
 d02 = f0.compare_to_other(f2)
 
 _logger.debug("d02 = %r" % d02)
-assert d02 == set(["mtime", "md5", "sha1"])
+assert d02 == set(["mtime", "md5", "sha1", "sha256"])
 
 f2.original_fileobject = f0
 f2.compare_to_original()

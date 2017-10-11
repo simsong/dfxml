@@ -26,8 +26,9 @@
     <byte_runs>
       <byte_run file_offset='0' img_offset='45123' len='40'/>
     </byte_runs>
-    <hashdigest type='md5'>158de35eacc7ac390693d90d31043ad6</hashdigest>
-    <hashdigest type='sha1'>b6fc3d9d7f4830070123522a5630f9e70b4931f6</hashdigest>
+    <hashdigest type='md5'>55b228770d96e4dbd1b218f4f07d8aae</hashdigest>
+    <hashdigest type='sha1'>8632a06e80eefbaf702ac6a44e633937e2be7186</hashdigest>
+    <hashdigest type='sha256'>77f380ce33609d55f8b874833c4495282fdf54869912822cde05c68090a60a18</hashdigest>
   </fileobject>
   <fileobject>
     <filename>i_will_be_modified.txt</filename>
@@ -40,8 +41,9 @@
     <byte_runs>
       <byte_run file_offset='0' img_offset='234512' len='23'/>
     </byte_runs>
-    <hashdigest type='md5'>d90d31043ad6158de35eacc7ac390693</hashdigest>
-    <hashdigest type='sha1'>070123522a5630f9e70b4931f6b6fc3d9d7f4830</hashdigest>
+    <hashdigest type='md5'>a6d9ebd95bcd3602b757ea63f9dd02ab</hashdigest>
+    <hashdigest type='sha1'>1e087807678a33ebbde2624341184c14303675a3</hashdigest>
+    <hashdigest type='sha256'>e49ff8fc09127f458830d7328b0aaabed46cab5bbeb1a22e4c93d762025be281</hashdigest>
   </fileobject>
   <fileobject>
     <filename>i_will_be_accessed.txt</filename>
@@ -54,7 +56,8 @@
     <byte_runs>
       <byte_run file_offset='0' img_offset='234512' len='12'/>
     </byte_runs>
-    <hashdigest type='md5'>e35eacc7ac390693d90d31043ad6158d</hashdigest>
-    <hashdigest type='sha1'>31f6b6fc3d9d7f4830070123522a5630f9e70b49</hashdigest>
+    <hashdigest type='md5'>f3a8f17b47f1fe899805c25b8f5a26b0</hashdigest>
+    <hashdigest type='sha1'>b439e832cb243e18f6bfc21ca0150de3ef4c6f27</hashdigest>
+    <hashdigest type='sha256'>3c4ace963a2a069a92d8abaa7c77d88e118758eff65c5180fed6534e75889bf3</hashdigest>
   </fileobject>
 </dfxml>

@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -1874,6 +1874,7 @@ class FileObject(object):
       "partition",
       "seq",
       "sha1",
+      "sha256",
       "uid",
       "unalloc",
       "unused",
@@ -2120,6 +2121,8 @@ class FileObject(object):
                     self.md5 = ce.text
                 elif ce.attrib["type"].lower() == "sha1":
                     self.sha1 = ce.text
+                elif ce.attrib["type"].lower() == "sha256":
+                    self.sha256 = ce.text
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
@@ -2322,6 +2325,7 @@ class FileObject(object):
         _append_byte_runs("data_brs", self.data_brs)
         _append_hash("md5", self.md5)
         _append_hash("sha1", self.sha1)
+        _append_hash("sha256", self.sha256)
         _append_object("original_fileobject", self.original_fileobject, "delta:")
 
         if len(diffs_whittle_set) > 0:
@@ -2683,6 +2687,14 @@ class FileObject(object):
     @sha1.setter
     def sha1(self, val):
         self._sha1 = _strcast(val)
+
+    @property
+    def sha256(self):
+        return self._sha256
+
+    @sha256.setter
+    def sha256(self, val):
+        self._sha256 = _strcast(val)
 
     @property
     def uid(self):

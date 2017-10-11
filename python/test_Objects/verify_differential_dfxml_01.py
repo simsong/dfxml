@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 
+# This software was developed at the National Institute of Standards
+# and Technology in whole or in part by employees of the Federal
+# Government in the course of their official duties. Pursuant to
+# title 17 Section 105 of the United States Code portions of this
+# software authored by NIST employees are not subject to copyright
+# protection and are in the public domain. For portions not authored
+# by NIST employees, NIST has been granted unlimited rights. NIST
+# assumes no responsibility whatsoever for its use by other parties,
+# and makes no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 import sys
 import os
 import logging
@@ -50,7 +63,7 @@ if __name__ == "__main__":
                 expected_fileobject_diffs = {
                   ("i_am_new.txt"): set([]),
                   ("i_will_be_deleted.txt"): set([]),
-                  ("i_will_be_modified.txt"): set(["filesize","mtime","ctime","atime","data_brs","md5","sha1"]),
+                  ("i_will_be_modified.txt"): set(["filesize","mtime","ctime","atime","data_brs","md5","sha1","sha256"]),
                   ("i_will_be_accessed.txt"): set(["atime", "data_brs"])
                 }
                 if o.diffs != expected_fileobject_diffs[_name]:
