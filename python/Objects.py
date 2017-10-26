@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -2623,7 +2623,7 @@ class FileObject(object):
             self._name_type = val
         else:
             cast_val = _strcast(val)
-            if cast_val not in ["-", "p", "c", "d", "b", "r", "l", "s", "h", "w", "v"]:
+            if cast_val not in ["-", "V", "b", "c", "d", "h", "l", "p", "r", "s", "v", "w"]:
                 raise ValueError("Unexpected name_type received: %r (casted to %r)." % (val, cast_val))
             self._name_type = cast_val
 
