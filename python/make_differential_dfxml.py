@@ -22,7 +22,7 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.11.1"
+__version__ = "0.12.0"
 
 import Objects
 import logging
@@ -410,7 +410,8 @@ def make_differential_dfxml(pre, post, **kwargs):
         #Add in the default appender, the DFXML Document itself.
         appenders[None] = d
 
-        content_diffs = set(["md5", "sha1", "mtime"])
+        #A file should only be considered "modified" if its contents have changed.
+        content_diffs = set(["md5", "sha1", "sha256"])
 
         def _maybe_match_attr(obj):
             """Just adds the 'matched' annotation when called."""
