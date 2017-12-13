@@ -15,6 +15,9 @@
 # This script is meant to be included in Bash scripts that need a Python v2 and v3.
 # An autotool configure script would also suffice.
 # The 'or echo' statements keep the subshell from returning an error exit status on missing a Python version.
+#
+# but what does this script do?
+#
 PYTHON2=`which python`
 
 PYTHON3=`which python3.6 2>/dev/null || echo`

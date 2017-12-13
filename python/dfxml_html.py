@@ -1,3 +1,6 @@
+# dfxml_html.py:
+# A collection of functions for generating HTML
+
 html = False
 
 def header():
