@@ -65,7 +65,38 @@ class DFXMLWriter:
         import xml.dom.minidom
         return xml.dom.minidom.parseString( self.asString()).toprettyxml(indent='  ')
 
+def dump_spark():
+    ### Connect to SPARK on local host and dump information
+    ### Uses requests
+    try:
+        import requests
+        import json
+    except ImportError:
+        return ""
+
+    r = requests.get('http://localhost:4040/api/v1/applications/')
+    if r.status_code!=200:
+        return ""
+    
+    for app in json.loads(r.text):
+        app_id = app['id']
+        print("id=",app_id)
+        print("name=",app['name'])
+        attempt_count = 1
+        for attempt in app['attempts']:
+            print("attempt {}".format(attempt_count))
+            attempt_count += 1
+            for (k,v) in attempt.items():
+                print("  {} = {}".format(k,v))
+        for param in ['jobs','allexecutors','storage/rdd']:
+            r = requests.get('http://localhost:4040/api/v1/applications/{}/{}'.format(app_id,param))
+            print("{}={}".format(param,r.text))
+
+
+
 if __name__=="__main__":
+    print(dump_spark())
+    exit(0)
     dfxml = DFXMLWriter()
     dfxml.timestamp("first")
     dfxml.timestamp("second")
