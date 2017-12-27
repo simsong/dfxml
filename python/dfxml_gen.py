@@ -65,9 +65,15 @@ class DFXMLWriter:
         import xml.dom.minidom
         return xml.dom.minidom.parseString( self.asString()).toprettyxml(indent='  ')
 
+            
+
 def dump_spark():
     ### Connect to SPARK on local host and dump information
     ### Uses requests
+    import os
+    if "SPARK_HOME" not in os.environ:
+        return "<spark/>"       # no spark
+
     try:
         import requests
         import json
@@ -90,7 +96,30 @@ def dump_spark():
                 print("  {} = {}".format(k,v))
         for param in ['jobs','allexecutors','storage/rdd']:
             r = requests.get('http://localhost:4040/api/v1/applications/{}/{}'.format(app_id,param))
-            print("{}={}".format(param,r.text))
+            e = ET.Element(param.replace("/","_"))
+            build_xml(e,json.loads(r.text))
+            import xml.dom.minidom
+            print(param)
+            print(xml.dom.minidom.parseString(ET.tostring(e)).toprettyxml(indent='  '))
+
+def build_xml(e,val):
+    if type(val)==list:
+        # A list is just a bunch of values
+        l = ET.SubElement(e,'list')
+        for v in val:
+            build_xml(l,v)
+        return
+    if type(val)==dict:
+        # A dict is a bunch of values, each with a key
+        d = ET.SubElement(e,'dict')
+        for (k,v) in val.items():
+            build_xml(ET.SubElement(d,k), v)
+        return
+    if type(val) in [int,str,bool]:
+        e.text = str(val)
+        return
+    raise RuntimeError("don't know how to build '{}'".format(val))
+        
 
 
 
