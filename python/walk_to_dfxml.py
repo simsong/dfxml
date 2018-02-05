@@ -26,7 +26,7 @@ _logger = logging.getLogger(os.path.basename(__file__))
 
 import Objects
 
-def filepath_to_fileobject(filepath):
+def filepath_to_fileobject(filepath, args):
     fobj = Objects.FileObject()
 
     #Determine type - done in three steps.
@@ -68,48 +68,48 @@ def filepath_to_fileobject(filepath):
 
     if fobj.name_type == "l":
         fobj.link_target = os.readlink(filepath)
-
-    #Add hashes for regular files.
-    if fobj.name_type == "r":
-        try:
-            with open(filepath, "rb") as in_fh:
-                chunk_size = 2**22
-                md5obj = hashlib.md5()
-                sha1obj = hashlib.sha1()
-                sha256obj = hashlib.sha256()
-                any_error = False
-                while True:
-                    buf = b""
-                    try:
-                        buf = in_fh.read(chunk_size)
-                    except Exception as e:
-                        any_error = True
-                        fobj.error = "".join(traceback.format_stack())
-                        if e.args:
-                            fobj.error += "\n" + str(e.args)
+    if not args.n:
+        #Add hashes for regular files.
+        if fobj.name_type == "r":
+            try:
+                with open(filepath, "rb") as in_fh:
+                    chunk_size = 2**22
+                    md5obj = hashlib.md5()
+                    sha1obj = hashlib.sha1()
+                    sha256obj = hashlib.sha256()
+                    any_error = False
+                    while True:
                         buf = b""
-                    if buf == b"":
-                        break
+                        try:
+                            buf = in_fh.read(chunk_size)
+                        except Exception as e:
+                            any_error = True
+                            fobj.error = "".join(traceback.format_stack())
+                            if e.args:
+                                fobj.error += "\n" + str(e.args)
+                            buf = b""
+                        if buf == b"":
+                            break
 
-                    md5obj.update(buf)
-                    sha1obj.update(buf)
-                    sha256obj.update(buf)
+                        md5obj.update(buf)
+                        sha1obj.update(buf)
+                        sha256obj.update(buf)
 
-                if not any_error:
-                    fobj.md5 = md5obj.hexdigest()
-                    fobj.sha1 = sha1obj.hexdigest()
-                    fobj.sha256 = sha256obj.hexdigest()
-        except Exception as e:
-            if fobj.error is None:
-                fobj.error = ""
-            else:
-                fobj.error += "\n"
-            fobj.error += "".join(traceback.format_stack())
-            if e.args:
-                fobj.error += "\n" + str(e.args)
+                    if not any_error:
+                        fobj.md5 = md5obj.hexdigest()
+                        fobj.sha1 = sha1obj.hexdigest()
+                        fobj.sha256 = sha256obj.hexdigest()
+            except Exception as e:
+                if fobj.error is None:
+                    fobj.error = ""
+                else:
+                    fobj.error += "\n"
+                fobj.error += "".join(traceback.format_stack())
+                if e.args:
+                    fobj.error += "\n" + str(e.args)
     return fobj
 
-def main():
+def main(args):
     #Determine whether we're going in threading mode or not.  (Some modules are not available by default.)
     using_threading = False
     if args.jobs > 1:
@@ -160,7 +160,7 @@ def main():
                 filepath = q.get()
                 if filepath is None:
                     break
-                fobj = filepath_to_fileobject(filepath)
+                fobj = filepath_to_fileobject(filepath, args)
                 fileobjects_by_filepath[filepath] = fobj
                 q.task_done()
 
@@ -182,7 +182,7 @@ def main():
             t.join()
     else: #Not threading.
         for filepath in sorted(filepaths):
-            fobj = filepath_to_fileobject(filepath)
+            fobj = filepath_to_fileobject(filepath, args)
             fileobjects_by_filepath[filepath] = fobj
 
     #Build output DFXML tree.
@@ -194,6 +194,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-n", action="store_true", help="Do not calculate any hashes")
     parser.add_argument("-j", "--jobs", type=int, default=1, help="Number of file-processing threads to run.")
     args = parser.parse_args()
 
@@ -202,4 +203,4 @@ if __name__ == "__main__":
     if args.jobs <= 0:
         raise ValueError("If requesting multiple jobs, please request 1 or more worker threads.")
 
-    main()
+    main(args)
