@@ -1,3 +1,7 @@
+2018-02-14    <alexander.nelson@nist.gov>
+
+	* Python: Add disclaimer text to files created or modified at NIST.
+
 2017-11-06    <alexander.nelson@nist.gov>
 
 	* make_differential_dfxml.py: Revise appearance of "modified" differential annotation
