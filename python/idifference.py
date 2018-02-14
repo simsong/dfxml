@@ -31,7 +31,7 @@ Process:
 4. Replace the old maps with the new maps
 """
 
-__version__ = "0.2.0rfc4"
+__version__ = "0.2.0rfc5"
 
 import sys,fiwalk,dfxml,time
 import copy
@@ -40,6 +40,7 @@ if sys.version_info < (3,1):
     raise RuntimeError("idifference.py now requires Python 3.1 or above")
 
 #Global variable, to be adjusted later
+global options
 options = None
 
 def ignore_filename(fn, include_dotdirs=False):
@@ -577,7 +578,6 @@ class DiskState:
 
 if __name__=="__main__":
     from optparse import OptionParser
-    global options
 
     parser = OptionParser()
     parser.usage = '%prog [options] file1 file2 [file3...]  (files can be xml or image files)'
