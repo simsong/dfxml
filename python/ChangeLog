@@ -1,5 +1,6 @@
 2018-02-14    <alexander.nelson@nist.gov>
 
+	* _pick_pythons.sh: Adjust Python selection; resolve inline comment; remove EOL'd Python3 versions
 	* Python: Add disclaimer text to files created or modified at NIST.
 
 2017-11-06    <alexander.nelson@nist.gov>
