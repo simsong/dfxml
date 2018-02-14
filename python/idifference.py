@@ -1,4 +1,19 @@
 #!/usr/bin/env python
+
+# This software was developed in whole or in part by employees of the
+# Federal Government in the course of their official duties, and with
+# other Federal assistance. Pursuant to title 17 Section 105 of the
+# United States Code portions of this software authored by Federal
+# employees are not subject to copyright protection within the United
+# States. For portions not authored by Federal employees, the Federal
+# Government has been granted unlimited rights, and no claim to
+# copyright is made. The Federal Government assumes no responsibility
+# whatsoever for its use by other parties, and makes no guarantees,
+# expressed or implied, about its quality, reliability, or any other
+# characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 """idifference.
 
 DEVELOPMENT NOTE: This implementation will soon be replaced by what is currently idifference2.py, after a period of testing by users.  If idifference2.py does not meet your needs, but idifference.py does, please let one of the maintainers know (email addresses in the Git history or the python/ChangeLog file).
