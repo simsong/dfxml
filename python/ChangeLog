@@ -1,3 +1,7 @@
+2018-02-28    <alexander.nelson@nist.gov>
+
+	* Objects.py: Handle numeric casting and st_ino in Python 2 on Windows 7
+
 2018-02-15    <alexander.nelson@nist.gov>
 
 	* _pick_pythons.sh: Adjust Python selection; resolve inline comment; remove EOL'd Python3 versions
