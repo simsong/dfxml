@@ -38,7 +38,7 @@ import platform
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
-#Contains: (namespace, local name) qualified XML element name pairs
+#Contains: (namespace, local name, class) qualified XML element name pairs, with a reference to the class that had the problem.
 _warned_elements = set([])
 _warned_byterun_attribs = set([])
 
@@ -832,7 +832,7 @@ class VolumeObject(object):
                 self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
-                    _warned_elements.add((cns, ctn))
+                    _warned_elements.add((cns, ctn, VolumeObject))
                     _logger.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
     def print_dfxml(self, output_fh=sys.stdout):
@@ -2154,8 +2154,8 @@ class FileObject(object):
                 self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
-                    _warned_elements.add((cns, ctn))
-                    _logger.warning("Uncertain what to do with this element: %r" % ce)
+                    _warned_elements.add((cns, ctn, FileObject))
+                    _logger.warning("Uncertain what to do with this element in a FileObject: %r" % ce)
 
     def populate_from_stat(self, s):
         """Populates FileObject fields from a stat() call."""
@@ -2945,8 +2945,8 @@ class CellObject(object):
                 self.parent_object.populate_from_Element(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
-                    _warned_elements.add((cns, ctn))
-                    _logger.warning("Uncertain what to do with this element: %r" % ce)
+                    _warned_elements.add((cns, ctn, CellObject))
+                    _logger.warning("Uncertain what to do with this element in a CellObject: %r" % ce)
 
         self.sanity_check()
 
