@@ -27,7 +27,7 @@ That is, this command:
 will create a single DFXML file with two volumes and their file objects contained.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 import Objects
 import logging
@@ -38,7 +38,7 @@ import xml.etree.ElementTree as ET
 _logger = logging.getLogger(os.path.basename(__file__))
 
 def main():
-    d = Objects.DFXMLObject(version="1.1.1")
+    d = Objects.DFXMLObject(version="1.2.0")
 
     d.program = sys.argv[0]
     d.program_version = __version__
