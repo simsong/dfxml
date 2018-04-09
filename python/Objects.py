@@ -176,17 +176,16 @@ class DFXMLObject(object):
         self.diff_file_ignores = kwargs.get("diff_file_ignores", set())
 
         self._namespaces = dict()
+        self._child_objects = []
         self._volumes = []
         self._files = []
 
         self._build_libraries = []
         self._creator_libraries = []
 
-        input_volumes = kwargs.get("volumes") or []
-        input_files = kwargs.get("files") or []
-        for v in input_volumes:
+        for v in kwargs.get("volumes", []):
             self.append(v)
-        for f in input_files:
+        for f in kwargs.get("files", []):
             self.append(f)
 
         #Add default namespaces
@@ -194,13 +193,19 @@ class DFXMLObject(object):
         self.add_namespace("dc", dfxml.XMLNS_DC)
 
     def __iter__(self):
-        """Yields all VolumeObjects, recursively their FileObjects, and the FileObjects directly attached to this DFXMLObject, in that order."""
-        for v in self._volumes:
-            yield v
-            for f in v:
-                yield f
-        for f in self._files:
-            yield f
+        """
+        Recursively yields all child Objects directly attached to this DFXMLObject, in depth-first order.  E.g. yields VolumeObjects, then recursively their FileObjects; and then FileObjects directly attached to this DFXMLObject, in that order.
+
+        This is a depth-first traversal, vs. direct-child-only, in keeping with etree's Element's iter:
+        https://docs.python.org/3/library/xml.etree.elementtree.html#xml.etree.ElementTree.Element.iter
+
+        For direct children, use the child_objects property.
+        """
+        for co in self.child_objects:
+            yield co
+            if hasattr(co, "child_objects"):
+                for gco in co:
+                    yield gco
 
     def _add_library(self, target_list, *args, **kwargs):
         #_logger.debug("_add_library:args = %r." % (args,))
@@ -232,12 +237,14 @@ class DFXMLObject(object):
 
     def append(self, value):
         if isinstance(value, VolumeObject):
-            self._volumes.append(value)
+            self.volumes.append(value)
         elif isinstance(value, FileObject):
-            self._files.append(value)
+            self.files.append(value)
         else:
             _logger.debug("value = %r" % value)
             raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
+
+        self.child_objects.append(value)
 
     def iter_namespaces(self):
         """Yields (prefix, url) pairs of each namespace registered in this DFXMLObject."""
@@ -291,11 +298,11 @@ class DFXMLObject(object):
         output_fh.write("""<?xml version="1.0"?>\n""")
         output_fh.write(dfxml_head)
         output_fh.write("\n")
-        _logger.debug("Writing %d volume objects." % len(self._volumes))
+        _logger.debug("Writing %d volume objects for the document object." % len(self.volumes))
         for v in self._volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
-        _logger.debug("Writing %d file objects." % len(self._files))
+        _logger.debug("Writing %d file objects for the document object." % len(self.files))
         for f in self._files:
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
@@ -305,12 +312,14 @@ class DFXMLObject(object):
 
     def to_Element(self):
         outel = self.to_partial_Element()
-        for v in self._volumes:
-            tmpel = v.to_Element()
-            outel.append(tmpel)
-        for f in self._files:
-            tmpel = f.to_Element()
-            outel.append(tmpel)
+        # List children grouped by type, in order per DFXML schema.
+        for child_list in [
+          self.volumes,
+          self.files
+        ]:
+            for obj in child_list:
+                tmpel = obj.to_Element()
+                outel.append(tmpel)
         return outel
 
     def to_dfxml(self):
@@ -394,6 +403,11 @@ class DFXMLObject(object):
         #_logger.debug("outel.attrib = %r." % outel.attrib)
 
         return outel
+
+    # No setter.
+    @property
+    def child_objects(self):
+        return self._child_objects
 
     @property
     def command_line(self):
@@ -567,6 +581,7 @@ class LibraryObject(object):
 class RegXMLObject(object):
 
     def __init__(self, *args, **kwargs):
+        self.child_objects = kwargs.get("child_objects", [])
         self.command_line = kwargs.get("command_line")
         self.interpreter = kwargs.get("interpreter")
         self.metadata = kwargs.get("metadata")
@@ -609,6 +624,7 @@ class RegXMLObject(object):
         else:
             _logger.debug("value = %r" % value)
             raise TypeError("Expecting a HiveObject or a CellObject.  Got instead this type: %r." % type(value))
+        self.child_objects.append(value)
 
     def print_regxml(self, output_fh=sys.stdout):
         """Serializes and prints the entire object, without constructing the whole tree."""
@@ -711,8 +727,10 @@ class VolumeObject(object):
       "block_count",
       "block_size",
       "byte_runs",
+      "child_objects",
       "error",
       "externals",
+      "files",
       "first_block",
       "ftype",
       "ftype_str",
@@ -731,16 +749,22 @@ class VolumeObject(object):
 
     #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
     _incomparable_properties = set([
-      "annos"
+      "annos",
+      "child_objects"
     ])
 
     def __init__(self, *args, **kwargs):
+        self._child_objects = []
         self._files = []
         self._annos = set()
         self._diffs = set()
 
         for prop in VolumeObject._all_properties:
-            if prop in ["annos", "files"]:
+            if prop in {
+              "annos",
+              "child_objects",
+              "files"
+            }:
                 continue
             elif prop == "externals":
                 setattr(self, prop, kwargs.get(prop, OtherNSElementList()))
@@ -748,15 +772,21 @@ class VolumeObject(object):
                 setattr(self, prop, kwargs.get(prop))
 
     def __iter__(self):
-        """Yields all FileObjects directly attached to this VolumeObject."""
-        for f in self._files:
-            yield f
+        """Recursively yields all child Objects in depth-first order."""
+        for co in self.child_objects:
+            yield co
+            if hasattr(co, "child_objects"):
+                for gco in co:
+                    yield gco
 
     def __repr__(self):
         parts = []
         for prop in VolumeObject._all_properties:
-            #Skip outputting the files list.
-            if prop == "files":
+            #Skip outputting the files lists.
+            if prop in {
+              "child_objects",
+              "files"
+            }:
                 continue
             val = getattr(self, prop)
             if not val is None:
@@ -765,7 +795,8 @@ class VolumeObject(object):
 
     def append(self, value):
         _typecheck(value, FileObject)
-        self._files.append(value)
+        self.files.append(value)
+        self.child_objects.append(value)
 
     def compare_to_original(self):
         self._diffs = self.compare_to_other(self.original_volume, True)
@@ -808,7 +839,7 @@ class VolumeObject(object):
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["volume", "original_volume"]
 
-        #Look through only direct-child elements (recursively handing off grandchildren to other populate_from_Element calls).
+        #Look through direct-child elements to populate object.
         for ce in e.findall("./*"):
             #_logger.debug("ce = %r" % ce)
             (cns, ctn) = _qsplit(ce.tag)
@@ -854,7 +885,7 @@ class VolumeObject(object):
 
         output_fh.write(dfxml_head)
         output_fh.write("\n")
-        _logger.debug("Writing %d file objects for this volume." % len(self._files))
+        _logger.debug("Writing %d file objects for this volume." % len(self.files))
         for f in self._files:
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
@@ -886,9 +917,13 @@ class VolumeObject(object):
                         _nagged_volume_error_standin = True
                     errorel = ET.Element("error")
                     errorel.text = str(self.error)
-        for f in self._files:
-            tmpel = f.to_Element()
-            outel.append(tmpel)
+        # List children grouped by type, in order per DFXML schema.
+        for child_list in [
+          self.files
+        ]:
+            for obj in child_list:
+                tmpel = obj.to_Element()
+                outel.append(tmpel)
         #The error element comes after the fileobject list in the schema.
         if not errorel is None:
             outel.append(errorel)
@@ -1011,6 +1046,21 @@ class VolumeObject(object):
         self._block_size = _intcast(val)
 
     @property
+    def byte_runs(self):
+        return self._byte_runs
+
+    @byte_runs.setter
+    def byte_runs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._byte_runs = val
+
+    # No setter.
+    @property
+    def child_objects(self):
+        return self._child_objects
+
+    @property
     def diffs(self):
         return self._diffs
 
@@ -1105,6 +1155,7 @@ class HiveObject(object):
       "original_fileobject",
       "original_hive"
     ])
+    # No child_objects property.  (This implementation doesn't support Objects attached to cells.)
 
     _diff_attr_names = {
       "new":"delta:new_hive",
@@ -1636,7 +1687,7 @@ class ByteRuns(object):
         if "facet" in e.attrib:
             self.facet = e.attrib["facet"]
 
-        #Look through direct-child elements to populate run array
+        #Look through direct-child elements to populate run array.
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "byte_run":
@@ -1906,6 +1957,7 @@ class FileObject(object):
     _incomparable_properties = set([
       "annos",
       "byte_runs",
+      "externals",
       "id",
       "unalloc",
       "unused"
@@ -1951,7 +2003,7 @@ class FileObject(object):
 
         for prop in sorted(FileObject._all_properties):
             #Save data byte runs for the end, as their lists can get really long.
-            if prop not in ["byte_runs", "data_brs"]:
+            if prop not in ["byte_runs", "data_brs", "externals"]:
                 value = getattr(self, prop)
                 if not value is None:
                     parts.append("%s=%r" % (prop, value))
