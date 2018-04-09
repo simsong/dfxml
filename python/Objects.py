@@ -1944,7 +1944,8 @@ class FileObject(object):
       "uid",
       "unalloc",
       "unused",
-      "used"
+      "used",
+      "volume_object"
     ])
 
     _br_facet_to_property = {
@@ -1960,7 +1961,8 @@ class FileObject(object):
       "externals",
       "id",
       "unalloc",
-      "unused"
+      "unused",
+      "volume_object"
     ])
 
     _diff_attr_names = {
@@ -2002,8 +2004,8 @@ class FileObject(object):
         parts = []
 
         for prop in sorted(FileObject._all_properties):
-            #Save data byte runs for the end, as their lists can get really long.
-            if prop not in ["byte_runs", "data_brs", "externals"]:
+            #Save data byte runs for the end, as their lists can get really long.  Skip parent-volume reference.
+            if prop not in ["byte_runs", "data_brs", "externals", "volume_object"]:
                 value = getattr(self, prop)
                 if not value is None:
                     parts.append("%s=%r" % (prop, value))
@@ -3302,6 +3304,250 @@ class CellObject(object):
         self._root = _boolcast(val)
 
 
+class Parser(object):
+
+    #Set up state machine.  (Would use enum if supported in Python 2.)
+    _INPUT_START               =  -1
+
+    _DFXML_START               =   0
+    DFXML_PRESTREAM            =   1
+    DFXML_POSTSTREAM           =   2
+    _DFXML_END                 = 999
+
+    _DFXML_METADATA_START      =  10
+    _DFXML_METADATA_END        =  19
+
+    _VOLUME_START              = 400
+    VOLUME_PRESTREAM           = 401
+    _VOLUME_END                = 499
+
+    _FILE_START                = 500
+    _FILE_END                  = 599
+
+    transitions = {
+      _INPUT_START: {
+        _DFXML_START
+      },
+      _DFXML_START: {
+        DFXML_PRESTREAM
+      },
+      _DFXML_END: set(),
+      _DFXML_METADATA_START: {
+        _DFXML_METADATA_END
+      },
+      _DFXML_METADATA_END: {
+        DFXML_PRESTREAM
+      },
+      _VOLUME_START: {
+        VOLUME_PRESTREAM
+      },
+      _VOLUME_END: {
+        _DFXML_END,
+        _VOLUME_START,
+        _VOLUME_END,
+        DFXML_POSTSTREAM
+      },
+      _FILE_START: {
+        _FILE_END
+      },
+      _FILE_END: {
+        _DFXML_END,
+        _VOLUME_END,
+        _FILE_START,
+        DFXML_POSTSTREAM
+      },
+      DFXML_PRESTREAM: {
+        _DFXML_END,
+        _DFXML_METADATA_START,
+        _VOLUME_START,
+        _FILE_START,
+        DFXML_POSTSTREAM
+      },
+      DFXML_POSTSTREAM: {
+        _DFXML_END
+      },
+      VOLUME_PRESTREAM: {
+        _FILE_START
+      }
+    }
+
+    def __init__(self):
+        self._dobj = None
+        self._iterparse_events = None
+        self._object_stack = []
+        self._proxy_element_stack = []
+        self._state = Parser._INPUT_START
+
+    def iterparse(self, fh, events=("start","end"), **kwargs):
+        self.dobj = kwargs.get("dfxmlobject", DFXMLObject())
+
+        self.iterparse_events = set()
+        for event in events:
+            self.iterparse_events.add(event)
+
+        #Throughout this loop, "eop" stands for "(event, object) pair."
+        for (ETevent, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
+            #View the object event stream in debug mode
+            #_logger.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
+            #if ETevent in ("start", "end"):
+            #    _logger.debug("_ET_tostring(elem) = %r" % _ET_tostring(elem))
+
+            #Track namespaces
+            if ETevent == "start-ns":
+                self.dobj.add_namespace(*elem)
+                ET.register_namespace(*elem)
+                continue
+
+            #Split tag name into namespace and local name
+            (ns, ln) = _qsplit(elem.tag)
+
+            if ETevent == "start":
+                if ln == "dfxml":
+                    for eop in self.transition(Parser._DFXML_START): yield eop
+                    for k in elem.attrib:
+                        #Note that xmlns declarations don't appear in elem.attrib.
+                        self.proxy_element_stack[-1].attrib[k] = elem.attrib[k]
+                    for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
+                elif ln == "metadata":
+                    #This transition is to resolve an ambiguity in handling external-namespace elements in the DFXML_PRESTREAM state.
+                    for eop in self.transition(Parser._DFXML_METADATA_START): yield eop
+                elif ln == "volume":
+                    for eop in self.transition(Parser._VOLUME_START): yield eop
+                    for k in elem.attrib:
+                        self.proxy_element_stack[-1].attrib[k] = elem.attrib[k]
+                    for eop in self.transition(Parser.VOLUME_PRESTREAM): yield eop
+                elif ln == "fileobject":
+                    for eop in self.transition(Parser._FILE_START): yield eop
+                    #All other work happens at the fileobject's end event.
+                else:
+                    pass
+            elif ETevent == "end":
+                #If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
+                if ln == "fileobject":
+                    for eop in self.transition(Parser._FILE_END): yield eop
+                    #No need to use the proxy element stack for file objects.  Handle emitting here.
+                    fobj = FileObject()
+                    fobj.populate_from_Element(elem)
+                    if isinstance(self.object_stack[-1], VolumeObject):
+                        fobj.volume_object = self.object_stack[-1]
+                    #_logger.debug("fi = %r" % fobj)
+                    if "end" in self.iterparse_events:
+                        yield ("end", fobj)
+                    #Reset
+                    elem.clear()
+                elif ln == "volume":
+                    for eop in self.transition(Parser._VOLUME_END): yield eop
+                    elem.clear()
+                elif ln == "metadata":
+                    for eop in self.transition(Parser._DFXML_METADATA_END): yield eop
+                    self.proxy_element_stack[0].append(elem)
+                    for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
+                elif ln == "dfxml":
+                    for eop in self.transition(Parser._DFXML_END): yield eop
+                    elem.clear()
+                #Branches after here have to reason based on the parse self.state value.
+                elif self.state in {
+                  Parser.DFXML_PRESTREAM,
+                  Parser.VOLUME_PRESTREAM
+                }:
+                    self.proxy_element_stack[-1].append(elem)
+                else:
+                    pass
+
+    def transition(self, to_state):
+        """
+        Internal function.  Updates _state variable and parallel object/element stacks (local to iterparse() call).  Returns ordered list of (event, object) pairs that result from transitioning to/from states.
+        """
+
+        retval = []
+
+        if not to_state in Parser.transitions[self.state]:
+            raise ValueError("DFXML stream has unexpected state transition: %r -> %r." % (self.state, to_state))
+        from_state = self.state
+        self.state = to_state
+
+        #_logger.debug("_transition:from_state = %r." % from_state)
+        #_logger.debug("_transition:to_state = %r." % to_state)
+
+        #Handle transitioning away from old state.  Mostly, this is emitting start events for Objects that have potentially large streams of child objects.
+        if from_state == Parser.DFXML_PRESTREAM:
+            #Cut; stash DFXMLObject stash now.
+            self.dobj.populate_from_Element(self.proxy_element_stack[0])
+            if "start" in self.iterparse_events:
+                retval.append(("start", self.dobj))
+        elif from_state == Parser.VOLUME_PRESTREAM:
+            #Cut; stash VolumeObject event now.
+            self.object_stack[-1].populate_from_Element(self.proxy_element_stack[-1])
+            if "start" in self.iterparse_events:
+                retval.append(("start", self.object_stack[-1]))
+
+        #Handle transitioning to new state.
+        if to_state == Parser._DFXML_START:
+            if from_state != Parser._INPUT_START:
+                raise ValueError("Encountered a <dfxml> element, but the parser isn't in its start state.  Recursive <dfxml> declarations aren't supported at this time.")
+            self.object_stack.append(self.dobj)
+            el = ET.Element("dfxml")
+            self.proxy_element_stack.append(el)
+        elif to_state == Parser._DFXML_END:
+            assert isinstance(self.object_stack[-1], DFXMLObject)
+            if "end" in self.iterparse_events:
+                retval.append(("end", self.object_stack[-1]))
+            self.object_stack.pop()
+            self.proxy_element_stack.pop().clear()
+
+        elif to_state == Parser._VOLUME_START:
+            self.object_stack.append(VolumeObject())
+            el = ET.Element("volume")
+            self.proxy_element_stack.append(el)
+        elif to_state == Parser._VOLUME_END:
+            assert isinstance(self.object_stack[-1], VolumeObject)
+            if "end" in self.iterparse_events:
+                retval.append(("end", self.object_stack[-1]))
+            self.object_stack.pop()
+            self.proxy_element_stack.pop().clear()
+
+        return retval
+
+    @property
+    def dobj(self):
+        """The DFXMLObject is affected at the beginning and end of the objects stream (metadata up front, rusage at end).  Maintain a dobj reference outside of the big tree-walking loop."""
+        return self._dobj
+
+    @dobj.setter
+    def dobj(self, value):
+        _typecheck(value, DFXMLObject)
+        self._dobj = value
+
+    @property
+    def iterparse_events(self):
+        return self._iterparse_events
+
+    @iterparse_events.setter
+    def iterparse_events(self, value):
+        _typecheck(value, set)
+        self._iterparse_events = value
+
+    #No setter.
+    @property
+    def object_stack(self):
+        """An object stack is necessary to track start and stop events for the same object in light of complicated nestings."""
+        return self._object_stack
+
+    #No setter.
+    @property
+    def proxy_element_stack(self):
+        """It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first child object is hit.  Likewise with the Element for the DFXMLObject, and anything else with child-object lists."""
+        return self._proxy_element_stack
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        _typecheck(value, int)
+        self._state = value
+
 def iterparse(filename, events=("start","end"), **kwargs):
     """
     Generator.  Yields a stream of populated DFXMLObjects, VolumeObjects and FileObjects, paired with an event type ("start" or "end").  The DFXMLObject and VolumeObjects do NOT have their child lists populated with this method - that is left to the calling program.
@@ -3316,11 +3562,14 @@ def iterparse(filename, events=("start","end"), **kwargs):
 
     #The DFXML stream file handle.
     fh = None
+
     subp = None
     fiwalk_path = kwargs.get("fiwalk", "fiwalk")
     subp_command = [fiwalk_path, "-x", filename]
+    need_cleanup = False
     if filename.endswith("xml"):
         fh = open(filename, "rb")
+        need_cleanup = True
     else:
         subp = subprocess.Popen(subp_command, stdout=subprocess.PIPE)
         fh = subp.stdout
@@ -3331,117 +3580,9 @@ def iterparse(filename, events=("start","end"), **kwargs):
             raise ValueError("Unexpected event type: %r.  Expecting 'start', 'end'." % e)
         _events.add(e)
 
-    dobj = kwargs.get("dfxmlobject", DFXMLObject())
-
-    #The only way to efficiently populate VolumeObjects is to populate the object when the stream has hit its first FileObject.
-    vobj = None
-
-    #It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first fileobject is hit.
-    #Likewise with the Element for the DFXMLObject.
-    dfxml_proxy = None
-    volume_proxy = None
-
-    #State machine, used to track when the first fileobject of a volume is encountered.
-    READING_START = 0
-    READING_PRESTREAM = 1 #DFXML metadata, pre-Object stream
-    READING_VOLUMES = 2
-    READING_FILES = 3
-    READING_POSTSTREAM = 4 #DFXML metadata, post-Object stream (typically the <rusage> element)
-    _state = READING_START
-
-    for (ETevent, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
-        #View the object event stream in debug mode
-        #_logger.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
-        #if ETevent in ("start", "end"):
-        #    _logger.debug("_ET_tostring(elem) = %r" % _ET_tostring(elem))
-
-        #Track namespaces
-        if ETevent == "start-ns":
-            dobj.add_namespace(*elem)
-            ET.register_namespace(*elem)
-            continue
-
-        #Split tag name into namespace and local name
-        (ns, ln) = _qsplit(elem.tag)
-
-        if ETevent == "start":
-            if ln == "dfxml":
-                if _state != READING_START:
-                    raise ValueError("Encountered a <dfxml> element, but the parser isn't in its start state.  Recursive <dfxml> declarations aren't supported at this time.")
-                dfxml_proxy = ET.Element(elem.tag)
-                for k in elem.attrib:
-                    #Note that xmlns declarations don't appear in elem.attrib.
-                    dfxml_proxy.attrib[k] = elem.attrib[k]
-                _state = READING_PRESTREAM
-            elif ln == "volume":
-                if _state == READING_PRESTREAM:
-                    #Cut; yield DFXMLObject now.
-                    dobj.populate_from_Element(dfxml_proxy)
-                    if "start" in _events:
-                        yield ("start", dobj)
-                #Start populating a new Volume proxy.
-                volume_proxy = ET.Element(elem.tag)
-                for k in elem.attrib:
-                    volume_proxy.attrib[k] = elem.attrib[k]
-                _state = READING_VOLUMES
-            elif ln == "fileobject":
-                if _state == READING_PRESTREAM:
-                    #Cut; yield DFXMLObject now.
-                    dobj.populate_from_Element(dfxml_proxy)
-                    if "start" in _events:
-                        yield ("start", dobj)
-                elif _state == READING_VOLUMES:
-                    #_logger.debug("Encountered a fileobject while reading volume properties.  Yielding volume now.")
-                    #Cut; yield VolumeObject now.
-                    if volume_proxy is not None:
-                        vobj = VolumeObject()
-                        vobj.populate_from_Element(volume_proxy)
-                        if "start" in _events:
-                            yield ("start", vobj)
-                        #Reset
-                        volume_proxy.clear()
-                        volume_proxy = None
-                _state = READING_FILES
-        elif ETevent == "end":
-            if ln == "fileobject":
-                if _state in (READING_PRESTREAM, READING_POSTSTREAM):
-                    #This particular branch can be reached if there are trailing fileobject elements after the volume element.  This would happen if a tool needed to represent files (likely reassembled fragments) found outside all the partitions.
-                    #More frequently, we hit this point when there are no volume groupings.
-                    vobj = None
-                fi = FileObject()
-                fi.populate_from_Element(elem)
-                fi.volume_object = vobj
-                #_logger.debug("fi = %r" % fi)
-                if "end" in _events:
-                    yield ("end", fi)
-                #Reset
-                elem.clear()
-            elif ln == "dfxml":
-                if "end" in _events:
-                    #_logger.debug("end, dfxml, _state=%r" % _state)
-                    if _state == READING_PRESTREAM:
-                        #This DFXML document contains no volumes or files, but may contain other metadata.  Populate (which would normally be done before starting a child Object stream) and yield.
-                        dobj.populate_from_Element(dfxml_proxy)
-                        yield ("end", dobj)
-            elif ln == "volume":
-                if _state == READING_VOLUMES:
-                    #Create and yield VolumeObject now (because there were no file objects to trigger it in the "start" ElementTree events branch above)
-                    vobj = VolumeObject()
-                    vobj.populate_from_Element(volume_proxy)
-                    if "start" in _events:
-                        yield ("start", vobj)
-                if "end" in _events:
-                    yield ("end", vobj)
-                _state = READING_POSTSTREAM
-            elif _state == READING_VOLUMES:
-                #This is a volume property; glom onto the proxy.
-                if volume_proxy is not None:
-                    volume_proxy.append(elem)
-            elif _state == READING_PRESTREAM:
-                if ln in ["metadata", "creator", "source"] or ns != dfxml.XMLNS_DFXML:
-                    #This is a direct child of the DFXML document property; glom onto the proxy.
-                    if dfxml_proxy is not None:
-                        dfxml_proxy.append(elem)
+    parser = Parser()
+    for (event, obj) in parser.iterparse(fh, _events, **kwargs):
+        yield (event, obj)
 
     #If we called Fiwalk, double-check that it exited successfully.
     if not subp is None:
@@ -3454,28 +3595,47 @@ def iterparse(filename, events=("start","end"), **kwargs):
             raise e
         _logger.debug("...Done.")
 
+    if need_cleanup:
+        fh.close()
+
 def parse(filename):
-    """Returns a DFXMLObject populated from the contents of the (string) filename argument."""
-    retval = None
-    appender = None
+    """
+    Returns a DFXMLObject populated from the contents of the (string) filename argument.
+    Internally, this function uses iterparse().  One key operational difference is this function also appends child objects emitted by iterparse() to parent objects; iterparse() does not handle parent-child relationships.
+    """
+    object_stack = []
+
     for (event, obj) in iterparse(filename):
         if event == "start":
             if isinstance(obj, DFXMLObject):
-                retval = obj
-                appender = obj
-            elif isinstance(obj, VolumeObject):
-                retval.append(obj)
-                appender = obj
+                object_stack.append(obj)
+            elif isinstance(obj, (
+              VolumeObject,
+            )):
+                #_logger.debug("Adding to stack a %r." % type(obj))
+                object_stack[-1].append(obj)
+                object_stack.append(obj)
+            else:
+                raise NotImplementedError("parse:Unexpected object type with start-event: %r." % type(obj))
         elif event == "end":
             if isinstance(obj, DFXMLObject):
-                if retval is None:
-                    retval = obj
-                appender = obj
-            if isinstance(obj, VolumeObject):
-                appender = retval
+                #Let object_stack retain bottom DFXMLObject.
+                pass
+            elif isinstance(obj, (
+              VolumeObject,
+            )):
+                popped = object_stack.pop()
+                #_logger.debug("Popped from stack a %r." % type(popped))
             elif isinstance(obj, FileObject):
-                appender.append(obj)
-    return retval
+                object_stack[-1].append(obj)
+            else:
+                raise NotImplementedError("parse:Unexpected object type with end-event: %r." % type(obj))
+
+    #_logger.debug("len(object_stack) = %d." % len(object_stack))
+    if len(object_stack) > 0:
+        return object_stack[0]
+    else:
+        return None
 
 if __name__ == "__main__":
     import argparse
