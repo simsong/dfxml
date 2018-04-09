@@ -162,7 +162,9 @@ def _typecheck(obj, classinfo):
         else:
             raise TypeError("Expecting object to be of type %r." % classinfo)
 
+
 class DFXMLObject(object):
+
     def __init__(self, *args, **kwargs):
         self.command_line = kwargs.get("command_line")
         self.program = kwargs.get("program")
@@ -489,7 +491,9 @@ class DFXMLObject(object):
         """List of volume objects directly attached to this DFXMLObject.  No setter for now."""
         return self._volumes
 
+
 class LibraryObject(object):
+
     def __init__(self, *args, **kwargs):
         self.name = None
         self.version = None
@@ -559,7 +563,9 @@ class LibraryObject(object):
     def version(self, value):
         self._version = _strcast(value)
 
+
 class RegXMLObject(object):
+
     def __init__(self, *args, **kwargs):
         self.command_line = kwargs.get("command_line")
         self.interpreter = kwargs.get("interpreter")
@@ -777,7 +783,7 @@ class VolumeObject(object):
             #_logger.debug("getattr(self, %r) = %r" % (prop, getattr(self, prop)))
             #_logger.debug("getattr(other, %r) = %r" % (prop, getattr(other, prop)))
 
-            #Allow file system type to be case-insensitive
+            #Allow file system type to be case-insensitive.
             if prop == "ftype_str":
                 o = getattr(other, prop)
                 if o: o = o.lower()
@@ -795,14 +801,14 @@ class VolumeObject(object):
         _typecheck(e, (ET.Element, ET.ElementTree))
         #_logger.debug("e = %r" % e)
 
-        #Read differential annotations
+        #Read differential annotations.
         _read_differential_annotations(VolumeObject._diff_attr_names, e, self.annos)
 
-        #Split into namespace and tagname
+        #Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["volume", "original_volume"]
 
-        #Look through direct-child elements to populate run array
+        #Look through only direct-child elements (recursively handing off grandchildren to other populate_from_Element calls).
         for ce in e.findall("./*"):
             #_logger.debug("ce = %r" % ce)
             (cns, ctn) = _qsplit(ce.tag)
@@ -839,7 +845,7 @@ class VolumeObject(object):
 
         dfxml_foot = "</volume>"
 
-        #Deal with an empty element being printed as <elem/>
+        #Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
             replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
             dfxml_head = replaced_dfxml_wrapper
@@ -857,6 +863,8 @@ class VolumeObject(object):
         output_fh.write("\n")
 
     def to_Element(self):
+        global _nagged_volume_error_impldrift
+        global _nagged_volume_error_standin
         outel = self.to_partial_Element()
         #If there is an error reported on this volume, pop the element off of the partial element's end.
         errorel = None
@@ -869,12 +877,10 @@ class VolumeObject(object):
                 del(outel[-1])
             else:
                 if outel.find("error"):
-                    global _nagged_volume_error_impldrift
                     if not _nagged_volume_error_impldrift:
                         _logger.error("Implementation drift - when this code was initially written, the error element was the last to be appended to the partial element.  Leaving the found error element in place for now, but this may fail validation against the schema because of child ordering.")
                         _nagged_volume_error_impldrift = True
                 else:
-                    global _nagged_volume_error_standin
                     if not _nagged_volume_error_standin:
                         _logger.warning("Could not find 'error' child on partial volume element.  Creating a replacement.")
                         _nagged_volume_error_standin = True
@@ -1089,6 +1095,7 @@ class VolumeObject(object):
     def sector_size(self, val):
         self._sector_size = _intcast(val)
 
+
 class HiveObject(object):
 
     _all_properties = set([
@@ -1248,6 +1255,7 @@ class HiveObject(object):
         if not val is None:
             _typecheck(val, HiveObject)
         self._original_hive = val
+
 
 class ByteRun(object):
 
@@ -1435,6 +1443,7 @@ class ByteRun(object):
     @uncompressed_len.setter
     def uncompressed_len(self, val):
         self._uncompressed_len = _intcast(val)
+
 
 class ByteRuns(object):
     """
@@ -1657,7 +1666,9 @@ class ByteRuns(object):
             raise ValueError("A ByteRuns facet must be one of these: %r.  Received: %r." % (ByteRuns._facet_values, val))
         self._facet = val
 
+
 re_precision = re.compile(r"(?P<num>\d+)(?P<unit>(|m|n)s|d)?")
+
 class TimestampObject(object):
     """
     Encodes the "dftime" type.  Wraps around dfxml.dftime, closely enough that this might just get folded into that class.
@@ -1939,7 +1950,7 @@ class FileObject(object):
         parts = []
 
         for prop in sorted(FileObject._all_properties):
-            #Save data byte runs for the end, as theirs lists can get really long.
+            #Save data byte runs for the end, as their lists can get really long.
             if prop not in ["byte_runs", "data_brs"]:
                 value = getattr(self, prop)
                 if not value is None:
@@ -2757,6 +2768,7 @@ class FileObject(object):
             _typecheck(val, VolumeObject)
         self._volume_object = val
 
+
 class OtherNSElementList(list):
     #Note that super() must be called with arguments to work in Python 2.
 
@@ -2782,6 +2794,7 @@ class OtherNSElementList(list):
         _typecheck(value, ET.Element)
         OtherNSElementList._check_qname(value.tag)
         super(OtherNSElementList, self).append(value)
+
 
 class CellObject(object):
 
