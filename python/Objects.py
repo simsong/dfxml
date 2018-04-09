@@ -48,10 +48,13 @@ _warned_byterun_facets = set([])
 #Issue some log statements only once per program invocation.
 _nagged_alloc = False
 _warned_byterun_badtypecomp = False
+_nagged_partition_file_alloc = False
+_nagged_partitionsystem_file_alloc = False
 _nagged_volume_error_impldrift = False
 _nagged_volume_error_standin = False
 
 XMLNS_REGXML = "http://www.forensicswiki.org/wiki/RegXML"
+XMLNS_DFXML_EXT = dfxml.XMLNS_DFXML + "#extensions"
 
 def _ET_tostring(e):
     """Between Python v2 and v3, there are some differences in the ElementTree library's tostring() behavior.  One, the method balks at the "unicode" encoding in v2.  Two, in 2, the XML prototypes output with every invocation.  This method serves as a wrapper to deal with those issues, plus another issue where ET.tostring prints repeated xmlns declarations (observed on reading and writing a DFXML file twice in the same process).  The repeated prints appear to be from a lack of inspection of existing namespace declarations in the attributes dictionary."""
@@ -177,12 +180,21 @@ class DFXMLObject(object):
 
         self._namespaces = dict()
         self._child_objects = []
+        self._disk_images = []
+        self._partition_systems = []
+        self._partitions = []
         self._volumes = []
         self._files = []
 
         self._build_libraries = []
         self._creator_libraries = []
 
+        for di in kwargs.get("disk_images", []):
+            self.append(di)
+        for ps in kwargs.get("partition_systems", []):
+            self.append(ps)
+        for p in kwargs.get("partitions", []):
+            self.append(p)
         for v in kwargs.get("volumes", []):
             self.append(v)
         for f in kwargs.get("files", []):
@@ -191,10 +203,11 @@ class DFXMLObject(object):
         #Add default namespaces
         self.add_namespace("", dfxml.XMLNS_DFXML)
         self.add_namespace("dc", dfxml.XMLNS_DC)
+        self.add_namespace("dfxmlext", XMLNS_DFXML_EXT)
 
     def __iter__(self):
         """
-        Recursively yields all child Objects directly attached to this DFXMLObject, in depth-first order.  E.g. yields VolumeObjects, then recursively their FileObjects; and then FileObjects directly attached to this DFXMLObject, in that order.
+        Recursively yields all child Objects directly attached to this DFXMLObject, in depth-first order.  E.g. yields DiskImageObjects, recursively their VolumeObjects, recursively their FileObjects; and then FileObjects directly attached to this DFXMLObject, in that order.
 
         This is a depth-first traversal, vs. direct-child-only, in keeping with etree's Element's iter:
         https://docs.python.org/3/library/xml.etree.elementtree.html#xml.etree.ElementTree.Element.iter
@@ -236,13 +249,18 @@ class DFXMLObject(object):
             #_logger.debug("ET namespaces after registration: %r." % ET._namespace_map)
 
     def append(self, value):
-        if isinstance(value, VolumeObject):
+        if isinstance(value, DiskImageObject):
+            self.disk_images.append(value)
+        elif isinstance(value, PartitionSystemObject):
+            self.partition_systems.append(value)
+        # PartitionObjects not included in this list; no application thought of so far.
+        elif isinstance(value, VolumeObject):
             self.volumes.append(value)
         elif isinstance(value, FileObject):
             self.files.append(value)
         else:
             _logger.debug("value = %r" % value)
-            raise TypeError("Expecting a VolumeObject or a FileObject.  Got instead this type: %r." % type(value))
+            raise TypeError("Expecting a DiskImageObject, PartitionSystemObject, VolumeObject, or a FileObject.  Got instead this type: %r." % type(value))
 
         self.child_objects.append(value)
 
@@ -298,6 +316,14 @@ class DFXMLObject(object):
         output_fh.write("""<?xml version="1.0"?>\n""")
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+        _logger.debug("Writing %d disk image objects for the document object." % len(self.disk_images))
+        for di in self._disk_images:
+            di.print_dfxml(output_fh)
+            output_fh.write("\n")
+        _logger.debug("Writing %d partition system objects for the document object." % len(self.partition_systems))
+        for ps in self._partition_systems:
+            ps.print_dfxml(output_fh)
+            output_fh.write("\n")
         _logger.debug("Writing %d volume objects for the document object." % len(self.volumes))
         for v in self._volumes:
             v.print_dfxml(output_fh)
@@ -314,6 +340,9 @@ class DFXMLObject(object):
         outel = self.to_partial_Element()
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
+          self.disk_images,
+          self.partition_systems,
+          self.partitions,
           self.volumes,
           self.files
         ]:
@@ -446,6 +475,11 @@ class DFXMLObject(object):
         self._diff_file_ignores = value
 
     @property
+    def disk_images(self):
+        """List of disk images directly attached to this DFXMLObject.  No setter for now."""
+        return self._disk_images
+
+    @property
     def externals(self):
         """(This property behaves the same as FileObject.externals.)"""
         return self._externals
@@ -463,6 +497,16 @@ class DFXMLObject(object):
     @property
     def namespaces(self):
         raise AttributeError("The namespaces dictionary should not be directly accessed; instead, use .iter_namespaces().")
+
+    @property
+    def partition_systems(self):
+        """List of partition system objects directly attached to this DFXMLObject.  No setter for now."""
+        return self._partition_systems
+
+    @property
+    def partitions(self):
+        """List of partition objects directly attached to this DFXMLObject.  No setter for now."""
+        return self._partitions
 
     @property
     def program(self):
@@ -719,6 +763,669 @@ class RegXMLObject(object):
         return _ET_tostring(self.to_Element())
 
 
+class DiskImageObject(object):
+
+    _all_properties = set([
+      "byte_runs",
+      "child_objects",
+      "externals",
+      "files",
+      "partition_systems",
+      "sector_size",
+      "volumes"
+    ])
+
+    def __init__(self, *args, **kwargs):
+        self.externals = kwargs.get("externals", OtherNSElementList())
+
+        self._byte_runs = None
+        self._child_objects = []
+        self._files = []
+        self._partition_systems = []
+        self._sector_size = None
+        self._volumes = []
+
+    def __iter__(self):
+        """Recursively yields all child Objects in depth-first order."""
+        for co in self.child_objects:
+            yield co
+            if hasattr(co, "child_objects"):
+                for gco in co:
+                    yield gco
+
+    def __repr__(self):
+        parts = []
+        for prop in DiskImageObject._all_properties:
+            if prop in {
+              "child_objects",
+              "externals",
+              "files",
+              "partition_systems",
+              "volumes"
+            }:
+                continue
+            val = getattr(self, prop)
+            if val:
+                parts.append("%s=%s" % (prop, val))
+        return "DiskImageObject(" + ", ".join(parts) + ")"
+
+    def append(self, obj):
+        if isinstance(obj, PartitionSystemObject):
+            self.partition_systems.append(obj)
+        elif isinstance(obj, VolumeObject):
+            self.volumes.append(obj)
+        else:
+            raise ValueError("Unexpected object type passed to DiskImageObject.append(): %r." % type(obj))
+        self.child_objects.append(obj)
+
+    def populate_from_Element(self, e):
+        global _warned_elements
+
+        _typecheck(e, (ET.Element, ET.ElementTree))
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn in ["diskimageobject"]
+        #Look through only direct-child elements (recursively handing off grandchildren to other populate_from_Element calls)
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "byte_runs":
+                self.byte_runs = ByteRuns()
+                self.byte_runs.populate_from_Element(ce)
+            elif ctn == "byte_run":
+                #byte_runs' block recursively handles this element.
+                continue
+            elif ctn in DiskImageObject._all_properties:
+                setattr(self, ctn, ce.text)
+            else:
+                if (cns, ctn) not in _warned_elements:
+                    _warned_elements.add((cns, ctn, DiskImageObject))
+                    _logger.warning("Unsure what to do with this element in a DiskImageObject: %r" % ce)
+
+    def print_dfxml(self, output_fh=sys.stdout):
+        pe = self.to_partial_Element()
+        dfxml_wrapper = _ET_tostring(pe)
+        if len(pe) == 0 and len(self.child_objects) == 0:
+            output_fh.write(dfxml_wrapper)
+            return
+
+        dfxml_foot = "</diskimageobject>"
+
+        #Deal with an empty element being printed as <elem/>
+        if len(pe) == 0:
+            replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
+            dfxml_head = replaced_dfxml_wrapper
+        else:
+            dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+
+        output_fh.write(dfxml_head)
+        output_fh.write("\n")
+        _logger.debug("Writing %d partition system objects for this disk image." % len(self.partition_systems))
+        for ps in self.partition_systems:
+            ps.print_dfxml(output_fh)
+            output_fh.write("\n")
+        _logger.debug("Writing %d volume objects for this disk image." % len(self.volumes))
+        for v in self.volumes:
+            v.print_dfxml(output_fh)
+            output_fh.write("\n")
+        _logger.debug("Writing %d file objects for this disk image." % len(self.files))
+        for f in self.files:
+            e = f.to_Element()
+            output_fh.write(_ET_tostring(e))
+            output_fh.write("\n")
+        output_fh.write(dfxml_foot)
+        output_fh.write("\n")
+
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        # List children grouped by type, in order per DFXML schema.
+        for child_list in [
+          self.partition_systems,
+          self.volumes,
+          self.files
+        ]:
+            for obj in child_list:
+                tmpel = obj.to_Element()
+                outel.append(tmpel)
+        return outel
+
+    def to_partial_Element(self):
+        outel = ET.Element("diskimageobject")
+
+        def _append_el(prop, value):
+            tmpel = ET.Element(prop)
+            _keep = False
+            if not value is None:
+                tmpel.text = str(value)
+                _keep = True
+            if _keep:
+                outel.append(tmpel)
+
+        def _append_str(prop):
+            value = getattr(self, prop)
+            _append_el(prop, value)
+
+        if self.byte_runs:
+            outel.append(self.byte_runs.to_Element())
+
+        for prop in [
+          "sector_size"
+        ]:
+            _append_str(prop)
+
+        return outel
+
+    @property
+    def byte_runs(self):
+        return self._byte_runs
+
+    @byte_runs.setter
+    def byte_runs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._byte_runs = val
+
+    @property
+    def child_objects(self):
+        return self._child_objects
+
+    @property
+    def files(self):
+        """List of file objects directly attached to this DiskImageObject.  No setter for now."""
+        return self._files
+
+    @property
+    def partition_systems(self):
+        """List of partition system objects directly attached to this DiskImageObject.  No setter for now."""
+        return self._partition_systems
+
+    @property
+    def sector_size(self):
+        return self._sector_size
+
+    @sector_size.setter
+    def sector_size(self, val):
+        self._sector_size = _intcast(val)
+
+    @property
+    def volumes(self):
+        """List of volume objects directly attached to this DiskImageObject.  No setter for now."""
+        return self._volumes
+
+
+class PartitionSystemObject(object):
+
+    _all_properties = set([
+      "block_size",
+      "byte_runs",
+      "child_objects",
+      "externals",
+      "files",
+      "guid",
+      "partitions",
+      "pstype_str",
+      "volume_name"
+    ])
+
+    def __init__(self, *args, **kwargs):
+        self.externals = kwargs.get("externals", OtherNSElementList())
+
+        self._byte_runs = None
+        self._child_objects = []
+        self._files = []
+        self._partitions = []
+        self._pstype_str = None
+
+        #TODO Make @property methods once properties listed in DFXML schema.
+        self.block_size = None
+        self.guid = None
+        self.volume_name = None #(This might only appear on Solaris disklabels that are directly nested in a partition.)
+
+    def __iter__(self):
+        """Recursively yields all child Objects in depth-first order."""
+        for co in self.child_objects:
+            yield co
+            if hasattr(co, "child_objects"):
+                for gco in co:
+                    yield gco
+
+    def __repr__(self):
+        parts = []
+        for prop in PartitionSystemObject._all_properties:
+            if prop in {
+              "child_objects",
+              "externals",
+              "files",
+              "partitions"
+            }:
+                continue
+            val = getattr(self, prop)
+            if val:
+                parts.append("%s=%s" % (prop, val))
+        return "PartitionSystemObject(" + ", ".join(parts) + ")"
+
+    def append(self, obj):
+        if isinstance(obj, PartitionObject):
+            self.partitions.append(obj)
+        elif isinstance(obj, FileObject):
+            if obj.is_allocated():
+                if not _nagged_partitionsystem_file_alloc:
+                    _logger.warning("A partition system has had an 'allocated' file appended directly to it.  This list of files is expected to be slack space discoveries.")
+                    _nagged_partitionsystem_file_alloc = True
+            self.files.append(obj)
+        else:
+            raise ValueError("Unexpected object type passed to PartitionSystemObject.append(): %r." % type(obj))
+        self.child_objects.append(obj)
+
+    def populate_from_Element(self, e):
+        global _warned_elements
+
+        _typecheck(e, (ET.Element, ET.ElementTree))
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn in ["partitionsystemobject"]
+        #Look through direct-child elements to populate object.
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "byte_runs":
+                self.byte_runs = ByteRuns()
+                self.byte_runs.populate_from_Element(ce)
+            elif ctn == "byte_run":
+                #byte_runs' block recursively handles this element.
+                continue
+            elif ctn in PartitionSystemObject._all_properties:
+                setattr(self, ctn, ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
+            else:
+                if (cns, ctn) not in _warned_elements:
+                    _warned_elements.add((cns, ctn, PartitionSystemObject))
+                    _logger.warning("Unsure what to do with this element in a PartitionSystemObject: %r" % ce)
+
+    def print_dfxml(self, output_fh=sys.stdout):
+        pe = self.to_partial_Element()
+        dfxml_wrapper = _ET_tostring(pe)
+        if len(pe) == 0 and len(self.partitions) == 0:
+            output_fh.write(dfxml_wrapper)
+            return
+
+        dfxml_foot = "</partitionsystemobject>"
+
+        #Deal with an empty element being printed as <elem/>
+        if len(pe) == 0:
+            replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
+            dfxml_head = replaced_dfxml_wrapper
+        else:
+            dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+
+        output_fh.write(dfxml_head)
+        output_fh.write("\n")
+        _logger.debug("Writing %d partition objects for this partition system." % len(self.partitions))
+        for p in self.partitions:
+            p.print_dfxml(output_fh)
+            output_fh.write("\n")
+        _logger.debug("Writing %d file objects for this partition system." % len(self.files))
+        for f in self.files:
+            e = f.to_Element()
+            output_fh.write(_ET_tostring(e))
+            output_fh.write("\n")
+        output_fh.write(dfxml_foot)
+        output_fh.write("\n")
+
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        # List children grouped by type, in order per DFXML schema.
+        for child_list in [
+          self.partitions,
+          self.files
+        ]:
+            for obj in child_list:
+                tmpel = obj.to_Element()
+                outel.append(tmpel)
+        return outel
+
+    def to_partial_Element(self):
+        outel = ET.Element("partitionsystemobject")
+
+        def _append_el(prop, value):
+            if prop in {
+              "pstype_str"
+            }:
+                tag = prop
+            else:
+                tag = "dfxmlext:" + prop
+            tmpel = ET.Element(tag)
+            _keep = False
+            if not value is None:
+                tmpel.text = str(value)
+                _keep = True
+            if _keep:
+                outel.append(tmpel)
+
+        def _append_str(prop):
+            value = getattr(self, prop)
+            _append_el(prop, value)
+
+        # Add not-yet-standardized properties before standardized elements.
+        for prop in [
+          "block_size",
+          "volume_name",
+          "guid"
+        ]:
+            _append_str(prop)
+
+        for e in self.externals:
+            outel.append(e)
+
+        if self.byte_runs:
+            outel.append(self.byte_runs.to_Element())
+
+        for prop in [
+          "pstype_str",
+        ]:
+            _append_str(prop)
+
+        return outel
+
+    @property
+    def byte_runs(self):
+        return self._byte_runs
+
+    @byte_runs.setter
+    def byte_runs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._byte_runs = val
+
+    # No setter.
+    @property
+    def child_objects(self):
+        return self._child_objects
+
+    @property
+    def externals(self):
+        """(This property behaves the same as FileObject.externals.)"""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
+
+    @property
+    def files(self):
+        """List of file objects directly attached to this PartitionSystemObject.  No setter for now."""
+        return self._files
+
+    @property
+    def partitions(self):
+        """List of partition objects directly attached to this PartitionSystemObject.  No setter for now."""
+        return self._partitions
+
+    @property
+    def pstype_str(self):
+        return self._pstype_str
+
+    @pstype_str.setter
+    def pstype_str(self, val):
+        self._pstype_str = _strcast(val)
+
+
+class PartitionObject(object):
+
+    _all_properties = set([
+      "block_count",
+      "block_size",
+      "byte_runs",
+      "child_objects",
+      "externals",
+      "files",
+      "ftype_str",
+      "guid",
+      "partition_label",
+      "partition_system_offset",
+      "partition_systems",
+      "ptype",
+      "ptype_str",
+      "volumes"
+    ])
+
+    def __init__(self, *args, **kwargs):
+        self.externals = kwargs.get("externals", OtherNSElementList())
+
+        self._byte_runs = None
+        self._child_objects = [] #For maintaining order of objects of different types.
+        self._files = []
+        self._partition_systems = []
+        self._volumes = []
+        self._ptype = None
+        self._ptype_str = None
+
+        #TODO Make @property methods once properties listed in DFXML schema.
+        self.block_count = None
+        self.block_size = None
+        self.ftype_str = None
+        self.guid = None
+        self.partition_label = None
+        self.partition_system_offset = None #Unit: bytes.  Offset within partition system.  Could also be byte_run/@ps_offset, if that were defined in the ByteRun class.
+
+    def __iter__(self):
+        """Recursively yields all child Objects in depth-first order."""
+        for co in self.child_objects:
+            yield co
+            if hasattr(co, "child_objects"):
+                for gco in co:
+                    yield gco
+
+    def __repr__(self):
+        parts = []
+        for prop in PartitionObject._all_properties:
+            if prop in {
+              "child_objects",
+              "externals",
+              "files",
+              "partition_systems",
+              "volumes"
+            }:
+                continue
+            val = getattr(self, prop)
+            if val:
+                parts.append("%s=%s" % (prop, val))
+        return "PartitionObject(" + ", ".join(parts) + ")"
+
+    def append(self, obj):
+        if isinstance(obj, PartitionSystemObject):
+            self.partition_systems.append(obj)
+        elif isinstance(obj, VolumeObject):
+            self.volumes.append(obj)
+        elif isinstance(obj, FileObject):
+            if obj.is_allocated():
+                if not _nagged_partition_file_alloc:
+                    _logger.warning("A partition has had an 'allocated' file appended directly to it.  This list of files is expected to be slack space discoveries.")
+                    _nagged_partition_file_alloc = True
+            self.files.append(obj)
+        else:
+            raise ValueError("Unexpected object type passed to PartitionObject.append(): %r." % type(obj))
+        self.child_objects.append(obj)
+
+    def populate_from_Element(self, e):
+        global _warned_elements
+
+        _typecheck(e, (ET.Element, ET.ElementTree))
+
+        #Split into namespace and tagname
+        (ns, tn) = _qsplit(e.tag)
+        assert tn in ["partitionobject"]
+        #Look through direct-child elements to populate object.
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            if ctn == "byte_runs":
+                self.byte_runs = ByteRuns()
+                self.byte_runs.populate_from_Element(ce)
+            elif ctn == "byte_run":
+                #byte_runs' block recursively handles this element.
+                continue
+            elif ctn in PartitionObject._all_properties:
+                setattr(self, ctn, ce.text)
+            elif cns not in [dfxml.XMLNS_DFXML, ""]:
+                #Put all non-DFXML-namespace elements into the externals list.
+                self.externals.append(ce)
+            else:
+                if (cns, ctn) not in _warned_elements:
+                    _warned_elements.add((cns, ctn, PartitionObject))
+                    _logger.warning("Unsure what to do with this element in a PartitionObject: %r" % ce)
+
+    def print_dfxml(self, output_fh=sys.stdout):
+        pe = self.to_partial_Element()
+        dfxml_wrapper = _ET_tostring(pe)
+        if len(pe) == 0 and len(self.child_objects) == 0:
+            output_fh.write(dfxml_wrapper)
+            return
+
+        dfxml_foot = "</partitionobject>"
+
+        #Deal with an empty element being printed as <elem/>
+        if len(pe) == 0:
+            replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
+            dfxml_head = replaced_dfxml_wrapper
+        else:
+            dfxml_head = dfxml_wrapper.strip()[:-len(dfxml_foot)]
+
+        output_fh.write(dfxml_head)
+        output_fh.write("\n")
+        _logger.debug("Writing %d partition system objects for this partition." % len(self.partition_systems))
+        for ps in self.partition_systems:
+            ps.print_dfxml(output_fh)
+            output_fh.write("\n")
+        _logger.debug("Writing %d volume objects for this partition." % len(self.volumes))
+        for v in self.volumes:
+            v.print_dfxml(output_fh)
+            output_fh.write("\n")
+        _logger.debug("Writing %d file objects for this partition." % len(self.files))
+        for f in self.files:
+            e = f.to_Element()
+            output_fh.write(_ET_tostring(e))
+            output_fh.write("\n")
+        output_fh.write(dfxml_foot)
+        output_fh.write("\n")
+
+    def to_Element(self):
+        outel = self.to_partial_Element()
+        # List children grouped by type, in order per DFXML schema.
+        for child_list in [
+          self.partition_systems,
+          self.volumes,
+          self.files
+        ]:
+            for obj in child_list:
+                tmpel = obj.to_Element()
+                outel.append(tmpel)
+        return outel
+
+    def to_partial_Element(self):
+        outel = ET.Element("partitionobject")
+
+        def _append_el(prop, value):
+            if prop in {
+              "ptype",
+              "ptype_str"
+            }:
+                tag = prop
+            else:
+                tag = "dfxmlext:" + prop
+            if not value is None:
+                tmpel = ET.Element(tag)
+                tmpel.text = str(value)
+                outel.append(tmpel)
+
+        def _append_str(prop):
+            value = getattr(self, prop)
+            _append_el(prop, value)
+
+        # Add not-yet-standardized properties before standardized elements.
+        for prop in [
+          "partition_label",
+          "partition_system_offset",
+          "block_size",
+          "ftype_str",
+          "block_count",
+          "guid"
+        ]:
+            _append_str(prop)
+
+        for e in self.externals:
+            outel.append(e)
+
+        if self.byte_runs:
+            outel.append(self.byte_runs.to_Element())
+
+        for prop in [
+          "ptype",
+          "ptype_str",
+        ]:
+            _append_str(prop)
+
+        return outel
+
+    @property
+    def byte_runs(self):
+        return self._byte_runs
+
+    @byte_runs.setter
+    def byte_runs(self, val):
+        if not val is None:
+            _typecheck(val, ByteRuns)
+        self._byte_runs = val
+
+    # No setter.
+    @property
+    def child_objects(self):
+        return self._child_objects
+
+    @property
+    def externals(self):
+        """(This property behaves the same as FileObject.externals.)"""
+        return self._externals
+
+    @externals.setter
+    def externals(self, val):
+        _typecheck(val, OtherNSElementList)
+        self._externals = val
+
+    @property
+    def files(self):
+        """List of file objects directly attached to this PartitionObject.  No setter for now."""
+        return self._files
+
+    @property
+    def partition_systems(self):
+        """List of partition system objects directly attached to this PartitionObject.  No setter for now."""
+        return self._partition_systems
+
+    @property
+    def ptype(self):
+        return self._ptype
+
+    @ptype.setter
+    def ptype(self, val):
+        self._ptype = _intcast(val)
+
+    @property
+    def ptype_str(self):
+        return self._ptype_str
+
+    @ptype_str.setter
+    def ptype_str(self, val):
+        self._ptype_str = _strcast(val)
+
+    @property
+    def volumes(self):
+        """List of volume objects directly attached to this PartitionObject.  No setter for now."""
+        return self._volumes
+
+
 class VolumeObject(object):
 
     _all_properties = set([
@@ -728,6 +1435,7 @@ class VolumeObject(object):
       "block_size",
       "byte_runs",
       "child_objects",
+      "disk_images",
       "error",
       "externals",
       "files",
@@ -737,7 +1445,8 @@ class VolumeObject(object):
       "last_block",
       "partition_offset",
       "original_volume",
-      "sector_size"
+      "sector_size",
+      "volumes"
     ])
 
     _diff_attr_names = {
@@ -750,12 +1459,16 @@ class VolumeObject(object):
     #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
     _incomparable_properties = set([
       "annos",
-      "child_objects"
+      "child_objects",
+      "volumes"
     ])
 
     def __init__(self, *args, **kwargs):
         self._child_objects = []
+        self._disk_images = []
         self._files = []
+        self._volumes = []
+
         self._annos = set()
         self._diffs = set()
 
@@ -763,7 +1476,9 @@ class VolumeObject(object):
             if prop in {
               "annos",
               "child_objects",
-              "files"
+              "disk_images",
+              "files",
+              "volumes"
             }:
                 continue
             elif prop == "externals":
@@ -782,10 +1497,12 @@ class VolumeObject(object):
     def __repr__(self):
         parts = []
         for prop in VolumeObject._all_properties:
-            #Skip outputting the files lists.
+            #Skip outputting the files, file systems, and disk images lists.
             if prop in {
               "child_objects",
-              "files"
+              "disk_images",
+              "files",
+              "volumes"
             }:
                 continue
             val = getattr(self, prop)
@@ -794,8 +1511,13 @@ class VolumeObject(object):
         return "VolumeObject(" + ", ".join(parts) + ")"
 
     def append(self, value):
-        _typecheck(value, FileObject)
-        self.files.append(value)
+        _typecheck(value, (DiskImageObject, FileObject, VolumeObject))
+        if isinstance(value, DiskImageObject):
+            self.disk_images.append(value)
+        elif isinstance(value, VolumeObject):
+            self.volumes.append(value)
+        elif isinstance(value, FileObject):
+            self.files.append(value)
         self.child_objects.append(value)
 
     def compare_to_original(self):
@@ -851,6 +1573,16 @@ class VolumeObject(object):
             elif ctn == "byte_run":
                 #byte_runs' block recursively handles this element.
                 continue
+            elif ctn == "diskimageobject":
+                #(Note that in Parser.iterparse, encountering a diskimageobject element triggers vobj.populate_from_Element on a proxy element that won't have the child disk_image.  So, if we encounter a disk image element here, it's not iterparse calling this function, meaning this DiskImageObject isn't redundant.)
+                diobj = DiskImageObject()
+                diobj.populate_from_Element(ce)
+                self._disk_images.append(diobj)
+            elif ctn == "volume":
+                #(As with the disk_image if-branch.)
+                vobj = VolumeObject()
+                vobj.populate_from_Element(ce)
+                self._volumes.append(vobj)
             elif ctn == "original_volume":
                 self.original_volume = VolumeObject()
                 self.original_volume.populate_from_Element(ce)
@@ -885,6 +1617,15 @@ class VolumeObject(object):
 
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+        _logger.debug("Writing %d disk images for this volume." % len(self.disk_images))
+        for di in self._disk_images:
+            di.print_dfxml(output_fh)
+            output_fh.write("\n")
+        #(Example case where this happens: HFS file system wrapping HFS+ file system.)
+        _logger.debug("Writing %d volumes for this volume [sic.]." % len(self.volumes))
+        for v in self._volumes:
+            v.print_dfxml(output_fh)
+            output_fh.write("\n")
         _logger.debug("Writing %d file objects for this volume." % len(self.files))
         for f in self._files:
             e = f.to_Element()
@@ -919,6 +1660,8 @@ class VolumeObject(object):
                     errorel.text = str(self.error)
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
+          self.disk_images,
+          self.volumes,
           self.files
         ]:
             for obj in child_list:
@@ -1065,6 +1808,11 @@ class VolumeObject(object):
         return self._diffs
 
     @property
+    def disk_images(self):
+        """List of disk images directly attached to this VolumeObject.  No setter for now."""
+        return self._disk_images
+
+    @property
     def error(self):
         return self._error
 
@@ -1144,6 +1892,11 @@ class VolumeObject(object):
     @sector_size.setter
     def sector_size(self, val):
         self._sector_size = _intcast(val)
+
+    @property
+    def volumes(self):
+        """List of (wrapped) volume objects directly attached to this VolumeObject.  No setter for now."""
+        return self._volumes
 
 
 class HiveObject(object):
@@ -3317,6 +4070,18 @@ class Parser(object):
     _DFXML_METADATA_START      =  10
     _DFXML_METADATA_END        =  19
 
+    _DISK_IMAGE_START          = 100
+    DISK_IMAGE_PRESTREAM       = 101
+    _DISK_IMAGE_END            = 199
+
+    _PARTITION_SYSTEM_START    = 200
+    PARTITION_SYSTEM_PRESTREAM = 201
+    _PARTITION_SYSTEM_END      = 299
+
+    _PARTITION_START           = 300
+    PARTITION_PRESTREAM        = 301
+    _PARTITION_END             = 399
+
     _VOLUME_START              = 400
     VOLUME_PRESTREAM           = 401
     _VOLUME_END                = 499
@@ -3338,11 +4103,40 @@ class Parser(object):
       _DFXML_METADATA_END: {
         DFXML_PRESTREAM
       },
+      _DISK_IMAGE_START: {
+        DISK_IMAGE_PRESTREAM
+      },
+      _DISK_IMAGE_END: {
+        _DFXML_END,
+        _DISK_IMAGE_START,
+        _VOLUME_END,
+        DFXML_POSTSTREAM
+      },
+      _PARTITION_SYSTEM_START: {
+        PARTITION_SYSTEM_PRESTREAM
+      },
+      _PARTITION_SYSTEM_END: {
+        _DFXML_END,
+        _DISK_IMAGE_END,
+        _PARTITION_SYSTEM_START,
+        _PARTITION_END,
+        _VOLUME_START,
+        DFXML_POSTSTREAM
+      },
+      _PARTITION_START: {
+        PARTITION_PRESTREAM
+      },
+      _PARTITION_END: {
+        _PARTITION_SYSTEM_END,
+        _PARTITION_START
+      },
       _VOLUME_START: {
         VOLUME_PRESTREAM
       },
       _VOLUME_END: {
         _DFXML_END,
+        _DISK_IMAGE_END,
+        _PARTITION_END,
         _VOLUME_START,
         _VOLUME_END,
         DFXML_POSTSTREAM
@@ -3359,6 +4153,7 @@ class Parser(object):
       DFXML_PRESTREAM: {
         _DFXML_END,
         _DFXML_METADATA_START,
+        _DISK_IMAGE_START,
         _VOLUME_START,
         _FILE_START,
         DFXML_POSTSTREAM
@@ -3366,7 +4161,24 @@ class Parser(object):
       DFXML_POSTSTREAM: {
         _DFXML_END
       },
+      DISK_IMAGE_PRESTREAM: {
+        _DISK_IMAGE_END,
+        _PARTITION_SYSTEM_START,
+        _VOLUME_START
+      },
+      PARTITION_SYSTEM_PRESTREAM: {
+        _PARTITION_SYSTEM_END,
+        _PARTITION_START
+      },
+      PARTITION_PRESTREAM: {
+        _PARTITION_SYSTEM_START,
+        _PARTITION_END,
+        _VOLUME_START
+      },
       VOLUME_PRESTREAM: {
+        _DISK_IMAGE_START,
+        _VOLUME_START,
+        _VOLUME_END,
         _FILE_START
       }
     }
@@ -3411,6 +4223,15 @@ class Parser(object):
                 elif ln == "metadata":
                     #This transition is to resolve an ambiguity in handling external-namespace elements in the DFXML_PRESTREAM state.
                     for eop in self.transition(Parser._DFXML_METADATA_START): yield eop
+                elif ln == "diskimageobject":
+                    for eop in self.transition(Parser._DISK_IMAGE_START): yield eop
+                    for eop in self.transition(Parser.DISK_IMAGE_PRESTREAM): yield eop
+                elif ln == "partitionsystemobject":
+                    for eop in self.transition(Parser._PARTITION_SYSTEM_START): yield eop
+                    for eop in self.transition(Parser.PARTITION_SYSTEM_PRESTREAM): yield eop
+                elif ln == "partitionobject":
+                    for eop in self.transition(Parser._PARTITION_START): yield eop
+                    for eop in self.transition(Parser.PARTITION_PRESTREAM): yield eop
                 elif ln == "volume":
                     for eop in self.transition(Parser._VOLUME_START): yield eop
                     for k in elem.attrib:
@@ -3438,6 +4259,15 @@ class Parser(object):
                 elif ln == "volume":
                     for eop in self.transition(Parser._VOLUME_END): yield eop
                     elem.clear()
+                elif ln == "partitionobject":
+                    for eop in self.transition(Parser._PARTITION_END): yield eop
+                    elem.clear()
+                elif ln == "partitionsystemobject":
+                    for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop
+                    elem.clear()
+                elif ln == "diskimageobject":
+                    for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
+                    elem.clear()
                 elif ln == "metadata":
                     for eop in self.transition(Parser._DFXML_METADATA_END): yield eop
                     self.proxy_element_stack[0].append(elem)
@@ -3448,6 +4278,9 @@ class Parser(object):
                 #Branches after here have to reason based on the parse self.state value.
                 elif self.state in {
                   Parser.DFXML_PRESTREAM,
+                  Parser.DISK_IMAGE_PRESTREAM,
+                  Parser.PARTITION_SYSTEM_PRESTREAM,
+                  Parser.PARTITION_PRESTREAM,
                   Parser.VOLUME_PRESTREAM
                 }:
                     self.proxy_element_stack[-1].append(elem)
@@ -3471,10 +4304,22 @@ class Parser(object):
 
         #Handle transitioning away from old state.  Mostly, this is emitting start events for Objects that have potentially large streams of child objects.
         if from_state == Parser.DFXML_PRESTREAM:
-            #Cut; stash DFXMLObject stash now.
+            #Cut; stash DFXMLObject event now.
             self.dobj.populate_from_Element(self.proxy_element_stack[0])
             if "start" in self.iterparse_events:
                 retval.append(("start", self.dobj))
+        elif from_state == Parser.DISK_IMAGE_PRESTREAM:
+            self.object_stack[-1].populate_from_Element(self.proxy_element_stack[-1])
+            if "start" in self.iterparse_events:
+                retval.append(("start", self.object_stack[-1]))
+        elif from_state == Parser.PARTITION_SYSTEM_PRESTREAM:
+            self.object_stack[-1].populate_from_Element(self.proxy_element_stack[-1])
+            if "start" in self.iterparse_events:
+                retval.append(("start", self.object_stack[-1]))
+        elif from_state == Parser.PARTITION_PRESTREAM:
+            self.object_stack[-1].populate_from_Element(self.proxy_element_stack[-1])
+            if "start" in self.iterparse_events:
+                retval.append(("start", self.object_stack[-1]))
         elif from_state == Parser.VOLUME_PRESTREAM:
             #Cut; stash VolumeObject event now.
             self.object_stack[-1].populate_from_Element(self.proxy_element_stack[-1])
@@ -3490,6 +4335,39 @@ class Parser(object):
             self.proxy_element_stack.append(el)
         elif to_state == Parser._DFXML_END:
             assert isinstance(self.object_stack[-1], DFXMLObject)
+            if "end" in self.iterparse_events:
+                retval.append(("end", self.object_stack[-1]))
+            self.object_stack.pop()
+            self.proxy_element_stack.pop().clear()
+
+        elif to_state == Parser._DISK_IMAGE_START:
+            self.object_stack.append(DiskImageObject())
+            el = ET.Element("diskimageobject")
+            self.proxy_element_stack.append(el)
+        elif to_state == Parser._DISK_IMAGE_END:
+            assert isinstance(self.object_stack[-1], DiskImageObject)
+            if "end" in self.iterparse_events:
+                retval.append(("end", self.object_stack[-1]))
+            self.object_stack.pop()
+            self.proxy_element_stack.pop().clear()
+
+        elif to_state == Parser._PARTITION_SYSTEM_START:
+            self.object_stack.append(PartitionSystemObject())
+            el = ET.Element("partitionsystemobject")
+            self.proxy_element_stack.append(el)
+        elif to_state == Parser._PARTITION_SYSTEM_END:
+            assert isinstance(self.object_stack[-1], PartitionSystemObject)
+            if "end" in self.iterparse_events:
+                retval.append(("end", self.object_stack[-1]))
+            self.object_stack.pop()
+            self.proxy_element_stack.pop().clear()
+
+        elif to_state == Parser._PARTITION_START:
+            self.object_stack.append(PartitionObject())
+            el = ET.Element("partitionobject")
+            self.proxy_element_stack.append(el)
+        elif to_state == Parser._PARTITION_END:
+            assert isinstance(self.object_stack[-1], PartitionObject)
             if "end" in self.iterparse_events:
                 retval.append(("end", self.object_stack[-1]))
             self.object_stack.pop()
@@ -3530,7 +4408,7 @@ class Parser(object):
     #No setter.
     @property
     def object_stack(self):
-        """An object stack is necessary to track start and stop events for the same object in light of complicated nestings."""
+        """An object stack is necessary to track start and stop events for the same object in light of complicated nestings (e.g. a ISO9660 file system containing an El Torito disk image, which ultimately contains another file system)."""
         return self._object_stack
 
     #No setter.
@@ -3610,7 +4488,10 @@ def parse(filename):
             if isinstance(obj, DFXMLObject):
                 object_stack.append(obj)
             elif isinstance(obj, (
-              VolumeObject,
+              DiskImageObject,
+              PartitionSystemObject,
+              PartitionObject,
+              VolumeObject
             )):
                 #_logger.debug("Adding to stack a %r." % type(obj))
                 object_stack[-1].append(obj)
@@ -3622,7 +4503,10 @@ def parse(filename):
                 #Let object_stack retain bottom DFXMLObject.
                 pass
             elif isinstance(obj, (
-              VolumeObject,
+              DiskImageObject,
+              PartitionSystemObject,
+              PartitionObject,
+              VolumeObject
             )):
                 popped = object_stack.pop()
                 #_logger.debug("Popped from stack a %r." % type(popped))
