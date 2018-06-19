@@ -99,6 +99,7 @@ class DFXMLWriter:
         self.tlast = now
 
     def done(self):
+        """Call when the program is finish"""
         import resource
         for who in ['RUSAGE_SELF','RUSAGE_CHILDREN']:
             ru = ET.SubElement(self.dfxml, 'rusage', {'who':who})
@@ -110,6 +111,12 @@ class DFXMLWriter:
             for i in range(len(rusage_fields)):
                 ET.SubElement(ru, rusage_fields[i]).text = str(rusage[i])
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
+        import psutil
+        vm = psutil.virtual_memory()
+        ru = ET.SubElement(self.dfxml, 'psutil')
+        for key in vm.__dir__():
+            if key[0]!='_' and key not in ['index','count']:
+                ET.SubElement(ru, key).text = str( getattr(vm, key))
 
     def comment(self,s):
         self.dfxml.insert(len(list(self.dfxml)), ET.Comment(s))
@@ -117,10 +124,13 @@ class DFXMLWriter:
     def asString(self):
         return ET.tostring(self.dfxml).decode('utf-8')
 
-    def write(self,f):
-        f.write(self.asString())
+    def write(self,f,prettyprint=False):
+        if prettyprint:
+            f.write(self.prettyprint())
+        else:
+            f.write(self.asString())
 
-    def writeToFile(self,fname):
+    def writeToFilename(self,f):
         self.write(open(fname,"w"))
 
     def prettyprint(self):
@@ -131,9 +141,6 @@ class DFXMLWriter:
         dfxml = ET.SubElement(self.dfxml, 'spark')
         get_spark_xml(dfxml)
         return
-
-        
-
 
 
 if __name__=="__main__":
@@ -150,6 +157,6 @@ if __name__=="__main__":
     dfxml.done()
     dfxml.comment("Thanks")
     if args.write:
-        dfxml.writeToFile(args.write)
+        dfxml.writeToFilename(args.write)
     if args.print or not args.write:
         print(dfxml.prettyprint())
