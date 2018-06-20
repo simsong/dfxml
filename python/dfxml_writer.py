@@ -5,8 +5,15 @@
 import sys
 import os
 import time
-
+import os
+import pwd
+import sys
+import datetime
+import subprocess
 import xml.etree.ElementTree as ET
+import __main__
+
+__version__="0.1"
 
 ###
 ### Code for working with Apache Spark
@@ -67,20 +74,37 @@ def get_spark_xml(ee):
     return 
 
 
+def git_commit():
+    from subprocess import run,PIPE,SubprocessError
+    try:
+        s = run(['git','rev-parse','HEAD'],stdout=PIPE,encoding='utf-8')
+        return s.stdout.strip()
+    except SubprocessError as e:
+        return ''
+
 class DFXMLWriter:
     def __init__(self):
         import time
         self.t0 = time.time()
         self.tlast = time.time()
-
         self.dfxml = ET.Element('dfxml')
+        self.add_DFXML_creator(self.dfxml)
 
-        import os
-        import pwd
-        import sys
-        import datetime
+    def add_DFXML_creator(self,e):
+        import __main__
+        ee = ET.SubElement(e, 'creator', {'version':'1.0'})
+        ET.SubElement(ee, 'program').text    = str(__main__.__file__)
+        try:
+            ET.SubElement(ee, 'version').text = str(__main__.__version__)
+        except AttributeError as e:
+            ET.SubElement(ee, 'version').text = ''
+        ET.SubElement(ee, 'executable').text = sys.executable
+        ET.SubElement(ee, 'git-commit').text = git_commit()
+        self.add_DFXML_execution_environment(ee)
+        
 
-        ee = ET.SubElement(self.dfxml, 'execution_enviornment')
+    def add_DFXML_execution_environment(self,e):
+        ee = ET.SubElement(e, 'execution_enviornment')
         uname = os.uname()
         uname_fields = ['os_sysname','host','os_release','os_version','arch']
         for i in range(len(uname_fields)):
@@ -90,6 +114,7 @@ class DFXMLWriter:
         ET.SubElement(ee, 'uid').text = str(os.getuid())
         ET.SubElement(ee, 'username').text = pwd.getpwuid(os.getuid())[0]
         ET.SubElement(ee, 'start_time').text = datetime.datetime.now().isoformat()
+
 
     def timestamp(self,name):
         now = time.time()
@@ -117,6 +142,7 @@ class DFXMLWriter:
         for key in vm.__dir__():
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
+        self.timestamp("done")
 
     def comment(self,s):
         self.dfxml.insert(len(list(self.dfxml)), ET.Comment(s))
@@ -148,7 +174,7 @@ if __name__=="__main__":
     arg_parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
                                 description="Demo program. Run DFXML for this program and print the results. If you run it on a system with SPARK, you get the spark") 
     arg_parser.add_argument("--write",help="Specify filename to write XML output to")
-    arg_parser.add_argument("--print",help="Print the output. Default unless --write is specified",action='store_true')
+    arg_parser.add_argument("--debug",help="Print the output. Default unless --write is specified",action='store_true')
     args = arg_parser.parse_args()
     dfxml = DFXMLWriter()
     dfxml.timestamp("first")
@@ -158,5 +184,5 @@ if __name__=="__main__":
     dfxml.comment("Thanks")
     if args.write:
         dfxml.writeToFilename(args.write)
-    if args.print or not args.write:
+    if args.debug or not args.write:
         print(dfxml.prettyprint())
