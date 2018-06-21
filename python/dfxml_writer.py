@@ -12,6 +12,7 @@ import datetime
 import subprocess
 import xml.etree.ElementTree as ET
 import __main__
+import atexit
 
 __version__="0.1"
 
@@ -83,12 +84,24 @@ def git_commit():
         return ''
 
 class DFXMLWriter:
-    def __init__(self):
+    def __init__(self,heartbeat=None,filename=None,prettyprint=False,logger=None):
         import time
         self.t0 = time.time()
         self.tlast = time.time()
         self.dfxml = ET.Element('dfxml')
         self.add_DFXML_creator(self.dfxml)
+        self.filename = filename
+        self.logger = logger
+        if self.filename:
+            # Set up to automatically write to filename on exit...
+            atexit.register(self.exiting,prettyprint=prettyprint)
+
+    def exiting(self,prettyprint=False):
+        """Cleanup handling. Run done() and write the output file..."""
+        if self.filename:
+            self.done()
+            self.writeToFilename(self.filename,prettyprint=prettyprint)
+            self.filename = None
 
     def add_DFXML_creator(self,e):
         import __main__
@@ -102,7 +115,6 @@ class DFXMLWriter:
         ET.SubElement(ee, 'git-commit').text = git_commit()
         self.add_DFXML_execution_environment(ee)
         
-
     def add_DFXML_execution_environment(self,e):
         ee = ET.SubElement(e, 'execution_enviornment')
         uname = os.uname()
@@ -115,16 +127,17 @@ class DFXMLWriter:
         ET.SubElement(ee, 'username').text = pwd.getpwuid(os.getuid())[0]
         ET.SubElement(ee, 'start_time').text = datetime.datetime.now().isoformat()
 
-
     def timestamp(self,name):
         now = time.time()
         ET.SubElement(self.dfxml, 'timestamp', {'name':name,
-                                        'delta':str(now - self.tlast),
-                                        'total':str(now - self.t0)})
+                                                'delta':str(now - self.tlast),
+                                                'total':str(now - self.t0)})
+        if self.logger:
+            self.logger("timestamp name:{}  delta:{}  total:{}".format(name,now-self.tlast,now-self.t0))
         self.tlast = now
+        
 
-    def done(self):
-        """Call when the program is finish"""
+    def add_usage(self):
         import resource
         for who in ['RUSAGE_SELF','RUSAGE_CHILDREN']:
             ru = ET.SubElement(self.dfxml, 'rusage', {'who':who})
@@ -136,16 +149,25 @@ class DFXMLWriter:
             for i in range(len(rusage_fields)):
                 ET.SubElement(ru, rusage_fields[i]).text = str(rusage[i])
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
+            if self.logger:
+                self.logger("maxrss: {}".format(rusage['maxrss']))
         import psutil
         vm = psutil.virtual_memory()
         ru = ET.SubElement(self.dfxml, 'psutil')
         for key in vm.__dir__():
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
+        
+
+    def done(self):
+        """Call when the program is finish"""
+        self.add_usage()
         self.timestamp("done")
 
     def comment(self,s):
         self.dfxml.insert(len(list(self.dfxml)), ET.Comment(s))
+        if self.logger:
+            self.logger(s)
 
     def asString(self):
         return ET.tostring(self.dfxml).decode('utf-8')
@@ -156,8 +178,9 @@ class DFXMLWriter:
         else:
             f.write(self.asString())
 
-    def writeToFilename(self,f):
-        self.write(open(fname,"w"))
+    def writeToFilename(self,fname,prettyprint=False):
+        self.write(open(fname,"w"),prettyprint=prettyprint)
+            
 
     def prettyprint(self):
         import xml.dom.minidom
@@ -186,3 +209,7 @@ if __name__=="__main__":
         dfxml.writeToFilename(args.write)
     if args.debug or not args.write:
         print(dfxml.prettyprint())
+
+    # Demonstrate the failure system
+    d2 = DFXMLWriter(filename="demo.dfxml",prettyprint=True)
+    exit(0)                     # whoops
