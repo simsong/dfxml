@@ -148,9 +148,9 @@ class DFXMLWriter:
 
             for i in range(len(rusage_fields)):
                 ET.SubElement(ru, rusage_fields[i]).text = str(rusage[i])
+                if rusage_fields[i] in ['maxrss']:
+                    self.logger("{}: {}".format(rusage_fields[i],rusage[i]))
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
-            if self.logger:
-                self.logger("maxrss: {}".format(rusage['maxrss']))
         import psutil
         vm = psutil.virtual_memory()
         ru = ET.SubElement(self.dfxml, 'psutil')
