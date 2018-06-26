@@ -133,7 +133,7 @@ class DFXMLWriter:
                                                 'delta':str(now - self.tlast),
                                                 'total':str(now - self.t0)})
         if self.logger:
-            self.logger("timestamp name:{}  delta:{}  total:{}".format(name,now-self.tlast,now-self.t0))
+            self.logger("timestamp name:{}  delta:{:.4}  total:{}".format(name,now-self.tlast,now-self.t0))
         self.tlast = now
         
 
