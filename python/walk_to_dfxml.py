@@ -15,7 +15,7 @@
 
 """Walk current directory, writing DFXML to stdout."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 import os
 import stat
@@ -53,7 +53,7 @@ def filepath_to_fileobject(filepath, **kwargs):
         name_type = "r"
     else:
         #Nop. Need to finish type determinations with stat structure.
-        pass
+        name_type = None
 
     # Retrieve stat struct for file to finish determining name type, and later to populate properties.
     if name_type == "l":
