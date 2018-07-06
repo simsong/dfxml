@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -2782,6 +2782,18 @@ class FileObject(object):
 
         return "FileObject(" + ", ".join(parts) + ")"
 
+    @staticmethod
+    def _should_ignore_property(ignore_properties, name_type, property_name):
+        """
+        Helper function for FileObject.populate_from_stat and walk_to_dfxml.py.  Defined as class method instead of inline definition in heavily looped functions.
+        """
+        if property_name in ignore_properties:
+            if "*" in ignore_properties[property_name]:
+                return True
+            elif name_type in ignore_properties[property_name]:
+                return True
+        return False
+
     def compare_to_original(self, **kwargs):
         file_ignores = kwargs.get("file_ignores", set())
         self._diffs = self.compare_to_other(self.original_fileobject, True, file_ignores)
@@ -2986,37 +2998,59 @@ class FileObject(object):
                     _warned_elements.add((cns, ctn, FileObject))
                     _logger.warning("Uncertain what to do with this element in a FileObject: %r" % ce)
 
-    def populate_from_stat(self, s):
-        """Populates FileObject fields from a stat() call."""
+    def populate_from_stat(self, s, **kwargs):
+        """
+        Populates FileObject fields from a stat() call.
+        Optional arguments:
+        * ignore_properties - dictionary of property names to exclude from FileObject.
+        * name_type_hint - name_type to use for this FileObject, if not already recorded in self.
+        """
         import os
         _typecheck(s, os.stat_result)
 
-        self.mode = s.st_mode
-        self.nlink = s.st_nlink
-        self.uid = s.st_uid
-        self.gid = s.st_gid
-        self.filesize = s.st_size
+        ignore_properties = kwargs.get("ignore_properties", dict())
+        #_logger.debug("ignore_properties = %r." % ignore_properties)
+
+        name_type = self.name_type or kwargs.get("name_type_hint")
+
+        _should_ignore = lambda x: FileObject._should_ignore_property(ignore_properties, name_type, x)
+
+        if not _should_ignore("mode"):
+            self.mode = s.st_mode
+        if not _should_ignore("nlink"):
+            self.nlink = s.st_nlink
+        if not _should_ignore("uid"):
+            self.uid = s.st_uid
+        if not _should_ignore("gid"):
+            self.gid = s.st_gid
+        if not _should_ignore("filesize"):
+            self.filesize = s.st_size
         #s.st_dev is ignored for now.
 
-        if platform.system() == "Windows":
-            # On Windows, Python 2 reports 0L.  Treat this as absent information.
-            # On Windows, Python 3 reports the "File ID" ( see "nFileIndexLow" remark at: https://msdn.microsoft.com/en-us/library/aa363788 ).  Record this as the inode number for now.  NOTE: in the future this may become a Windows-namespaced property "fileindex"; it may be prudent to later file a follow-on to Python Issue 32878 ( https://bugs.python.org/issue32878 ).
-            if sys.version_info[0] >= 3:
+        if not _should_ignore("inode"):
+            if platform.system() == "Windows":
+                # On Windows, Python 2 reports 0L.  Treat this as absent information.
+                # On Windows, Python 3 reports the "File ID" ( see "nFileIndexLow" remark at: https://msdn.microsoft.com/en-us/library/aa363788 ).  Record this as the inode number for now.  NOTE: in the future this may become a Windows-namespaced property "fileindex"; it may be prudent to later file a follow-on to Python Issue 32878 ( https://bugs.python.org/issue32878 ).
+                if sys.version_info[0] >= 3:
+                    self.inode = s.st_ino
+            else:
                 self.inode = s.st_ino
-        else:
-            self.inode = s.st_ino
 
-        if "st_mtime" in dir(s):
-            self.mtime = s.st_mtime
+        if not _should_ignore("mtime"):
+            if "st_mtime" in dir(s):
+                self.mtime = s.st_mtime
 
-        if "st_atime" in dir(s):
-            self.atime = s.st_atime
+        if not _should_ignore("atime"):
+            if "st_atime" in dir(s):
+                self.atime = s.st_atime
 
-        if "st_ctime" in dir(s):
-            self.ctime = s.st_ctime
+        if not _should_ignore("ctime"):
+            if "st_ctime" in dir(s):
+                self.ctime = s.st_ctime
 
-        if "st_birthtime" in dir(s):
-            self.crtime = s.st_birthtime
+        if not _should_ignore("crtime"):
+            if "st_birthtime" in dir(s):
+                self.crtime = s.st_birthtime
 
     def to_Element(self):
         """Creates an ElementTree Element with elements in DFXML schema order."""
