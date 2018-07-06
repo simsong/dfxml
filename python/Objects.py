@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -2681,6 +2681,7 @@ class FileObject(object):
       "link_target",
       "libmagic",
       "md5",
+      "md6",
       "meta_type",
       "mode",
       "mtime",
@@ -2693,7 +2694,10 @@ class FileObject(object):
       "partition",
       "seq",
       "sha1",
+      "sha224",
       "sha256",
+      "sha384",
+      "sha512",
       "uid",
       "unalloc",
       "unused",
@@ -2705,6 +2709,16 @@ class FileObject(object):
       "data":"data_brs",
       "inode":"inode_brs",
       "name":"name_brs"
+    }
+
+    _hash_properties = {
+      "md5",
+      "md6",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512"
     }
 
     #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
@@ -2941,10 +2955,18 @@ class FileObject(object):
             elif ctn == "hashdigest":
                 if ce.attrib["type"].lower() == "md5":
                     self.md5 = ce.text
+                elif ce.attrib["type"].lower() == "md6":
+                    self.md6 = ce.text
                 elif ce.attrib["type"].lower() == "sha1":
                     self.sha1 = ce.text
+                elif ce.attrib["type"].lower() == "sha224":
+                    self.sha224 = ce.text
                 elif ce.attrib["type"].lower() == "sha256":
                     self.sha256 = ce.text
+                elif ce.attrib["type"].lower() == "sha384":
+                    self.sha384 = ce.text
+                elif ce.attrib["type"].lower() == "sha512":
+                    self.sha512 = ce.text
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
@@ -3153,8 +3175,12 @@ class FileObject(object):
         _append_byte_runs("name_brs", self.name_brs)
         _append_byte_runs("data_brs", self.data_brs)
         _append_hash("md5", self.md5)
+        _append_hash("md6", self.md6)
         _append_hash("sha1", self.sha1)
+        _append_hash("sha224", self.sha224)
         _append_hash("sha256", self.sha256)
+        _append_hash("sha384", self.sha384)
+        _append_hash("sha512", self.sha512)
         _append_object("original_fileobject", self.original_fileobject, "delta:")
 
         if len(diffs_whittle_set) > 0:
@@ -3401,6 +3427,14 @@ class FileObject(object):
         self._md5 = _strcast(val)
 
     @property
+    def md6(self):
+        return self._md6
+
+    @md6.setter
+    def md6(self, val):
+        self._md6 = _strcast(val)
+
+    @property
     def meta_type(self):
         return self._meta_type
 
@@ -3518,12 +3552,36 @@ class FileObject(object):
         self._sha1 = _strcast(val)
 
     @property
+    def sha224(self):
+        return self._sha224
+
+    @sha224.setter
+    def sha224(self, val):
+        self._sha224 = _strcast(val)
+
+    @property
     def sha256(self):
         return self._sha256
 
     @sha256.setter
     def sha256(self, val):
         self._sha256 = _strcast(val)
+
+    @property
+    def sha384(self):
+        return self._sha384
+
+    @sha384.setter
+    def sha384(self, val):
+        self._sha384 = _strcast(val)
+
+    @property
+    def sha512(self):
+        return self._sha512
+
+    @sha512.setter
+    def sha512(self, val):
+        self._sha512 = _strcast(val)
 
     @property
     def uid(self):

@@ -13,7 +13,7 @@
 
 """Walk current directory, writing DFXML to stdout."""
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 import os
 import stat
@@ -76,7 +76,10 @@ def filepath_to_fileobject(filepath):
                 chunk_size = 2**22
                 md5obj = hashlib.md5()
                 sha1obj = hashlib.sha1()
+                sha224obj = hashlib.sha224()
                 sha256obj = hashlib.sha256()
+                sha384obj = hashlib.sha384()
+                sha512obj = hashlib.sha512()
                 any_error = False
                 while True:
                     buf = b""
@@ -93,12 +96,18 @@ def filepath_to_fileobject(filepath):
 
                     md5obj.update(buf)
                     sha1obj.update(buf)
+                    sha224obj.update(buf)
                     sha256obj.update(buf)
+                    sha384obj.update(buf)
+                    sha512obj.update(buf)
 
                 if not any_error:
                     fobj.md5 = md5obj.hexdigest()
                     fobj.sha1 = sha1obj.hexdigest()
+                    fobj.sha224 = sha224obj.hexdigest()
                     fobj.sha256 = sha256obj.hexdigest()
+                    fobj.sha384 = sha384obj.hexdigest()
+                    fobj.sha512 = sha512obj.hexdigest()
         except Exception as e:
             if fobj.error is None:
                 fobj.error = ""
