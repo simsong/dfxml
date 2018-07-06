@@ -75,6 +75,7 @@ check-versioned:
 	$$PY test_diffing_ByteRuns.py
 	$$PY test_diffing_TimestampObject.py
 	$$PY test_diffing_VolumeObject.py
+	$$PY test_storage_layers.py
 	$$PY test_ByteRun.py
 	$$PY test_ByteRuns.py
 	$$PY test_CellObject.py
