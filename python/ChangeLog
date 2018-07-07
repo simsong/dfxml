@@ -1,3 +1,26 @@
+2018-07-06    <alexander.nelson@nist.gov>
+
+	* walk_to_dfxml.py: Add property-ignoring flag
+	* Python: Add support for hashes added in DFXML 1.2.0
+
+2018-04-09    <alexander.nelson@nist.gov>
+
+	* Python: Update scripts' reported DFXML version to 1.2.0
+	* Objects.py: Add new container classes
+	* Objects.py: Rewrite iterparse loop
+	* Objects.py: Normalize property listings and function recursion style
+	* Objects.py: Update _warned_elements record
+	* Objects.py: Adjust comment and code cosmetics
+
+2018-02-28    <alexander.nelson@nist.gov>
+
+	* Objects.py: Handle numeric casting and st_ino in Python 2 on Windows 7
+
+2018-02-15    <alexander.nelson@nist.gov>
+
+	* _pick_pythons.sh: Adjust Python selection; resolve inline comment; remove EOL'd Python3 versions
+	* Python: Add disclaimer text to files created or modified at NIST.
+
 2017-11-06    <alexander.nelson@nist.gov>
 
 	* make_differential_dfxml.py: Revise appearance of "modified" differential annotation

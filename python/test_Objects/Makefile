@@ -75,6 +75,7 @@ check-versioned:
 	$$PY test_diffing_ByteRuns.py
 	$$PY test_diffing_TimestampObject.py
 	$$PY test_diffing_VolumeObject.py
+	$$PY test_storage_layers.py
 	$$PY test_ByteRun.py
 	$$PY test_ByteRuns.py
 	$$PY test_CellObject.py
@@ -88,6 +89,7 @@ check-versioned:
 	$$PY test_VolumeObject_hash.py
 	$$PY verify_differential_dfxml_01.py
 	$$PY verify_differential_dfxml_23.py
+	./test_walk_ignore.sh $$PY
 
 clean:
 	rm -f differential_dfxml_test_[02]*
@@ -96,6 +98,7 @@ clean:
 	rm -f test_cat_partitions.sh.dfxml
 	rm -f diff_file_ignore_sample-py[23].dfxml
 	rm -f test_LibraryObject_py[23].dfxml
+	rm -rf test_walk_ignore test_walk_ignore_*dfxml
 
 diff_file_ignore_sample-py2.dfxml: \
   Objects.py \
