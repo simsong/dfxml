@@ -39,41 +39,6 @@ def json_to_xml(e,val):
         return
     raise RuntimeError("don't know how to build '{}'".format(val))
 
-def get_spark_xml(ee):
-    ### Connect to SPARK on local host and dump information
-    ### Uses requests
-    import os
-    if "SPARK_HOME" not in os.environ:
-        return        # no spark
-
-    try:
-        import requests
-        import json
-    except ImportError:
-        return 
-
-    try:
-        r = requests.get('http://localhost:4040/api/v1/applications/')
-        if r.status_code!=200:
-            return
-    except requests.exceptions.ConnectionError:
-        return
-    
-    for app in json.loads(r.text):
-        app_id   = app['id']
-        app_name = app['name']
-        e = ET.SubElement(ee,'application',{'id':app_id,'name':app_name})
-
-        attempt_count = 1
-        for attempt in app['attempts']:
-            e = ET.SubElement(ee,'attempt')
-            json_to_xml(e,attempt)
-        for param in ['jobs','allexecutors','storage/rdd']:
-            r = requests.get('http://localhost:4040/api/v1/applications/{}/{}'.format(app_id,param))
-            e = ET.SubElement(ee,param.replace("/","_"))
-            json_to_xml(e,json.loads(r.text))
-    return 
-
 
 def git_commit():
     from subprocess import run,PIPE,SubprocessError
@@ -133,14 +98,15 @@ class DFXMLWriter:
                                                 'delta':str(now - self.tlast),
                                                 'total':str(now - self.t0)})
         if self.logger:
-            self.logger("timestamp name:{}  delta:{:.4}  total:{}".format(name,now-self.tlast,now-self.t0))
+            self.logger("timestamp name:{}  delta:{:.4}  total:{}".
+                        format(name,now-self.tlast,now-self.t0))
         self.tlast = now
         
 
-    def add_usage(self):
+    def add_rusage(self,node):
         import resource
         for who in ['RUSAGE_SELF','RUSAGE_CHILDREN']:
-            ru = ET.SubElement(self.dfxml, 'rusage', {'who':who})
+            ru = ET.SubElement(node, 'rusage', {'who':who})
             rusage = resource.getrusage(getattr(resource,who))
             rusage_fields = ['utime','stime','maxrss','ixrss','idrss','isrss',
                              'minflt','majflt','nswap','inblock','oublock',
@@ -148,21 +114,19 @@ class DFXMLWriter:
 
             for i in range(len(rusage_fields)):
                 ET.SubElement(ru, rusage_fields[i]).text = str(rusage[i])
-                if rusage_fields[i] in ['maxrss']:
+                if rusage_fields[i] in ['maxrss'] and self.logger:
                     self.logger("{}: {}".format(rusage_fields[i],rusage[i]))
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
+
+
+    def add_vminfo(self,node):
         import psutil
         vm = psutil.virtual_memory()
-        ru = ET.SubElement(self.dfxml, 'psutil')
+        ru = ET.SubElement(node, 'psutil')
         for key in vm.__dir__():
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
         
-
-    def done(self):
-        """Call when the program is finish"""
-        self.add_usage()
-        self.timestamp("done")
 
     def comment(self,s):
         self.dfxml.insert(len(list(self.dfxml)), ET.Comment(s))
@@ -186,23 +150,67 @@ class DFXMLWriter:
         import xml.dom.minidom
         return xml.dom.minidom.parseString( self.asString()).toprettyxml(indent='  ')
 
-    def add_spark(self):
-        dfxml = ET.SubElement(self.dfxml, 'spark')
-        get_spark_xml(dfxml)
-        return
+    def add_spark(self,node):
+        ### Connect to SPARK on local host and dump information
+        ### Uses requests
+        import os
+        if "SPARK_HOME" not in os.environ:
+            return        # no spark
 
+        try:
+            import requests
+            import json
+        except ImportError:
+            return 
+
+        try:
+            r = requests.get('http://localhost:4040/api/v1/applications/')
+            if r.status_code!=200:
+                return
+        except requests.exceptions.ConnectionError:
+            return
+
+        # Looks like we have spark!
+        spark = ET.SubElement(node, 'spark')
+        for app in json.loads(r.text):
+            app_id   = app['id']
+            app_name = app['name']
+            e = ET.SubElement(spark,'application',{'id':app_id,'name':app_name})
+
+            attempt_count = 1
+            for attempt in app['attempts']:
+                e = ET.SubElement(spark,'attempt')
+                json_to_xml(e,attempt)
+            for param in ['jobs','allexecutors','storage/rdd']:
+                r = requests.get('http://localhost:4040/api/v1/applications/{}/{}'.
+                                 format(app_id,param))
+                e = ET.SubElement(spark,param.replace("/","_"))
+                json_to_xml(e,json.loads(r.text))
+
+
+    def add_report(self,node):
+        """Add the end of run report"""
+        report = ET.SubElement(self.dfxml, 'report')
+        self.add_spark(report)
+        self.add_rusage(report)
+        self.add_vminfo(report)
+        ET.SubElement(report, 'elapsed_seconds').text = str(time.time()-self.t0)
+
+    def done(self):
+        """Call when the program is finish"""
+        self.add_report(self.dfxml)
+        self.timestamp("done")
 
 if __name__=="__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     arg_parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
-                                description="Demo program. Run DFXML for this program and print the results. If you run it on a system with SPARK, you get the spark") 
+                                description="Demo program. Run DFXML for this program and print the results. If you run it on a system with SPARK, you get the spark DFXML too!") 
     arg_parser.add_argument("--write",help="Specify filename to write XML output to")
     arg_parser.add_argument("--debug",help="Print the output. Default unless --write is specified",action='store_true')
     args = arg_parser.parse_args()
     dfxml = DFXMLWriter()
     dfxml.timestamp("first")
     dfxml.timestamp("second")
-    dfxml.add_spark()
     dfxml.done()
     dfxml.comment("Thanks")
     if args.write:
