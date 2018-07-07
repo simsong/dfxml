@@ -1,20 +1,26 @@
 #!/usr/bin/env python
 # coding=UTF-8
 """dfxinfo.py:
-Generates a report about what up with a DFXML file.
+Generates a report about what's up with a DFXML file.
 """
 
-import platform,os,os.path,sys,time
-if platform.python_version_tuple() < ('3','2','0'):
-    raise RuntimeError('This script now requires Python 3.2 or above')
+import platform
+import os
+import os.path
+import sys
+import time
 
 try:
     import dfxml, fiwalk
 except ImportError:
     raise ImportError('This script requires the dfxml and fiwalk modules for Python.')
 
-__version__='0.0.1'
+__version__='0.1.0'
 
+MAXSIZE = 1024*1024*16
+
+
+import xml.etree.ElementTree as ET
 import fiwalk,dfxml
 from histogram import histogram
 
@@ -25,6 +31,11 @@ class DiskSet:
         self.ext_histogram          = histogram()
         self.ext_histogram_distinct = histogram()
         self.fi_by_md5              = dict() # a dictionary of lists
+
+    def uniques(self):
+        return len(self.fi_by_md5)
+
+
 
     def pass1(self,fi):
         if fi.is_virtual(): return
@@ -43,6 +54,14 @@ class DiskSet:
             dup_bytes += fis[0].filesize() * (len(fis)-1)
         print("Total duplicate bytes: {:,}".format(dup_bytes))
 
+def dfxml_info(fn):
+    tree = ET.parse(fn)
+    print(tree.find(".//command_line").text)
+    print(tree.find(".//start_time").text)
+    maxrss = tree.findall(".//rusage[@who='RUSAGE_SELF']/maxrss")
+    if maxrss:
+        print("MAXRSS: {:,} MiB".format(int(maxrss[0].text)//1024))
+
 
 if __name__=="__main__":
     from argparse import ArgumentParser
@@ -56,5 +75,11 @@ if __name__=="__main__":
     ds   = DiskSet()
     for fn in args.xmlfiles:
         print("Processing {}".format(fn))
+        # If this file isn't too big, read it with ETree
+        if os.path.getsize(fn)<MAXSIZE:
+            dfxml_info(fn)
+
         dfxml.read_dfxml(xmlfile=open(fn,'rb'),callback=ds.pass1)
-    ds.print_dups_report()
+        print("\n")
+    if ds.uniques()>0:
+        ds.print_dups_report()
