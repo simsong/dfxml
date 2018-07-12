@@ -27,3 +27,4 @@ stamp-h1
 src/compile
 src/iblkfind
 python/demo.dfxml
+.cache
