@@ -9,6 +9,9 @@ import os
 import os.path
 import sys
 import time
+import xml
+import xml.etree
+import xml.etree.ElementTree as ET
 
 try:
     import dfxml, fiwalk
@@ -20,7 +23,6 @@ __version__='0.1.0'
 MAXSIZE = 1024*1024*16
 
 
-import xml.etree.ElementTree as ET
 import fiwalk,dfxml
 from histogram import histogram
 
@@ -34,8 +36,6 @@ class DiskSet:
 
     def uniques(self):
         return len(self.fi_by_md5)
-
-
 
     def pass1(self,fi):
         if fi.is_virtual(): return
@@ -54,13 +54,33 @@ class DiskSet:
             dup_bytes += fis[0].filesize() * (len(fis)-1)
         print("Total duplicate bytes: {:,}".format(dup_bytes))
 
+def get_text(tree,tag):
+    try:
+        return tree.find(tag).text
+    except AttributeError as e:
+        return ""
+
 def dfxml_info(fn):
-    tree = ET.parse(fn)
-    print(tree.find(".//command_line").text)
-    print(tree.find(".//start_time").text)
+    try:
+        tree = ET.parse(fn)
+    except xml.etree.ElementTree.ParseError as e:
+        print("corrupt: {}".format(fn))
+        return
+    command_line    = get_text(tree,".//command_line")
+    elapsed_seconds = get_text(tree,".//elapsed_seconds")
+    if '.' in elapsed_seconds:
+        elapsed_seconds = elapsed_seconds[0:elapsed_seconds.find('.')+2]
+    elapsed_seconds += 's' if elapsed_seconds else ' '
+
+    start_time      = get_text(tree,".//start_time")
+    if '.' in start_time:
+        start_time = start_time[0:start_time.find('.')]
+    start_time = start_time.replace("T"," ")
+    memory_usage    = ''
     maxrss = tree.findall(".//rusage[@who='RUSAGE_SELF']/maxrss")
     if maxrss:
-        print("MAXRSS: {:,} MiB".format(int(maxrss[0].text)//1024))
+        memory_usage = '{} MiB'.format(int(maxrss[0].text)//1024)
+    print("{}    {} {:>7}   {:>10}".format(command_line,start_time,elapsed_seconds,memory_usage))
 
 
 if __name__=="__main__":
@@ -69,17 +89,17 @@ if __name__=="__main__":
 
     parser = ArgumentParser(description='Report information about a DFXML file')
     parser.add_argument('xmlfiles',help='XML files to process',nargs='+')
+    parser.add_argument("--files", help="Report on file objects that the DFXML file contains", action='store_true')
     parser.add_argument("--imagefile",help="specifies imagefile to examine; automatically runs fiwalk",nargs='+')
 
     args = parser.parse_args()
     ds   = DiskSet()
-    for fn in args.xmlfiles:
-        print("Processing {}".format(fn))
-        # If this file isn't too big, read it with ETree
-        if os.path.getsize(fn)<MAXSIZE:
-            dfxml_info(fn)
 
+    if args.files:
         dfxml.read_dfxml(xmlfile=open(fn,'rb'),callback=ds.pass1)
-        print("\n")
-    if ds.uniques()>0:
-        ds.print_dups_report()
+        if ds.uniques()>0:
+            ds.print_dups_report()
+        exit(0)
+
+    for fn in args.xmlfiles:
+        dfxml_info(fn)
