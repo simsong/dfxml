@@ -9,11 +9,15 @@ Typically, this repository will be a submodule in another project. C++ projects 
 These tools are not guarenteed to create clean XML, but they can handle XML of any size.
 
 Sometimes when working with DFXML as a submodule, you may get off the master and end up with a disconnected head. If so, use this to get back on the master:
-    $ git checkout -b newbranch
-    $ git checkout master
-    $ git merge newbranch
-    $ git branch -d newbranch
+```
+$ git checkout -b newbranch
+$ git checkout master
+$ git merge newbranch
+$ git branch -d newbranch
+```
 
 or:
 
-    $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp ; git push git@github.com:simsong/dfxml.git master
+```
+$ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp ; git push git@github.com:simsong/dfxml.git master
+```
