@@ -1,4 +1,5 @@
-DFXML tools
+# DFXML tools
+This repository is a set of tools for creating, processing, and reporting on files in the Digital Forensics XML (DFXML) format.
 
 python/ - tools in Python
 src/    - tools in C
