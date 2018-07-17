@@ -4,6 +4,10 @@ This repository is a set of tools for creating, processing, and reporting on fil
 python/ - tools in Python
 src/    - tools in C
 
+## Usage
+Typically, this repository will be a submodule in another project. C++ projects will include the files in src/ in their program and manually write a DFXML file using the primitive XML writing tools that are included. 
+These tools are not guarenteed to create clean XML, but they can handle XML of any size.
+
 ================================================================
 To get back on master:
 
