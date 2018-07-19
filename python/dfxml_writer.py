@@ -151,28 +151,41 @@ class DFXMLWriter:
         return xml.dom.minidom.parseString( self.asString()).toprettyxml(indent='  ')
 
     def add_spark(self,node):
-        ### Connect to SPARK on local host and dump information
-        ### Uses requests
+        """Connect to SPARK on local host and dump information. 
+        Uses requests. Note: disables HTTPS certificate warnings."""
         import os
-        if "SPARK_HOME" not in os.environ:
+        import json
+        from   urllib.request import urlopen
+        import ssl
+        if "SPARK_ENV_LOADED" not in os.environ:
             return        # no spark
 
+        spark = ET.SubElement(node, 'spark')
         try:
             import requests
-            import json
+            import urllib3
+            urllib3.disable_warnings()
         except ImportError:
+            ET.SubElement(spark,'error').text = "SPARK_ENV_LOADED present but requests module not available"
             return 
 
-        try:
-            r = requests.get('http://localhost:4040/api/v1/applications/')
-            if r.status_code!=200:
-                return
-        except requests.exceptions.ConnectionError:
+        host = 'ip-10-252-45-20.ite.ti.census.gov'
+        p1 = 4040
+        p2 = 4050
+        for port in range(p1,p2+1):
+            try:
+                url = f'http://{host}:{port}/api/v1/applications/'
+                resp  = urlopen(url, context=ssl._create_unverified_context())
+                spark_data = resp.read()
+                break
+            except ConnectionError as e:
+                continue
+        if port>=p2:
+            ET.SubElement(spark,'error').text = f"SPARK_ENV_LOADED present but no listener on {host} ports {p1}-{p2}"
             return
 
         # Looks like we have spark!
-        spark = ET.SubElement(node, 'spark')
-        for app in json.loads(r.text):
+        for app in json.loads(spark_data):
             app_id   = app['id']
             app_name = app['name']
             e = ET.SubElement(spark,'application',{'id':app_id,'name':app_name})
@@ -182,10 +195,11 @@ class DFXMLWriter:
                 e = ET.SubElement(spark,'attempt')
                 json_to_xml(e,attempt)
             for param in ['jobs','allexecutors','storage/rdd']:
-                r = requests.get('http://localhost:4040/api/v1/applications/{}/{}'.
-                                 format(app_id,param))
+                url = f'http://{host}:{port}/api/v1/applications/{app_id}/{param}'
+                resp = urlopen(url, context=ssl._create_unverified_context())
+                data = resp.read()
                 e = ET.SubElement(spark,param.replace("/","_"))
-                json_to_xml(e,json.loads(r.text))
+                json_to_xml(e,json.loads(data))
 
 
     def add_report(self,node):
@@ -204,7 +218,8 @@ class DFXMLWriter:
 if __name__=="__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     arg_parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
-                                description="Demo program. Run DFXML for this program and print the results. If you run it on a system with SPARK, you get the spark DFXML too!") 
+                                description="""Demo program. Run DFXML for this program and print the results. 
+                                If you run it on a system with SPARK, you get the spark DFXML too!""") 
     arg_parser.add_argument("--write",help="Specify filename to write XML output to")
     arg_parser.add_argument("--debug",help="Print the output. Default unless --write is specified",action='store_true')
     args = arg_parser.parse_args()
@@ -214,7 +229,7 @@ if __name__=="__main__":
     dfxml.done()
     dfxml.comment("Thanks")
     if args.write:
-        dfxml.writeToFilename(args.write)
+        dfxml.writeToFilename(args.write,prettyprint=True)
     if args.debug or not args.write:
         print(dfxml.prettyprint())
 
