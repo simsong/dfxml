@@ -48,6 +48,20 @@ def git_commit():
     except SubprocessError as e:
         return ''
 
+class DFXMLTimer:
+    def __init__(self,dfxml,name):
+        self.dfxml = dfxml
+        self.name  = name
+        self.t0    = 0
+
+    def start(self):
+        self.t0    = time.time()
+        ET.SubElement(self.dfxml, 'timer', {'name':self.name, 'start':str(self.t0)})
+
+    def stop(self):
+        stop = time.time()
+        ET.SubElement(self.dfxml, 'timer', {'name':self.name, 'start':str(self.t0), 'stop':str(stop), 'elapsed':str(stop-self.t0)})
+
 class DFXMLWriter:
     def __init__(self,heartbeat=None,filename=None,prettyprint=False,logger=None):
         import time
@@ -57,9 +71,15 @@ class DFXMLWriter:
         self.add_DFXML_creator(self.dfxml)
         self.filename = filename
         self.logger = logger
+        self.timers = {}
         if self.filename:
             # Set up to automatically write to filename on exit...
             atexit.register(self.exiting,prettyprint=prettyprint)
+
+    def timer(self,name):
+        if name not in self.timers:
+            self.timers[name] = DFXMLTimer(self.dfxml, name)
+        return self.timers[name]
 
     def exiting(self,prettyprint=False):
         """Cleanup handling. Run done() and write the output file..."""
@@ -169,7 +189,7 @@ class DFXMLWriter:
             ET.SubElement(spark,'error').text = "SPARK_ENV_LOADED present but requests module not available"
             return 
 
-        host = 'ip-10-252-45-20.ite.ti.census.gov'
+        host = 'localhost'
         p1 = 4040
         p2 = 4050
         for port in range(p1,p2+1):
@@ -226,6 +246,23 @@ if __name__=="__main__":
     dfxml = DFXMLWriter()
     dfxml.timestamp("first")
     dfxml.timestamp("second")
+
+    dfxml.timer("junky").start()
+    time.sleep(.05)
+    dfxml.timer("junky").stop()
+
+    dfxml.timer("junky").start()
+    time.sleep(.10)
+    dfxml.timer("junky").stop()
+
+    dfxml.timer("junky").start()
+    time.sleep(.15)
+    dfxml.timer("junky").stop()
+
+    dfxml.timer("baby").start()
+    time.sleep(.15)
+    dfxml.timer("baby").stop()
+
     dfxml.done()
     dfxml.comment("Thanks")
     if args.write:
