@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.8.0"
+__version__ = "0.8.2"
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -2681,6 +2681,7 @@ class FileObject(object):
       "link_target",
       "libmagic",
       "md5",
+      "md6",
       "meta_type",
       "mode",
       "mtime",
@@ -2693,7 +2694,10 @@ class FileObject(object):
       "partition",
       "seq",
       "sha1",
+      "sha224",
       "sha256",
+      "sha384",
+      "sha512",
       "uid",
       "unalloc",
       "unused",
@@ -2705,6 +2709,16 @@ class FileObject(object):
       "data":"data_brs",
       "inode":"inode_brs",
       "name":"name_brs"
+    }
+
+    _hash_properties = {
+      "md5",
+      "md6",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512"
     }
 
     #TODO There may be need in the future to compare the annotations as well.  It complicates make_differential_dfxml too much for now.
@@ -2767,6 +2781,18 @@ class FileObject(object):
             parts.append("data_brs=%r" % self.byte_runs)
 
         return "FileObject(" + ", ".join(parts) + ")"
+
+    @staticmethod
+    def _should_ignore_property(ignore_properties, name_type, property_name):
+        """
+        Helper function for FileObject.populate_from_stat and walk_to_dfxml.py.  Defined as class method instead of inline definition in heavily looped functions.
+        """
+        if property_name in ignore_properties:
+            if "*" in ignore_properties[property_name]:
+                return True
+            elif name_type in ignore_properties[property_name]:
+                return True
+        return False
 
     def compare_to_original(self, **kwargs):
         file_ignores = kwargs.get("file_ignores", set())
@@ -2941,10 +2967,18 @@ class FileObject(object):
             elif ctn == "hashdigest":
                 if ce.attrib["type"].lower() == "md5":
                     self.md5 = ce.text
+                elif ce.attrib["type"].lower() == "md6":
+                    self.md6 = ce.text
                 elif ce.attrib["type"].lower() == "sha1":
                     self.sha1 = ce.text
+                elif ce.attrib["type"].lower() == "sha224":
+                    self.sha224 = ce.text
                 elif ce.attrib["type"].lower() == "sha256":
                     self.sha256 = ce.text
+                elif ce.attrib["type"].lower() == "sha384":
+                    self.sha384 = ce.text
+                elif ce.attrib["type"].lower() == "sha512":
+                    self.sha512 = ce.text
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
@@ -2964,37 +2998,59 @@ class FileObject(object):
                     _warned_elements.add((cns, ctn, FileObject))
                     _logger.warning("Uncertain what to do with this element in a FileObject: %r" % ce)
 
-    def populate_from_stat(self, s):
-        """Populates FileObject fields from a stat() call."""
+    def populate_from_stat(self, s, **kwargs):
+        """
+        Populates FileObject fields from a stat() call.
+        Optional arguments:
+        * ignore_properties - dictionary of property names to exclude from FileObject.
+        * name_type_hint - name_type to use for this FileObject, if not already recorded in self.
+        """
         import os
         _typecheck(s, os.stat_result)
 
-        self.mode = s.st_mode
-        self.nlink = s.st_nlink
-        self.uid = s.st_uid
-        self.gid = s.st_gid
-        self.filesize = s.st_size
+        ignore_properties = kwargs.get("ignore_properties", dict())
+        #_logger.debug("ignore_properties = %r." % ignore_properties)
+
+        name_type = self.name_type or kwargs.get("name_type_hint")
+
+        _should_ignore = lambda x: FileObject._should_ignore_property(ignore_properties, name_type, x)
+
+        if not _should_ignore("mode"):
+            self.mode = s.st_mode
+        if not _should_ignore("nlink"):
+            self.nlink = s.st_nlink
+        if not _should_ignore("uid"):
+            self.uid = s.st_uid
+        if not _should_ignore("gid"):
+            self.gid = s.st_gid
+        if not _should_ignore("filesize"):
+            self.filesize = s.st_size
         #s.st_dev is ignored for now.
 
-        if platform.system() == "Windows":
-            # On Windows, Python 2 reports 0L.  Treat this as absent information.
-            # On Windows, Python 3 reports the "File ID" ( see "nFileIndexLow" remark at: https://msdn.microsoft.com/en-us/library/aa363788 ).  Record this as the inode number for now.  NOTE: in the future this may become a Windows-namespaced property "fileindex"; it may be prudent to later file a follow-on to Python Issue 32878 ( https://bugs.python.org/issue32878 ).
-            if sys.version_info[0] >= 3:
+        if not _should_ignore("inode"):
+            if platform.system() == "Windows":
+                # On Windows, Python 2 reports 0L.  Treat this as absent information.
+                # On Windows, Python 3 reports the "File ID" ( see "nFileIndexLow" remark at: https://msdn.microsoft.com/en-us/library/aa363788 ).  Record this as the inode number for now.  NOTE: in the future this may become a Windows-namespaced property "fileindex"; it may be prudent to later file a follow-on to Python Issue 32878 ( https://bugs.python.org/issue32878 ).
+                if sys.version_info[0] >= 3:
+                    self.inode = s.st_ino
+            else:
                 self.inode = s.st_ino
-        else:
-            self.inode = s.st_ino
 
-        if "st_mtime" in dir(s):
-            self.mtime = s.st_mtime
+        if not _should_ignore("mtime"):
+            if "st_mtime" in dir(s):
+                self.mtime = s.st_mtime
 
-        if "st_atime" in dir(s):
-            self.atime = s.st_atime
+        if not _should_ignore("atime"):
+            if "st_atime" in dir(s):
+                self.atime = s.st_atime
 
-        if "st_ctime" in dir(s):
-            self.ctime = s.st_ctime
+        if not _should_ignore("ctime"):
+            if "st_ctime" in dir(s):
+                self.ctime = s.st_ctime
 
-        if "st_birthtime" in dir(s):
-            self.crtime = s.st_birthtime
+        if not _should_ignore("crtime"):
+            if "st_birthtime" in dir(s):
+                self.crtime = s.st_birthtime
 
     def to_Element(self):
         """Creates an ElementTree Element with elements in DFXML schema order."""
@@ -3153,8 +3209,12 @@ class FileObject(object):
         _append_byte_runs("name_brs", self.name_brs)
         _append_byte_runs("data_brs", self.data_brs)
         _append_hash("md5", self.md5)
+        _append_hash("md6", self.md6)
         _append_hash("sha1", self.sha1)
+        _append_hash("sha224", self.sha224)
         _append_hash("sha256", self.sha256)
+        _append_hash("sha384", self.sha384)
+        _append_hash("sha512", self.sha512)
         _append_object("original_fileobject", self.original_fileobject, "delta:")
 
         if len(diffs_whittle_set) > 0:
@@ -3401,6 +3461,14 @@ class FileObject(object):
         self._md5 = _strcast(val)
 
     @property
+    def md6(self):
+        return self._md6
+
+    @md6.setter
+    def md6(self, val):
+        self._md6 = _strcast(val)
+
+    @property
     def meta_type(self):
         return self._meta_type
 
@@ -3518,12 +3586,36 @@ class FileObject(object):
         self._sha1 = _strcast(val)
 
     @property
+    def sha224(self):
+        return self._sha224
+
+    @sha224.setter
+    def sha224(self, val):
+        self._sha224 = _strcast(val)
+
+    @property
     def sha256(self):
         return self._sha256
 
     @sha256.setter
     def sha256(self, val):
         self._sha256 = _strcast(val)
+
+    @property
+    def sha384(self):
+        return self._sha384
+
+    @sha384.setter
+    def sha384(self, val):
+        self._sha384 = _strcast(val)
+
+    @property
+    def sha512(self):
+        return self._sha512
+
+    @sha512.setter
+    def sha512(self, val):
+        self._sha512 = _strcast(val)
 
     @property
     def uid(self):

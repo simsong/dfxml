@@ -15,40 +15,42 @@
 
 import Objects
 
-dobj = Objects.DFXMLObject(version="1.2.0")
+if __name__=="__main__":
 
-# Make objects for simple appends.
-diobj_0 = Objects.DiskImageObject()
-psobj_0 = Objects.PartitionSystemObject()
-pobj_0 = Objects.PartitionObject()
-vobj_0 = Objects.VolumeObject()
-vobj_0.ftype_str="hfs"
-fobj_0 = Objects.FileObject()
+    dobj = Objects.DFXMLObject(version="1.2.0")
 
-# Make objects for more exotic appends.
-psobj_1 = Objects.PartitionSystemObject()
-vobj_1 = Objects.VolumeObject()
-vobj_1.ftype_str = "hfsplus"
-fobj_dobj_1 = Objects.FileObject()
-fobj_dobj_1.alloc_inode = False
-fobj_dobj_1.alloc_name = False
-fobj_psobj_1 = Objects.FileObject()
-fobj_psobj_1.alloc_inode = False
-fobj_psobj_1.alloc_name = False
-fobj_pobj_1 = Objects.FileObject()
-fobj_pobj_1.alloc_inode = False
-fobj_pobj_1.alloc_name = False
+    # Make objects for simple appends.
+    diobj_0 = Objects.DiskImageObject()
+    psobj_0 = Objects.PartitionSystemObject()
+    pobj_0 = Objects.PartitionObject()
+    vobj_0 = Objects.VolumeObject()
+    vobj_0.ftype_str="hfs"
+    fobj_0 = Objects.FileObject()
 
-# Do simple appends.
-dobj.append(diobj_0)
-diobj_0.append(psobj_0)
-psobj_0.append(pobj_0)
-pobj_0.append(vobj_0)
-vobj_0.append(fobj_0)
+    # Make objects for more exotic appends.
+    psobj_1 = Objects.PartitionSystemObject()
+    vobj_1 = Objects.VolumeObject()
+    vobj_1.ftype_str = "hfsplus"
+    fobj_dobj_1 = Objects.FileObject()
+    fobj_dobj_1.alloc_inode = False
+    fobj_dobj_1.alloc_name = False
+    fobj_psobj_1 = Objects.FileObject()
+    fobj_psobj_1.alloc_inode = False
+    fobj_psobj_1.alloc_name = False
+    fobj_pobj_1 = Objects.FileObject()
+    fobj_pobj_1.alloc_inode = False
+    fobj_pobj_1.alloc_name = False
 
-# Do more exotic appends.
-pobj_0.append(psobj_1)
-vobj_0.append(vobj_1)
-dobj.append(fobj_dobj_1)
-psobj_0.append(fobj_psobj_1)
-pobj_0.append(fobj_pobj_1)
+    # Do simple appends.
+    dobj.append(diobj_0)
+    diobj_0.append(psobj_0)
+    psobj_0.append(pobj_0)
+    pobj_0.append(vobj_0)
+    vobj_0.append(fobj_0)
+
+    # Do more exotic appends.
+    pobj_0.append(psobj_1)
+    vobj_0.append(vobj_1)
+    dobj.append(fobj_dobj_1)
+    psobj_0.append(fobj_psobj_1)
+    pobj_0.append(fobj_pobj_1)

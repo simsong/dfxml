@@ -18,21 +18,23 @@ import logging
 import os
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
-_logger = logging.getLogger(os.path.basename(__file__))
+if __name__=="__main__":
 
-import Objects
+    logging.basicConfig(level=logging.DEBUG)
+    _logger = logging.getLogger(os.path.basename(__file__))
 
-dobj = Objects.parse(sys.argv[1])
+    import Objects
 
-_logger.debug("dobj.creator_libraries = %r." % dobj.creator_libraries)
+    dobj = Objects.parse(sys.argv[1])
 
-assert Objects.LibraryObject("libfoo", "1.2.3") in dobj.creator_libraries
-assert Objects.LibraryObject("libbaz", "4.5") in dobj.build_libraries
+    _logger.debug("dobj.creator_libraries = %r." % dobj.creator_libraries)
 
-found = None
-for library in dobj.creator_libraries:
-    if library.relaxed_eq(Objects.LibraryObject("libfoo")):
-        found = True
-        break
-assert found
+    assert Objects.LibraryObject("libfoo", "1.2.3") in dobj.creator_libraries
+    assert Objects.LibraryObject("libbaz", "4.5") in dobj.build_libraries
+
+    found = None
+    for library in dobj.creator_libraries:
+        if library.relaxed_eq(Objects.LibraryObject("libfoo")):
+            found = True
+            break
+    assert found

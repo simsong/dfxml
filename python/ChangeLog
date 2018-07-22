@@ -1,3 +1,8 @@
+2018-07-06    <alexander.nelson@nist.gov>
+
+	* walk_to_dfxml.py: Add property-ignoring flag
+	* Python: Add support for hashes added in DFXML 1.2.0
+
 2018-04-09    <alexander.nelson@nist.gov>
 
 	* Python: Update scripts' reported DFXML version to 1.2.0
