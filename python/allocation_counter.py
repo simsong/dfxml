@@ -22,7 +22,7 @@ __version__ = "0.1.1"
 # * Tabular output in HTML
 # * Tabular output in LaTeX
 
-import Objects
+import dfxml.objects as Objects
 import make_differential_dfxml
 
 import collections

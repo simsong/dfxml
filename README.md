@@ -6,11 +6,13 @@ DFXML is a file format designed to capture metadata and provenance information a
 This repository contains original DFXML implements in C and Python for writing DFXML files, as well as an assortment of tools (mostly in Python) for reading and processing DFXML files.  The folder layout is as follows:
 
 ```
-dtd/    - the DFXML DTD, somewhat out of date.
-python/ - Python source files
-python/dfxml/ - The Python DFXML module
-python/tools  - Tools written in Python for processing DFXML files.
-src/    - The C language DFXML implementation for both writing and reading DFXML files. Includes a few tools, mostly demos.
+dtd/               - the DFXML DTD, somewhat out of date.
+python/            - Python source files
+python/dfxml/      - The Python DFXML module
+python/dfxml/tests - Unit tests for the DFXML modules.
+python/tools       - Tools written in Python for processing DFXML files.
+python/tools/tests - Unit tests for the DFXML tools.
+src/               - The C language DFXML implementation for both writing and reading DFXML files. Includes a few tools, mostly demos.
 ```
 
 # Using this as a git submodule
@@ -30,3 +32,11 @@ or, more succinctly:
 ```
 $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp 
 ```
+
+# Release Notes
+- 2018-07-22 @simsong Significant redesign of the Python library.
+  - Configure Python module with a module directory and moved most of `dfxml.py` to `__init__.py`.
+  - Renamed `Objects.py` to be `objects.py` since Python3 naming conventions use only lower case filenames.
+  - Moved tests to a `test/` subdirectory and redesigned most of them to work with py.test. The tests that require arguments on the python command line were not updated.
+  - Removed calls to logging withing files and modules that are not tests, so that using DFXML doesn't inherently start emitting logging messages.
+  - Removed calls to logging in Objects tests where the only thing that the test program was logging was the fact that it had run. py.test will provide similar logging now.

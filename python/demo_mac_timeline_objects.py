@@ -15,7 +15,7 @@
 
 # produce a MAC-times timeline using the DFXML Objects interface.
 # works under either Python2 or Python3
-import Objects
+import dfxml.objects as Objects
 import sys
 
 def main():

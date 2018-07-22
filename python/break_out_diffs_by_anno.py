@@ -22,7 +22,7 @@ Rows: Counts of instances of a property being changed per FileObject annotation.
 
 __version__ = "0.1.0"
 
-import Objects
+import dfxml.objects as Objects
 import sys
 import collections
 

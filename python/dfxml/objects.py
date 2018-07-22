@@ -18,7 +18,12 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.8.2"
+__version__ = "0.9.0"
+
+# Revision Log
+# 2018-07-22 @simsong - removed calls to logging, since this module shouldn't create log files.
+#                     - made to operate inside dfxml module
+#                    
 
 #Remaining roadmap to 1.0.0:
 # * Documentation.
@@ -30,11 +35,16 @@ import re
 import copy
 import xml.etree.ElementTree as ET
 import subprocess
-import dfxml
 import os
 import sys
 import struct
 import platform
+
+# The following allows us to import the dfxml module as dfxml
+# There may be a cleaner way to do this.
+sys.path.append( os.path.dirname(__file__) + "/..")
+import dfxml
+
 
 _logger = logging.getLogger(os.path.basename(__file__))
 

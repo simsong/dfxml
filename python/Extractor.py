@@ -25,7 +25,7 @@ import traceback
 _logger = logging.getLogger(os.path.basename(__file__))
 
 import dfxml
-import Objects
+import dfxml.objects as Objects
 
 XMLNS_EXTRACTOR = "#Extractor.py"
 

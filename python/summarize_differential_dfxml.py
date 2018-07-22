@@ -17,7 +17,7 @@ __version__ = "0.8.2"
 
 import os
 import logging
-import Objects
+import dfxml.objects as Objects
 import idifference
 import copy
 import collections
