@@ -96,13 +96,15 @@ check-versioned:
 	./walk_ignore_test.sh $$PY
 
 clean:
-	rm -f differential_dfxml_[02]_test*
-	rm -f verify_differential_dfxml_{01,23}.py-test[12].xml
+	rm -f differential_dfxml_test_??.{xml,txt}
+	rm -f verify_differential_dfxml_{01,23}_test.py-test[12].xml
 	rm -f difference_counts_test.py-d*
 	rm -f cat_partitions_test.sh.dfxml
 	rm -f diff_file_ignore_sample-py[23].dfxml
 	rm -f LibraryObject_py[23]_test.dfxml
-	rm -rf walk_ignore_test walk_ignore_test*dfxml
+	rm -rf walk_ignore_test/ walk_ignore_*_test.dfxml
+	rm -f *~
+
 
 diff_file_ignore_sample-py2.dfxml: \
   $(OBJECTS) \
