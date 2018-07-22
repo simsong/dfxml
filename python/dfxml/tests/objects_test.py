@@ -3,6 +3,8 @@
 from dfxml.objects import *
 from dfxml.objects import _intcast, _qsplit, _logger
 
+__version__="0.1.0"
+
 def test_all():
     assert _intcast(-1) == -1
     assert _intcast("-1") == -1

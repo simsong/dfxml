@@ -14,6 +14,8 @@
 Run test against DFXML file generatd by the _write counterpart script.
 """
 
+__version__="0.1.0"
+
 import sys
 import logging
 import os

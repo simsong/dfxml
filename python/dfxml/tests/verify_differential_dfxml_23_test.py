@@ -15,6 +15,8 @@
 
 SAMPLES_DIR="../../../samples"
 
+__version__="0.1.0"
+
 import sys
 import sys
 import os
