@@ -12,8 +12,10 @@ sys.path.append(os.getenv("DOMEX_HOME") + "/src/lib/") # add the library
 sys.path.append(os.getenv("DOMEX_HOME") + "/src/fiwalk/python/") # add the library
 
 
-import fiwalk,hashlib
+import hashlib
 import xml.parsers.expat
+
+import dfxml.fiwalk as fiwalk
 
 redact_extensions = set([".dll",".exe",".com"])
 redact_filenames  = set()

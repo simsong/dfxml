@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-import dfxml,fiwalk
 import zipfile,sys,os,os.path,datetime
+
+import dfxml
+import dfxml.fiwalk as fiwalk
 
 if __name__=="__main__":
     from optparse import OptionParser

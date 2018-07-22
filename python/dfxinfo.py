@@ -13,18 +13,15 @@ import xml
 import xml.etree
 import xml.etree.ElementTree as ET
 
-try:
-    import dfxml, fiwalk
-except ImportError:
-    raise ImportError('This script requires the dfxml and fiwalk modules for Python.')
+import dfxml
+import dfxml.fiwalk as fiwalk
+import dfxml.histogram as histogram
 
-__version__='0.1.0'
+__version__='0.2.0'
 
 MAXSIZE = 1024*1024*16
 
 
-import fiwalk,dfxml
-from histogram import histogram
 
 class DiskSet:
     """DiskSet maintains a database of the file objects within a disk.

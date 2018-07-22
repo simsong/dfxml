@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-### DO NOT MODIFY THIS FILE ###
-### DOWNLOAD NEW FILE FROM https://raw.github.com/simsong/dfxml/master/python/fiwalk.py
 
 # This software was developed in whole or in part by employees of the
 # Federal Government in the course of their official duties, and with
@@ -16,15 +14,20 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-#
-# fiwalk version 0.6.3
-#
-# %%% BEGIN NO FILL
+__version__="0.7.0"
+
+
 """fiwalk module
 
 This is the part of dfxml that is dependent on fiwalk.py
 
 """
+
+import os
+import sys
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+
 import dfxml
 from sys import stderr
 from subprocess import Popen,PIPE

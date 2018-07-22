@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use('agg.pdf')
 
 
-import fiwalk
+import dfxml.fiwalk as fiwalk
 import datetime
 from matplotlib.dates import MonthLocator, WeekdayLocator, DateFormatter
 from matplotlib.dates import MONDAY,SATURDAY

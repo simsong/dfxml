@@ -27,7 +27,10 @@ import sys,time
 if sys.version_info < (3,1):
     raise RuntimeError("rdifference.py requires Python 3.1 or above")
 
-import fiwalk,dfxml,dfxml_html
+import dfxml
+import dfxml.fiwalk as fiwalk
+import dfxml.dfxml_html as dfxml_html
+
 def ptime(t):
     """Print the time in the requested format. T is a dfxml time value"""
     global options

@@ -30,9 +30,12 @@ Process:
 
 #AJN This script does not call out duplicate paths, but they are reported.
 
-import sys,fiwalk,dfxml,time
+import sys,time
 if sys.version_info < (3,1):
     raise RuntimeError("rdifference.py requires Python 3.1 or above")
+
+import dfxml
+import dfxml.fiwalk as fiwalk
 
 def ptime(t):
     """Print the time in the requested format. T is a dfxml time value"""

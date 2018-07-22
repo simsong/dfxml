@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # produce a MAC-times timeline.
 # works under either Python2 or Python3
-import dfxml, sys
+import os
+import sys
 
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+import dfxml
 
 
 timeline = []

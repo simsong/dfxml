@@ -159,7 +159,7 @@ def hash_file(fn,x,partno=None):
     
     try:
         f = open(fn)
-    except IOError,e:
+    except IOError as e:
         sys.stderr.write("%s: %s\n" % (fn,str(e)))
         return
 

@@ -2,7 +2,8 @@
 #
 # sync corpus based on DFXML files
 
-import dfxml, fiwalk
+import dfxml
+import dfxml.fiwalk as fiwalk
 from collections import defaultdict
 
 class CorpusDB:

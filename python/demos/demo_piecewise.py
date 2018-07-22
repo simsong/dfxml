@@ -5,7 +5,14 @@
 #
 # Multimap from http://stackoverflow.com/questions/1731971/is-there-multimap-implementation-in-python
 
-import dfxml,math,sys,collections
+import os
+import sys
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+import dfxml
+
+
+import math,sys,collections
 
 
 class SectorCorrelator:

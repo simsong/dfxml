@@ -67,7 +67,7 @@ KEY 12342343  (an encryption key)
 import xml.parsers.expat
 import hashlib
 import os.path
-import fiwalk
+import dfxml.fiwalk as fiwalk
 import re
 
 ################################################################

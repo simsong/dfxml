@@ -4,8 +4,13 @@
 # Demo program that shows how to calculate the average size of file objects in a DFXML file
 #
 
-import dfxml,math,sys
+import math
+import sys
+import os
 import collections
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+import dfxml
 
 sums = collections.Counter()
 sum_of_squares= collections.Counter()

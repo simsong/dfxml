@@ -2,11 +2,13 @@
 """Reads an fiwalk XML file and reports how many of the files are still in the image..."""
 
 import sys,os
-sys.path.append(os.getenv("DOMEX_HOME") + "/src/lib/") # add the library
-sys.path.append("../lib/")      # add the library
-sys.path.append("../fiwalk/")
 
-import fiwalk
+import os
+import sys
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+import dfxml
+import dfxml.fiwalk as fiwalk
 import time
 
 def calc_jumps(fis,title):

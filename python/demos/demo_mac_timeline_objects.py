@@ -13,9 +13,16 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-# produce a MAC-times timeline using the iterative DFXML interface.
+# produce a MAC-times timeline using the DFXML Objects interface.
 # works under either Python2 or Python3
-import dfxml, sys
+
+import os
+import sys
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+import dfxml
+import dfxml.objects as Objects
+
 
 def main():
     if len(sys.argv) < 2:
@@ -24,11 +31,14 @@ def main():
 
     timeline = []
 
-    for fi in dfxml.iter_dfxml( xmlfile=open(sys.argv[1],"rb") ):
-        if fi.mtime()!=None: timeline.append([fi.mtime(),fi.filename()," modified"])
-        if fi.crtime()!=None: timeline.append([fi.crtime(),fi.filename()," created"])
-        if fi.ctime()!=None: timeline.append([fi.ctime(),fi.filename()," changed"])
-        if fi.atime()!=None: timeline.append([fi.atime(),fi.filename()," accessed"])
+    for (event, obj) in Objects.iterparse( sys.argv[1] ):
+        #Only work on FileObjects
+        if not isinstance(obj, Objects.FileObject):
+            continue
+        if not obj.mtime is None:  timeline.append([obj.mtime, obj.filename," modified"])
+        if not obj.crtime is None: timeline.append([obj.crtime,obj.filename," created"])
+        if not obj.ctime is None:  timeline.append([obj.ctime, obj.filename," changed"])
+        if not obj.atime is None:  timeline.append([obj.atime, obj.filename," accessed"])
 
     timeline.sort()
 

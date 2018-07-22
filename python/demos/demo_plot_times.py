@@ -2,6 +2,13 @@
 import fiwalk
 import time
 
+import os
+import sys
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+import dfxml
+
+
 if __name__=="__main__":
     import sys
     from optparse import OptionParser

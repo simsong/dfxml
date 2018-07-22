@@ -9,7 +9,10 @@ Dave Dittrich <dittrich@u.washington.edu>
 
 """
 import sys,time
-import fiwalk,dfxml,idifference
+import dfxml
+import dfxml.fiwalk as fiwalk
+
+import idifference
 
 # We are re-using code from idifference.py and over-riding
 # the process_fi method in the DiskState class.
