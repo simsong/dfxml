@@ -22,8 +22,9 @@ import sys
 import os
 import logging
 
-sys.path.append("../..")
-sys.path.append("..")
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+
 import dfxml.objects as Objects
 import make_differential_dfxml
 

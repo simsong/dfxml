@@ -19,7 +19,7 @@ import copy
 import logging
 import os
 
-sys.path.append("../..")
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
 def get_ho():

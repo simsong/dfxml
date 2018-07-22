@@ -15,12 +15,12 @@
 __version__="0.1.0"
 
 import sys
-
-sys.path.append("../..")
-import dfxml.objects as Objects
 import logging
 import os
 import xml.etree.ElementTree as ET
+
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
+import dfxml.objects as Objects
 
 def test_all():
 

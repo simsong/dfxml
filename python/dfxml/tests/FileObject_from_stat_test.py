@@ -18,11 +18,11 @@ import sys
 import logging
 import os
 
-sys.path.append("../..")
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
+
 import dfxml.objects as Objects
 
 def test_all():
-
 
     logging.basicConfig(level=logging.DEBUG)
     _logger = logging.getLogger(os.path.basename(__file__))

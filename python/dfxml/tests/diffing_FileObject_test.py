@@ -1,4 +1,3 @@
-
 # This software was developed at the National Institute of Standards
 # and Technology in whole or in part by employees of the Federal
 # Government in the course of their official duties. Pursuant to
@@ -18,7 +17,7 @@ import sys
 import logging
 import os
 
-sys.path.append("../..")
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
 def test_all():

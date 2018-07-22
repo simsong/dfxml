@@ -1,9 +1,14 @@
 # Unit tests for objects
 
-from dfxml.objects import *
-from dfxml.objects import _intcast, _qsplit, _logger
 
 __version__="0.1.0"
+
+import sys
+import os
+
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
+from dfxml.objects import *
+from dfxml.objects import _intcast, _qsplit, _logger
 
 def test_all():
     assert _intcast(-1) == -1

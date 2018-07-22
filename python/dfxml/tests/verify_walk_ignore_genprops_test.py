@@ -2,9 +2,11 @@
 
 __version__="0.1.0"
 
+import os
 import sys
 
-sys.path.append("../..")
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
 import dfxml.objects as Objects
 
 if __name__=="__main__":

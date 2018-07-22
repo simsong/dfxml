@@ -17,8 +17,9 @@ __version__="0.1.0"
 import sys
 import logging
 import os
+import os.path
 
-sys.path.append("../..")
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
 def test_all():
