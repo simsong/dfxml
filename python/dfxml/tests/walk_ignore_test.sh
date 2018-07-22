@@ -7,7 +7,7 @@ set -u
 
 pythonbin="$1"
 
-mkdir -p walk_ignore/foo/bar/baz
+mkdir -p walk_ignore_test/foo/bar/baz
 echo 'contents c' > walk_ignore_test/foo/bar/baz/c
 echo 'contents b' > walk_ignore_test/foo/bar/b
 echo 'contents a' > walk_ignore_test/foo/a
@@ -32,4 +32,4 @@ $pythonbin $TOOLS_DIR/walk_to_dfxml.py \
     xmllint --format - \
     > walk_ignore_nohash_test.dfxml
 
-$pythonbin verify_walk_ignore_nohash_test.py walk_ignore_nohash_dfxml.dfxml
+$pythonbin verify_walk_ignore_nohash_test.py walk_ignore_nohash_test.dfxml
