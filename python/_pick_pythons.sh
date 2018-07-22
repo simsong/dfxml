@@ -12,24 +12,13 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-# This script is meant to be included in Bash scripts (especially unit
-# tests) that need a Python v2 and v3.  It defines the variables PYTHON2
-# and PYTHON3 according to the highest available minor version number.
+# This script is meant to be included in Bash scripts that need a Python v2 and v3.
+# An autotool configure script would also suffice.
+# The 'or echo' statements keep the subshell from returning an error exit status on missing a Python version.
 #
-# (An autotool configure script would also suffice.)
+# but what does this script do?
 #
-# The 'or echo' statements keep the subshell from returning an error
-# exit status on missing a Python version.
-
-# In some environments, these Python 2 calls may find different Python
-# executables.  For instance, in macOS using MacPorts, 'python' by
-# default finds the system Python 2.7, whereas 'python2.7' finds the
-# MacPorts Python 2.7. This script opts to select for MacPorts in that
-# environment because of package management.
-PYTHON2=`which python2.7 2>/dev/null || echo`
-if [ -z "$PYTHON2" ]; then
-  PYTHON2=`which python`
-fi
+PYTHON2=`which python`
 
 PYTHON3=`which python3.6 2>/dev/null || echo`
 if [ -z "$PYTHON3" ]; then
