@@ -13,9 +13,9 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-source ../../tests/_pick_pythons.sh
+source paths.sh
 
-"$PYTHON3" ../cat_partitions.py \
-  12345678:../../../samples/difference_test_0.xml \
-  87654321:../../../samples/difference_test_1.xml \
+"$PYTHON3" $TOOLS_DIR/cat_partitions.py \
+  12345678:$SAMPLES_DIR/difference_test_0.xml \
+  87654321:$SAMPLES_DIR/difference_test_1.xml \
   | xmllint --format - >$0.dfxml

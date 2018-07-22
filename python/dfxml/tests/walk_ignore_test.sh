@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOOLS_DIR=../..
+source paths.sh
 
 set -e
 set -u

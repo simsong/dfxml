@@ -18,20 +18,18 @@ import sys
 sys.path.append("../..")
 import dfxml.objects as Objects
 
-def test_all():
+def main():
+    dobj = Objects.DFXMLObject()
+    dobj.diff_file_ignores.add("atime")
+    dobj.diff_file_ignores.add("crtime")
+    with open(args.out_dfxml, "w") as fh:
+        dobj.print_dfxml(fh)
 
-    def main():
-        dobj = Objects.DFXMLObject()
-        dobj.diff_file_ignores.add("atime")
-        dobj.diff_file_ignores.add("crtime")
-        with open(args.out_dfxml, "w") as fh:
-            dobj.print_dfxml(fh)
-
-    if __name__ == "__main__":
-        import argparse
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-d", "--debug", action="store_true")
-        parser.add_argument("out_dfxml")
-        args = parser.parse_args()
-        logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
-        main()
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("out_dfxml")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
+    main()
