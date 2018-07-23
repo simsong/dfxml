@@ -20,6 +20,11 @@ Typically this DFXML module will be a submodule inside another git module.
 
 We've noticed that people will typically start development in these modules, and then want to push the chages back to the master. This causes a problem with git, because when you've done the development, you weren't at the head. If this happens to you, you will need to create a new branch for your current location, then checkout the master branch, and then merge your branch into the master. You can do that this this sequence of git commands:
 
+## Usage
+Typically, this repository will be a submodule in another project. C++ projects will include the files in src/ in their program and manually write a DFXML file using the primitive XML writing tools that are included. 
+These tools are not guarenteed to create clean XML, but they can handle XML of any size.
+
+Sometimes when working with DFXML as a submodule, you may get off the master and end up with a disconnected head. If so, use this to get back on the master:
 ```
 $ git checkout -b newbranch
 $ git checkout master
