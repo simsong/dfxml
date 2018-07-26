@@ -1,4 +1,5 @@
 import py.test
+from iexport import *
 
 def test_iexport():
     r1 = Run(0,1000)
