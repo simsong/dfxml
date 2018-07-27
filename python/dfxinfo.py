@@ -12,6 +12,7 @@ import time
 import xml
 import xml.etree
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 
 import dfxml
 import dfxml.fiwalk as fiwalk
@@ -58,6 +59,7 @@ def get_text(tree,tag):
         return ""
 
 def dfxml_info(fn):
+    import statistics 
     try:
         tree = ET.parse(fn)
     except xml.etree.ElementTree.ParseError as e:
@@ -78,6 +80,27 @@ def dfxml_info(fn):
     if maxrss:
         memory_usage = '{} MiB'.format(int(maxrss[0].text)//1024)
     print("{}    {} {:>7}   {:>10}".format(command_line,start_time,elapsed_seconds,memory_usage))
+
+    # See if there are timers
+    timers = tree.findall("timer")
+    times  = defaultdict(list)
+    for timer in timers:
+        try:
+            name = timer.attrib['name']
+            elapsed = float(timer.attrib['elapsed'])
+            times[name].append(elapsed)
+        except KeyError as e:
+            continue
+    if timers:
+        print("Timers:")
+        fmt = "   {:>6}   {:>5}  {:>9.4}  {:>9.4}  {:>9.4}"
+        print(fmt.format("name","#","min","med.","max"))
+        for name in times:
+            data = times[name]
+            print(fmt.format(name, len(data), min(data), statistics.median(data), max(data)))
+
+            
+
 
 
 if __name__=="__main__":
