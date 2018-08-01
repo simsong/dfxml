@@ -194,7 +194,7 @@ class DFXMLWriter:
         p2 = 4050
         for port in range(p1,p2+1):
             try:
-                url = f'http://{host}:{port}/api/v1/applications/'
+                url = 'http://{}:{}/api/v1/applications/'.format(host,port)
                 resp  = urlopen(url, context=ssl._create_unverified_context())
                 spark_data = resp.read()
                 break
@@ -215,7 +215,7 @@ class DFXMLWriter:
                 e = ET.SubElement(spark,'attempt')
                 json_to_xml(e,attempt)
             for param in ['jobs','allexecutors','storage/rdd']:
-                url = f'http://{host}:{port}/api/v1/applications/{app_id}/{param}'
+                url = 'http://{}:{}/api/v1/applications/{}/{param}'.format(host,port,app_id)
                 resp = urlopen(url, context=ssl._create_unverified_context())
                 data = resp.read()
                 e = ET.SubElement(spark,param.replace("/","_"))
