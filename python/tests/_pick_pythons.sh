@@ -16,7 +16,7 @@
 # An autotool configure script would also suffice.
 # The 'or echo' statements keep the subshell from returning an error exit status on missing a Python version.
 #
-# but what does this script do?
+# This script defines two variables, PYTHON2 and PYTHON3, providing the highest-available Python binary for each major version.
 #
 PYTHON2=`which python`
 

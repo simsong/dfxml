@@ -5,5 +5,6 @@ you do so, the following incantation will create a branch called
 'tmp', checkout the master, merge the tmp into the master, delete the
 tmp branch, and push the results back to the origin:
 
-git checkout -b tmp  ; git checkout master ; git merge tmp ; 
-git branch -d tmp ; git push git@github.com:simsong/dfxml.git master
+    git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp 
+
+Then you can `git push` as necessary.
