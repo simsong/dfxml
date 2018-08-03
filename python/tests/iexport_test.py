@@ -1,4 +1,9 @@
+import sys
+import os
 import py.test
+
+sys.path.append( os.path.join(os.path.dirname(__file__), ".."))
+from iexport import *
 
 def test_iexport():
     r1 = Run(0,1000)
