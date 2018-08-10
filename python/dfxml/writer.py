@@ -147,7 +147,6 @@ class DFXMLWriter:
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
         
-
     def comment(self,s):
         self.dfxml.insert(len(list(self.dfxml)), ET.Comment(s))
         if self.logger:
@@ -222,12 +221,15 @@ class DFXMLWriter:
                 json_to_xml(e,json.loads(data))
 
 
-    def add_report(self,node):
+    def add_report(self,node,spark=True,rusage=True,vminfo=True):
         """Add the end of run report"""
         report = ET.SubElement(self.dfxml, 'report')
-        self.add_spark(report)
-        self.add_rusage(report)
-        self.add_vminfo(report)
+        if spark:
+            self.add_spark(report)
+        if rusage:
+            self.add_rusage(report)
+        if vminfo:
+            self.add_vminfo(report)
         ET.SubElement(report, 'elapsed_seconds').text = str(time.time()-self.t0)
 
     def done(self):
