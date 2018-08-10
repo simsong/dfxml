@@ -67,8 +67,8 @@ class DFXMLWriter:
         import time
         self.t0 = time.time()
         self.tlast = time.time()
-        self.dfxml = ET.Element('dfxml')
-        self.add_DFXML_creator(self.dfxml)
+        self.doc = ET.Element('dfxml')
+        self.add_DFXML_creator(self.doc)
         self.filename = filename
         self.logger = logger
         self.timers = {}
@@ -78,7 +78,7 @@ class DFXMLWriter:
 
     def timer(self,name):
         if name not in self.timers:
-            self.timers[name] = DFXMLTimer(self.dfxml, name)
+            self.timers[name] = DFXMLTimer(self.doc, name)
         return self.timers[name]
 
     def exiting(self,prettyprint=False):
@@ -111,10 +111,15 @@ class DFXMLWriter:
         ET.SubElement(ee, 'uid').text = str(os.getuid())
         ET.SubElement(ee, 'username').text = pwd.getpwuid(os.getuid())[0]
         ET.SubElement(ee, 'start_time').text = datetime.datetime.now().isoformat()
+        try:
+            import psutil
+            ET.SubElement(ee, 'boot_time').text = datetime.datetime.fromtimestamp(psutil.boot_time()).isoformat()
+        except ImportError:
+            pass
 
     def timestamp(self,name):
         now = time.time()
-        ET.SubElement(self.dfxml, 'timestamp', {'name':name,
+        ET.SubElement(self.doc, 'timestamp', {'name':name,
                                                 'delta':str(now - self.tlast),
                                                 'total':str(now - self.t0)})
         if self.logger:
@@ -139,21 +144,25 @@ class DFXMLWriter:
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
 
 
+    def add_cpuinfo(self,node,interval=0.1):
+        import psutil
+        ET.SubElement(node, 'cpuinfo', {'interval':str(interval)}).text = str( psutil.cpu_percent(interval=interval,percpu=True) )
+
     def add_vminfo(self,node):
         import psutil
         vm = psutil.virtual_memory()
-        ru = ET.SubElement(node, 'psutil')
+        ru = ET.SubElement(node, 'virtual_memory')
         for key in vm.__dir__():
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
         
     def comment(self,s):
-        self.dfxml.insert(len(list(self.dfxml)), ET.Comment(s))
+        self.doc.insert(len(list(self.doc)), ET.Comment(s))
         if self.logger:
             self.logger(s)
 
     def asString(self):
-        return ET.tostring(self.dfxml).decode('utf-8')
+        return ET.tostring(self.doc).decode('utf-8')
 
     def write(self,f,prettyprint=False):
         if prettyprint:
@@ -223,18 +232,23 @@ class DFXMLWriter:
 
     def add_report(self,node,spark=True,rusage=True,vminfo=True):
         """Add the end of run report"""
-        report = ET.SubElement(self.dfxml, 'report')
+        report = ET.SubElement(self.doc, 'report')
         if spark:
             self.add_spark(report)
         if rusage:
             self.add_rusage(report)
-        if vminfo:
-            self.add_vminfo(report)
+        try:
+            import psutil
+            ps = ET.SubElement(report, 'psutil')
+            self.add_cpuinfo(ps)
+            self.add_vminfo(ps)
+        except ImportError:
+            pass
         ET.SubElement(report, 'elapsed_seconds').text = str(time.time()-self.t0)
 
     def done(self):
         """Call when the program is finish"""
-        self.add_report(self.dfxml)
+        self.add_report(self.doc)
         self.timestamp("done")
 
 if __name__=="__main__":
