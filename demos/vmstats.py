@@ -8,6 +8,7 @@ import os.path
 import sys
 import xml.etree.ElementTree as ET
 import psutil
+import time
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../python") )
 
@@ -25,8 +26,8 @@ from dfxml.writer import DFXMLWriter
 
 # <cpu_times>pcputimes(user=38.687571968, system=141.358628864, children_user=0, children_system=0)</cpu_times>
 
-if __name__=="__main__":
 
+def write_dfxml_to_file(fname,prettyprint=False):
     dfxml = DFXMLWriter()
     processlist = ET.SubElement(dfxml.doc,'processlist')
     for p in psutil.process_iter():
@@ -52,4 +53,22 @@ if __name__=="__main__":
         except psutil.ZombieProcess as e:
             pass
     dfxml.add_report(dfxml.doc,spark=False,rusage=False)
-    print( dfxml.prettyprint())
+    with open(fname,"a") as f:
+        dfxml.write(f, prettyprint=prettyprint)
+        if not prettyprint:
+            f.write("\n")
+
+if __name__=="__main__":
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+    import time
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("fname",help="Output filename")
+    parser.add_argument("--repeat",help="Number of times to repeat",type=int,default=1)
+    parser.add_argument("--delay",help="Number of seconds to delay between query",type=float,default=60)
+    args   = parser.parse_args()
+
+    for i in range(args.repeat):
+        if i>0:
+            time.sleep(args.delay)
+        write_dfxml_to_file(args.fname)
+        
