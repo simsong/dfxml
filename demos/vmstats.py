@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# output stats about a VM using DFXML.
+# A tool for collecting stats about a system using DFXML.
 # Specifically captures: uptime, current load, all running processes and their memory
 
 import os
@@ -14,7 +14,7 @@ sys.path.append( os.path.join(os.path.dirname(__file__), "../python") )
 
 from dfxml.writer import DFXMLWriter
 
-# Here are the attribs:
+# Here are the attribs for psutil.Process:
 # ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_create_time', '_exe', '_gone', '_hash', '_ident', '_init', '_last_proc_cpu_times', '_last_sys_cpu_times', '_name', '_oneshot_inctx', '_pid', '_ppid', '_proc', '_send_signal', 'as_dict', 'children', 'cmdline', 'connections', 'cpu_percent', 'cpu_times', 'create_time', 'cwd', 'environ', 'exe', 'gids', 'is_running', 'kill', 'memory_full_info', 'memory_info', 'memory_info_ex', 'memory_maps', 'memory_percent', 'name', 'nice', 'num_ctx_switches', 'num_fds', 'num_threads', 'oneshot', 'open_files', 'parent', 'pid', 'ppid', 'resume', 'send_signal', 'status', 'suspend', 'terminal', 'terminate', 'threads', 'uids', 'username', 'wait']
 #
 # Here is a sample process as a dict on a MacBook; it has a lot of information!
@@ -44,7 +44,8 @@ def write_dfxml_to_file(fname,prettyprint=False):
                 ET.SubElement(proc,'cmdline').text = ' '.join( p.cmdline())
                 proc.set('cpu_percent', str(p.cpu_percent()))
                 mem = p.memory_info_ex()
-                ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 'pfaults':str(mem.pfaults), 'pageins':str(mem.pageins)})
+                ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
+                                                   'pfaults':str(mem.pfaults), 'pageins':str(mem.pageins)})
                 cpu = p.cpu_times()
                 ET.SubElement(proc,'cpu_times', {'user': str(cpu.user), 'system':str(cpu.system)})
             except psutil.AccessDenied:
@@ -62,13 +63,15 @@ if __name__=="__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     import time
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument("fname",help="Output filename")
+    parser.add_argument("fname",help="filename")
     parser.add_argument("--repeat",help="Number of times to repeat",type=int,default=1)
-    parser.add_argument("--delay",help="Number of seconds to delay between query",type=float,default=60)
+    parser.add_argument("--interval",help="Number of seconds to delay between query",type=float,default=60)
+    parser.add_argument("--prettyprint",action='store_true')
     args   = parser.parse_args()
 
     for i in range(args.repeat):
         if i>0:
-            time.sleep(args.delay)
-        write_dfxml_to_file(args.fname)
+            time.sleep(args.interval)
+        print(time.asctime())
+        write_dfxml_to_file(args.fname,prettyprint=args.prettyprint)
         

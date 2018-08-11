@@ -101,7 +101,7 @@ class DFXMLWriter:
         self.add_DFXML_execution_environment(ee)
         
     def add_DFXML_execution_environment(self,e):
-        ee = ET.SubElement(e, 'execution_enviornment')
+        ee = ET.SubElement(e, 'execution_environment')
         uname = os.uname()
         uname_fields = ['os_sysname','host','os_release','os_version','arch']
         for i in range(len(uname_fields)):
