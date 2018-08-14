@@ -10,6 +10,8 @@ import psutil
 import time
 import json
 import statistics
+import shutil
+import datetime
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../python") )
 import dfxml
@@ -62,17 +64,20 @@ def html_filename(root):
     return fn+".html"
 
 TEMPLATE_FILE = "vmstats_decode.html"
-def html_generate(root):
+def html_generate(root, *, prev_fname, next_fname):
     import jinja2 
     import os.path
 
+    stats   = get_stats(root)
     ps_list = list( get_processes(root) )
 
-    vars = {'next':'next',
-            'prev':'prev',
-            'host':'my host',
-            'date':'2018-08-01',
-            'ps_list': ps_list}
+    vars = {'next_fname' : next_fname,
+            'prev_fname' : prev_fname,
+            'host' : 'my host',
+            'date' : '2018-08-01',
+            'ps_list': ps_list, 
+            **stats
+    }
 
     templateLoader = jinja2.FileSystemLoader(searchpath = os.path.dirname(__file__) )
     templateEnv = jinja2.Environment(loader=templateLoader, undefined=jinja2.StrictUndefined)
@@ -97,21 +102,41 @@ if __name__=="__main__":
         if os.path.exists(path):
             raise RuntimeError("{}: exists".format(path))
         os.mkdir(path)
+        shutil.copy( os.path.join( os.path.dirname(__file__), "skeleton.css"), path)
 
     roots = []
     for fn in args.fname:
         roots.extend( get_dfxml(fn) )
 
-    for root in roots:
+    for i in range(len(roots)):
+        root = roots[i]
         if args.plot:
             stats.append( get_stats(root))
         if args.ps:
             for proc in get_processes(root):
                 print(proc)
         if args.html:
-            fn = os.path.join(path, html_filename(root))
-            with open(fn,"w") as f:
-                f.write( html_generate( root ))
+            with open( os.path.join(path, html_filename(root)), "w") as f:
+                prev_fname = html_filename(roots[i-1]) if i > 0 else ""
+                next_fname = html_filename(roots[i+1]) if i < len(roots)-1 else ""
+                f.write( html_generate( root, prev_fname=prev_fname, next_fname=next_fname ))
+            # Make the JSON file
+            data = [{'stats':get_stats(root), 'processes':get_processes(root)} for root in roots]
+
+            def myconverter(o):
+                if isinstance(o, datetime.datetime):
+                    return o.__str__()
+
+            json_data = json.dumps( data, default = myconverter )
+
+            with open( os.path.join(path, 'data.json'), 'w') as f:
+                f.write( json_data )
+            
+            with open( os.path.join(path, 'data.js'), 'w') as f:
+                f.write( "var data = ")
+                f.write( json_data )
+                f.write( "\n" );
+            
 
     if args.plot:
         import datetime
