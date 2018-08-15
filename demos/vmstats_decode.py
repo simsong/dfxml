@@ -43,19 +43,24 @@ def get_processes(root):
                'name':proc.get('name')}
         mi = proc.findall("./memory_info")
         if mi:
-            rec['rss'] = "{:6.0f}MB".format(float(mi[0].get('rss')) / (1024*1024))
+            rec['rss'] = "{:.0f}MB".format(float(mi[0].get('rss')) / (1024*1024))
         else:
             rec['rss'] = None
         ct = proc.findall("./cpu_times")
         if ct:
             rec['user'] = float(ct[0].get('user'))
             rec['system'] = float(ct[0].get('system'))
-            rec['key'] = (1e10 - (rec['user'] + rec['system']), rec['name'])
         else:
             rec['user'] = rec['system'] = None
-            rec['key']  = (1e10, rec['name'])
         ret.append(rec)
-    ret.sort( key = lambda rec: rec['key'])
+
+    def keyfunc(rec):
+        v1 = 1e10
+        if 'user' in rec and type(rec['user'])==float and 'system' in rec and type(rec['system'])==float:
+            v1 -= (rec['user'] + rec['system'])
+        return (v1, rec['name'])
+
+    ret.sort( key = keyfunc)
     return ret
 
 def html_filename(root):
@@ -93,6 +98,7 @@ if __name__=="__main__":
     parser.add_argument("--ps", help="Show the processes", action='store_true')
     parser.add_argument("--plot",help="Create a plot")
     parser.add_argument("--html", help="Render HTML files into a new directory")
+    parser.add_argument("--json", help="Render JSON file and JavaScript HTML files into a new directory")
     args   = parser.parse_args()
 
     stats = []
@@ -102,6 +108,13 @@ if __name__=="__main__":
         if os.path.exists(path):
             raise RuntimeError("{}: exists".format(path))
         os.mkdir(path)
+        shutil.copy( os.path.join( os.path.dirname(__file__), "skeleton.css"), path)
+
+    if args.json:
+        path = args.json
+        if not os.path.exists(path):
+            os.mkdir(path)
+        shutil.copy( os.path.join( os.path.dirname(__file__), "vmstats_json.html"), path)
         shutil.copy( os.path.join( os.path.dirname(__file__), "skeleton.css"), path)
 
     roots = []
@@ -120,6 +133,8 @@ if __name__=="__main__":
                 prev_fname = html_filename(roots[i-1]) if i > 0 else ""
                 next_fname = html_filename(roots[i+1]) if i < len(roots)-1 else ""
                 f.write( html_generate( root, prev_fname=prev_fname, next_fname=next_fname ))
+
+        if args.json:
             # Make the JSON file
             data = [{'stats':get_stats(root), 'processes':get_processes(root)} for root in roots]
 
@@ -128,6 +143,19 @@ if __name__=="__main__":
                     return o.__str__()
 
             json_data = json.dumps( data, default = myconverter )
+            json_data_len = len(json_data)
+            # Now clean the data...
+            for slot in data:
+                slot['stats']['start_time'] = slot['stats']['start_time'].isoformat()[0:19]
+                slot['processes'] = [p for p in slot['processes'] 
+                                     if ( (p['user'] and p['user']>1) and 
+                                          (p['system'] and p['system']>1)) ]
+                for p in slot['processes']:
+                    p['user']   = int( p['user'])
+                    p['system'] = int( p['system'])
+
+            json_data = json.dumps( data, default = myconverter )
+            print("json shrunk by {} to {}".format(json_data_len - len(json_data), len(json_data)))
 
             with open( os.path.join(path, 'data.json'), 'w') as f:
                 f.write( json_data )
@@ -136,7 +164,6 @@ if __name__=="__main__":
                 f.write( "var data = ")
                 f.write( json_data )
                 f.write( "\n" );
-            
 
     if args.plot:
         import datetime

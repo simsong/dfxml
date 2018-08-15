@@ -27,7 +27,7 @@ from dfxml.writer import DFXMLWriter
 # <cpu_times>pcputimes(user=38.687571968, system=141.358628864, children_user=0, children_system=0)</cpu_times>
 
 
-def write_dfxml_to_file(fname,prettyprint=False):
+def write_process_dfxml_to_file(fname,prettyprint=False):
     dfxml = DFXMLWriter()
     processlist = ET.SubElement(dfxml.doc,'processlist')
     for p in psutil.process_iter():
