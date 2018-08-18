@@ -157,9 +157,12 @@ if __name__=="__main__":
             json_data = json.dumps( data, default = myconverter )
             print("json shrunk by {} to {}".format(json_data_len - len(json_data), len(json_data)))
 
+            # Throw the data into a JSON file
             with open( os.path.join(path, 'data.json'), 'w') as f:
                 f.write( json_data )
             
+            # Create a JavaScript file that also defines the data object. We do this becasue
+            # we can load the JavaScript file from the local file system, but not data.json
             with open( os.path.join(path, 'data.js'), 'w') as f:
                 f.write( "var data = ")
                 f.write( json_data )
