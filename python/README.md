@@ -16,5 +16,5 @@ dfxml_gen.py  - generates DFXML. Based on the C generator
 
 iverify:   - Reads an XML file and image and verifies that the files are present.
 
-dfxml_html.py - WHAT DOES THIS DO?
+
 
