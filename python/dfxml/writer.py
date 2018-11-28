@@ -200,13 +200,14 @@ class DFXMLWriter:
         host = 'localhost'
         p1 = 4040
         p2 = 4050
+        import urllib.error
         for port in range(p1,p2+1):
             try:
                 url = 'http://{}:{}/api/v1/applications/'.format(host,port)
                 resp  = urlopen(url, context=ssl._create_unverified_context())
                 spark_data = resp.read()
                 break
-            except ConnectionError as e:
+            except (ConnectionError, ConnectionRefusedError, urllib.error.URLError) as e:
                 continue
         if port>=p2:
             ET.SubElement(spark,'error').text = f"SPARK_ENV_LOADED present but no listener on {host} ports {p1}-{p2}"
@@ -223,7 +224,7 @@ class DFXMLWriter:
                 e = ET.SubElement(spark,'attempt')
                 json_to_xml(e,attempt)
             for param in ['jobs','allexecutors','storage/rdd']:
-                url = 'http://{}:{}/api/v1/applications/{}/{param}'.format(host,port,app_id)
+                url = f'http://{host}:{port}/api/v1/applications/{app_id}/{param}'
                 resp = urlopen(url, context=ssl._create_unverified_context())
                 data = resp.read()
                 e = ET.SubElement(spark,param.replace("/","_"))

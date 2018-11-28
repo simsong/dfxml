@@ -28,3 +28,9 @@ src/install-sh
 src/missing
 stamp-h
 stamp-h1
+src/compile
+src/iblkfind
+python/demo.dfxml
+.cache
+.pytest_cache
+

@@ -10,10 +10,10 @@ if __name__ == "__main__":
 
     parser = OptionParser()
     parser.usage = '%prog [options] dfxml_sequence_list.txt output_zip'
-    #parser.add_option("-z", "--zap", help="Zap output directory (erases if present)" dest="zap")
     parser.add_option("-p", "--prefix", help="prepend prefix to every test image path", dest="prefix")
     parser.add_option("-v", "--verbose", help="verbose output: print call to difference program", dest="verbose", action="store_true")
     parser.add_option("-d", "--diff-program", help="use this path to the diff program", dest="diff_program")
+    #parser.add_option("-z", "--zap", help="Zap output directory (erases if present)" dest="zap")
 
     (options,args) = parser.parse_args()
     if len(args) < 2:
