@@ -156,6 +156,41 @@ class DFXMLWriter:
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
         
+    def add_processlist(self,node):
+        processlist = ET.SubElement(node,'processlist')
+        for p in psutil.process_iter():
+            try:
+                proc = ET.SubElement(processlist,'process', 
+                                     {'pid':str(p.pid), 'ppid':str(p.ppid()), 'uid':str(p.uids().real), 
+                                      'euid':str(p.uids().effective), 'create_time': str(p.create_time())})
+                try:
+                    proc.set('name',p.name())
+                    proc.set('num_fds',str(p.num_fds()))
+                    proc.set('memory_percent',str(p.memory_percent()))
+                    proc.set('num_threads',str(p.num_threads()))
+                    proc.set('cwd',p.cwd())
+                    ET.SubElement(proc,'cmdline').text = ' '.join( p.cmdline())
+                    proc.set('cpu_percent', str(p.cpu_percent()))
+                    mem = p.memory_info_ex()
+                    try:
+                        ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
+                                                           'pfaults':str(mem.pfaults), 'pageins':str(mem.pageins)})
+                    except AttributeError:
+                        ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
+                                                           'data':str(mem.data), 'dirty':str(mem.dirty),
+                                                           'lib':str(mem.lib), 'shared':str(mem.shared),
+                                                           'text':str(mem.text) })
+
+                    cpu = p.cpu_times()
+                    ET.SubElement(proc,'cpu_times', {'user': str(cpu.user), 'system':str(cpu.system)})
+                except psutil.AccessDenied:
+                    pass
+
+            except psutil.ZombieProcess as e:
+                pass
+
+
+
     def comment(self,s):
         self.doc.insert(len(list(self.doc)), ET.Comment(s))
         if self.logger:

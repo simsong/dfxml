@@ -30,62 +30,69 @@ from dfxml.writer import DFXMLWriter
 # <cpu_times>pcputimes(user=38.687571968, system=141.358628864, children_user=0, children_system=0)</cpu_times>
 
 
-def write_process_dfxml_to_file(fname,prettyprint=False):
-    dfxml = DFXMLWriter()
-    processlist = ET.SubElement(dfxml.doc,'processlist')
-    for p in psutil.process_iter():
+def getlock(fname):
+    fd = os.open(fname,os.O_RDONLY)
+    if fd>0:
         try:
-            proc = ET.SubElement(processlist,'process', 
-                                 {'pid':str(p.pid), 'ppid':str(p.ppid()), 'uid':str(p.uids().real), 
-                                  'euid':str(p.uids().effective), 'create_time': str(p.create_time())})
-            try:
-                proc.set('name',p.name())
-                proc.set('num_fds',str(p.num_fds()))
-                proc.set('memory_percent',str(p.memory_percent()))
-                proc.set('num_threads',str(p.num_threads()))
-                proc.set('cwd',p.cwd())
-                ET.SubElement(proc,'cmdline').text = ' '.join( p.cmdline())
-                proc.set('cpu_percent', str(p.cpu_percent()))
-                mem = p.memory_info_ex()
-                try:
-                    ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
-                                                       'pfaults':str(mem.pfaults), 'pageins':str(mem.pageins)})
-                except AttributeError:
-                    ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
-                                                       'data':str(mem.data), 'dirty':str(mem.dirty),
-                                                       'lib':str(mem.lib), 'shared':str(mem.shared),
-                                                       'text':str(mem.text) })
-                    
-                cpu = p.cpu_times()
-                ET.SubElement(proc,'cpu_times', {'user': str(cpu.user), 'system':str(cpu.system)})
-            except psutil.AccessDenied:
-                pass
+            fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB) # non-blocking
+        except IOError:
+            raise RuntimeError("Could not acquire lock")
+    return fd
 
-        except psutil.ZombieProcess as e:
-            pass
+
+def write_process_dfxml_to_file(f,processlist=True,prettyprint=False):
+    """Write the DFXML object to file f. If not prettyprint, add a blank line, so the object can be read as a single line"""
+    dfxml = DFXMLWriter()
+    if processlist:
+        dfxml.add_processlist(dfxml.doc)
     dfxml.add_report(dfxml.doc,spark=False,rusage=False)
-    with open(fname,"a") as f:
-        dfxml.write(f, prettyprint=prettyprint)
-        if not prettyprint:
-            f.write("\n")
+    dfxml.write(f, prettyprint=prettyprint)
+    if not prettyprint:
+        f.write("\n")
+    f.flush()
 
 if __name__=="__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     import time
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument("fname",help="filename")
+    parser = ArgumentParser(description='Report statistics about a VM over time with dfxml, optionally writing back to Amazon S3',formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("fname",help="output filename. May be a S3 URL if ctools is present. $HOSTIP is replaced with the HostIP address.")
     parser.add_argument("--repeat",help="Number of times to repeat",type=int,default=1)
     parser.add_argument("--interval",help="Number of seconds to delay between query",type=float,default=60)
     parser.add_argument("--prettyprint",action='store_true')
-    parser.add_argument("--pid",help="write PID to the indicated file")
+    parser.add_argument("--pidfile",help="write PID to the indicated file")
+    parser.add_argument("--lockfile",help="Only run if we can grab a lock on LOCKFILE (which we will create if it doesn't exist). Must reside in local file system; may not be an S3 file.")
+    parser.add_argument("--stopfile",help="Stop running when this file is created. May be an S3 file.")
+    parser.add_argument("--noprocesslist",action='store_true',help="Exclude processlist")
     args   = parser.parse_args()
 
-    if args.pid:
-        with open(args.pid,"w") as f:
+    if args.lockfile:
+        if args.localfile.startswith('s3://'):
+            raise ValueError("lockfile may not be an S3 file")
+        if not os.path.exists(args.lockfile):
+            with open(args.lockfile,"w") as f:
+                f.flush()
+        try:
+            fd = getlock(args.lockfile)
+        except RuntimeError as e:
+            print("Cannot acquire lock on: {}".format(args.logfile),file=sys.stderr)
+            exit(0)
+        
+    if args.fname.startswith('s3://'):
+        import ctools.s3
+
+    if args.pidfile:
+        with open(args.pidfile,"w") as f:
             f.write(str(os.getpid()))
 
+    localfname = args.fname
+    if localfname.startswith("s3://"):
+        f = tempfile.NamedTemporaryFile(mode'a',encoding='utf8',suffix='.dfxml',delete=False)
+        localfname = f.name
+    else:
+        f = open(args.fname,"a")
     for i in range(args.repeat):
+        # Sleep after the first iteration, not after the last
         if i>0:
             time.sleep(args.interval)
-        write_process_dfxml_to_file(args.fname,prettyprint=args.prettyprint)
+        write_process_dfxml_to_file(f,prettyprint=args.prettyprint,processlist=not args.noprocesslist)
         
