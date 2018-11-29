@@ -54,8 +54,8 @@ if __name__=="__main__":
     shell_command = f"{sys.executable} {args.vm_collect} --repeat {args.max_seconds} --lockfile /tmp/vm_collect.lock --runfile {runfile} --noprocesslist"
     if args.aws_region:
         shell_command += f" --aws_region {args.aws_region}"
-    shell_command += " --bg"
-    shell_command += " --s3root {s3root}
+    shell_command += f" --bg"
+    shell_command += f" --s3root {s3root}"
 
     print(f"Shell command: {shell_command}")
 
