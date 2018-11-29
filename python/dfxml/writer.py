@@ -13,6 +13,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 import __main__
 import atexit
+import psutil
 
 __version__="0.1"
 
