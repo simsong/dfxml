@@ -39,9 +39,12 @@ def getlock(fname):
 def file_exists(fname):
     """Return if fname exists. May be a s3: file"""
     if is_s3file(fname):
-        (out,err) = subprocess.Popen(['aws','s3','ls',fname],
-                                     stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8').communicate()
+        cmd = ['aws','s3','ls',fname]
+        if args.debug:
+            print(" ".join(cmd))
+        (out,err) = subprocess.Popen(cmd, stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding='utf-8').communicate()
         if err:
+            print(err,file=sys.stderr)
             return False
         if not out:
             return False
@@ -75,7 +78,12 @@ if __name__=="__main__":
     parser.add_argument("--s3root",help="If provided, fname is an s3root location. Run in EMR mode",action='store_true')
     parser.add_argument("--bg",help="Run in the background.",action='store_true')
     parser.add_argument("--aws_region", help="specify aws region")
+    parser.add_argument("--debug", help="display debug info", action='store_true')
     args   = parser.parse_args()
+
+    if args.debug and args.bg:
+        print("--debug overrides --bg")
+        args.bg == False
 
     if args.lockfile:
         if is_s3file(args.lockfile):
@@ -122,11 +130,18 @@ if __name__=="__main__":
 
     for i in range(args.repeat):
         # Sleep after the first iteration, not after the last
-        if args.runfile and not file_exists(args.runfile):
+        if args.runfile and not file_exists(args.runfile, debug=args.debug):
             break
         if i>0:
+            if args.debug:
+                print("Sleeping...")
             time.sleep(args.interval)
+            if args.debug:
+                print("Wakeup...")
         write_process_dfxml_to_file(f,prettyprint=args.prettyprint,processlist=not args.noprocesslist)
         if is_s3file(args.fname):
             # upload the file to s3
-            subprocess.check_call(['aws','s3','cp','--quiet',f.name,s3fname])
+            cmd = ['aws','s3','cp','--quiet',f.name,s3fname]
+            if args.debug:
+                print(" ".join(cmd))
+            subprocess.check_call(cmd)
