@@ -51,9 +51,11 @@ if __name__=="__main__":
     # Create the runfile
     check_call(['aws','s3','cp','-',runfile],stdin=open('/dev/null'))
 
-    shell_command = f"{sys.executable} {args.vm_collect} --repeat {args.max_seconds} --lockfile /tmp/vm_collect.lock --runfile {runfile} --s3root {s3root} --bg"
+    shell_command = f"{sys.executable} {args.vm_collect} --repeat {args.max_seconds} --lockfile /tmp/vm_collect.lock --runfile {runfile} --noprocesslist"
     if args.aws_region:
         shell_command += f" --aws_region {args.aws_region}"
+    shell_command += " --bg"
+    shell_command += " --s3root {s3root}
 
     print(f"Shell command: {shell_command}")
 
