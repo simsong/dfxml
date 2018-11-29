@@ -42,11 +42,11 @@ def json_to_xml(e,val):
 
 
 def git_commit():
-    from subprocess import run,PIPE,SubprocessError
+    import subprocess
     try:
-        s = run(['git','rev-parse','HEAD'],stdout=PIPE,encoding='utf-8')
+        s = subprocess.run(['git','rev-parse','HEAD'],stdout=PIPE,encoding='utf-8')
         return s.stdout.strip()
-    except SubprocessError as e:
+    except Exception as e:
         return ''
 
 class DFXMLTimer:
