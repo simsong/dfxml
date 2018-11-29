@@ -36,7 +36,7 @@ def getlock(fname):
     return fd
 
 
-def file_exists(fname):
+def file_exists(fname, debug=False):
     """Return if fname exists. May be a s3: file"""
     if is_s3file(fname):
         cmd = ['aws','s3','ls',fname]
