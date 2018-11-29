@@ -83,7 +83,7 @@ if __name__=="__main__":
 
     if args.debug and args.bg:
         print("--debug overrides --bg")
-        args.bg == False
+        args.bg = False
 
     if args.lockfile:
         if is_s3file(args.lockfile):
@@ -111,6 +111,10 @@ if __name__=="__main__":
     else:
         f = open(args.fname,"a")
 
+    if args.debug:
+        print("f:",f)
+        print("args.bg:",args.bg)
+
     if args.bg:
         # https://stackoverflow.com/questions/19369671/launching-a-daemon-from-python-then-detaching-the-parent-from-the-child
         # free parent, detach from process group
@@ -128,9 +132,13 @@ if __name__=="__main__":
         sys.stderr.close()
         sys.stdout.close()
 
+    if args.debug:
+        print("Starting up...")
     for i in range(args.repeat):
         # Sleep after the first iteration, not after the last
         if args.runfile and not file_exists(args.runfile, debug=args.debug):
+            if debug:
+                print(f"runfile {args.runfile} is gone")
             break
         if i>0:
             if args.debug:
