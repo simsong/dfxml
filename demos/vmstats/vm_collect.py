@@ -83,7 +83,7 @@ if __name__=="__main__":
 
     if args.debug and args.bg:
         print("--debug overrides --bg")
-        args.bg == False
+        args.bg = False
 
     if args.lockfile:
         if is_s3file(args.lockfile):
@@ -108,6 +108,7 @@ if __name__=="__main__":
         f = tempfile.NamedTemporaryFile(mode='a',encoding='utf8',suffix='.dfxml',delete=False)
         timestr = time.strftime("%Y-%m-%d-%H-%M")
         s3fname = f"{args.fname}/node/{aws_instance_id()}/DAS/dfxml-instance-state/dfxml.log.{timestr}.dfxml"
+        print(f"recording to {s3fname}")
     else:
         f = open(args.fname,"a")
 

@@ -9,7 +9,7 @@ import sys
 import time
 
 VM_COLLECT = os.path.join( os.path.dirname(os.path.abspath(__file__)),"vm_collect.py")
-INSTANCE_FACTOR = 2             # creates this times more vm_collect processes (logfile will prevent others from launching)
+INSTANCE_FACTOR = 10             # creates this times more vm_collect processes (logfile will prevent others from launching)
 
 
 if __name__=="__main__":
@@ -34,8 +34,10 @@ if __name__=="__main__":
         parser.add_argument("--aws_region", help="specify aws region")
 
 
+    parser.add_argument("--interval",help="Number of seconds to delay between query",type=float,default=60)
     parser.add_argument("--vm_collect", help="vm_collect.py executable on each node",default=VM_COLLECT)
     parser.add_argument("--max_seconds", help="Maximum number of seconds to collect for",default=60*60*24*7)
+    parser.add_argument("--shutdown", help="remove the runfile",action='store_true')
     args = parser.parse_args()
 
     s3root  = f"{args.s3logbucket}/{args.clusterId}"
@@ -48,10 +50,15 @@ if __name__=="__main__":
     print(f"There are {instances} instances in cluster {args.clusterId}")
     runfile = f"{s3root}/vm_collect_running"
 
+    if args.shutdown:
+        print("Removing the runfile")
+        check_call(['aws','s3','rm',runfile])
+        exit(0)
+
     # Create the runfile
     check_call(['aws','s3','cp','-',runfile],stdin=open('/dev/null'))
 
-    shell_command = f"{sys.executable} {args.vm_collect} --repeat {args.max_seconds} --lockfile /tmp/vm_collect.lock --runfile {runfile} --noprocesslist"
+    shell_command = f"{sys.executable} {args.vm_collect} --repeat {args.max_seconds} --lockfile /tmp/vm_collect.lock --runfile {runfile} --noprocesslist --interval {args.interval}"
     if args.aws_region:
         shell_command += f" --aws_region {args.aws_region}"
     shell_command += f" --bg"
