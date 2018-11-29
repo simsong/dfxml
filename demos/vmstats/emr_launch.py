@@ -6,25 +6,34 @@
 import os
 from subprocess import check_call,check_output
 import sys
+import time
 
-VM_COLLECT = os.path.join( os.path.dirname(__file__),"vm_collect.py")
-INSTANCE_FACTOR = 3             # creates this times more vm_collect processes (logfile will prevent others from launching)
+VM_COLLECT = os.path.join( os.path.dirname(os.path.abspath(__file__)),"vm_collect.py")
+INSTANCE_FACTOR = 2             # creates this times more vm_collect processes (logfile will prevent others from launching)
 
 
 if __name__=="__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-    import time
     parser = ArgumentParser(description='Launch vm_collect on each of the nodes in an EMR cluster',formatter_class=ArgumentDefaultsHelpFormatter)
+
     if "CLUSTERID" in os.environ:
         parser.add_argument("--clusterId",help="Specifies cluster ID",default=os.environ['CLUSTERID'])
     else:
         parser.add_argument("--clusterId",help="Specifies cluster ID",required=True)
+
     if "DAS_S3ROOT" in os.environ:
         parser.add_argument("--s3logbucket",help="When running in EMR mode, this bucket specifies where the logfiles are stored.",
                             default=os.environ['DAS_S3ROOT']+"-logs")
     else:
         parser.add_argument("--s3logbucket",help="When running in EMR mode, this bucket specifies where the logfiles are stored.",
                             required=True)
+
+    if "AWS_DEFAULT_REGION" in os.environ:
+        parser.add_argument("--aws_region", help="specify aws region", default=os.environ['AWS_DEFAULT_REGION'])
+    else:
+        parser.add_argument("--aws_region", help="specify aws region")
+
+
     parser.add_argument("--vm_collect", help="vm_collect.py executable on each node",default=VM_COLLECT)
     parser.add_argument("--max_seconds", help="Maximum number of seconds to collect for",default=60*60*24*7)
     args = parser.parse_args()
@@ -43,6 +52,10 @@ if __name__=="__main__":
     check_call(['aws','s3','cp','-',runfile],stdin=open('/dev/null'))
 
     shell_command = f"{sys.executable} {args.vm_collect} --repeat {args.max_seconds} --lockfile /tmp/vm_collect.lock --runfile {runfile} --s3root {s3root} --bg"
+    if args.aws_region:
+        shell_command += f" --aws_region {args.aws_region}"
+
+    print(f"Shell command: {shell_command}")
 
     # Run on the head end
     check_call(shell_command,shell=True)

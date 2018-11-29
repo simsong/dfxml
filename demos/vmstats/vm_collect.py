@@ -74,6 +74,7 @@ if __name__=="__main__":
     parser.add_argument("--noprocesslist",action='store_true',help="Exclude processlist")
     parser.add_argument("--s3root",help="If provided, fname is an s3root location. Run in EMR mode",action='store_true')
     parser.add_argument("--bg",help="Run in the background.",action='store_true')
+    parser.add_argument("--aws_region", help="specify aws region")
     args   = parser.parse_args()
 
     if args.lockfile:
@@ -88,6 +89,9 @@ if __name__=="__main__":
             print("Cannot acquire lock: {}".format(args.lockfile),file=sys.stderr)
             exit(0)
         
+    if args.aws_region:
+        os.environ['AWS_DEFAULT_REGION'] = args.aws_region
+
     if args.pidfile:
         with open(args.pidfile,"w") as f:
             f.write(str(os.getpid()))
