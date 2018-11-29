@@ -8,6 +8,7 @@ from subprocess import check_call,check_output
 import sys
 
 VM_COLLECT = os.path.join( os.path.dirname(__file__),"vm_collect.py")
+INSTANCE_FACTOR = 3             # creates this times more vm_collect processes (logfile will prevent others from launching)
 
 
 if __name__=="__main__":
@@ -47,9 +48,10 @@ if __name__=="__main__":
     check_call(shell_command,shell=True)
 
     # Run on CORE nodes
-    subprocess.check_call(['yarn','jar','/usr/lib/hadoop-yarn/hadoop-yarn-applications-distributedshell-2.8.3-amzn-0.jar',
-                           'org.apache.hadoop.yarn.applications.distributedshell.Client',
-                           '-num_containers', str(args.num_containers),'-master_memory','1000','-container_memory','1000',
-                           '-shell_command',shell_command])
+    DSJAR='/usr/lib/hadoop-yarn/hadoop-yarn-applications-distributedshell-2.8.3-amzn-0.jar'
+    CLIENT='org.apache.hadoop.yarn.applications.distributedshell.Client'
+    check_call(['yarn','jar',DSJAR,'-jar',DSJAR, CLIENT,
+                '-num_containers', str(instances * INSTANCE_FACTOR),'-master_memory','1000','-container_memory','1000',
+                '-shell_command',shell_command])
     
     print(f"Terminate with: aws s3 rm {runfile}")
