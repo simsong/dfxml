@@ -65,7 +65,11 @@ class DFXMLTimer:
 
 class DFXMLWriter:
     def __init__(self,heartbeat=None,filename=None,prettyprint=False,logger=None):
-        import time
+        """Create a DFXML file. 
+        @param heartbeat is not currently implemented.
+        @param filename is where the file should be written.
+        @param logger is a function that takes a string (NOT a python logger). If passed in, then timestamps and comments are sent there as well.
+        """
         self.t0 = time.time()
         self.tlast = time.time()
         self.doc = ET.Element('dfxml')
@@ -119,10 +123,11 @@ class DFXMLWriter:
             pass
 
     def timestamp(self,name):
+        """Create a timestamp object in the DFXML file, with the specified name"""
         now = time.time()
         ET.SubElement(self.doc, 'timestamp', {'name':name,
-                                                'delta':str(now - self.tlast),
-                                                'total':str(now - self.t0)})
+                                              'delta':str(now - self.tlast),
+                                              'total':str(now - self.t0)})
         if self.logger:
             self.logger("timestamp name:{}  delta:{:.4}  total:{}".
                         format(name,now-self.tlast,now-self.t0))
@@ -190,9 +195,8 @@ class DFXMLWriter:
             except psutil.ZombieProcess as e:
                 pass
 
-
-
     def comment(self,s):
+        """Insert a comment in the DFXML file and in a logger if we have one"""
         self.doc.insert(len(list(self.doc)), ET.Comment(s))
         if self.logger:
             self.logger(s)
