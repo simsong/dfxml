@@ -79,19 +79,24 @@ class DFXMLWriter:
         self.timers = {}
         if self.filename:
             # Set up to automatically write to filename on exit...
-            atexit.register(self.exiting,prettyprint=prettyprint)
+            atexit.register(self._exiting,prettyprint=prettyprint)
 
     def timer(self,name):
         if name not in self.timers:
             self.timers[name] = DFXMLTimer(self.doc, name)
         return self.timers[name]
 
-    def exiting(self,prettyprint=False):
+    def exit(self):
+        """Call to force a premature exit of the DFXMLwriter."""
+        atexit.unregister(self._exiting)
+        self._exiting()
+
+    def _exiting(self,prettyprint=False):
         """Cleanup handling. Run done() and write the output file..."""
         if self.filename:
             self.done()
             self.writeToFilename(self.filename,prettyprint=prettyprint)
-            self.filename = None
+
 
     def add_DFXML_creator(self,e):
         import __main__
