@@ -167,6 +167,12 @@ class DFXMLWriter:
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
         
+    def add_iostat(self,node):
+        try:
+            ET.SubElement(node, 'iostat') = subprocess.check_output(['iostat'],encoding='utf-8')
+        except subprocess.CalledProcessError:
+            pass
+
     def add_processlist(self,node):
         processlist = ET.SubElement(node,'processlist')
         for p in psutil.process_iter():
