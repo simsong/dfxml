@@ -169,7 +169,7 @@ class DFXMLWriter:
         
     def add_iostat(self,node):
         try:
-            ET.SubElement(node, 'iostat') = subprocess.check_output(['iostat'],encoding='utf-8')
+            ET.SubElement(node, 'iostat').text = subprocess.check_output(['iostat','-x'],encoding='utf-8')
         except subprocess.CalledProcessError:
             pass
 
