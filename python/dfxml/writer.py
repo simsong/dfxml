@@ -139,6 +139,10 @@ class DFXMLWriter:
         self.tlast = now
         
 
+    def add_loadavg(self,node):
+        avgs = os.getloadavg()
+        ET.SubElement(node, 'loadavg', {'avg1':str(avgs[0]),'avg5':str(avgs[1]),'avg15':str(avgs[2])})
+
     def add_rusage(self,node):
         import resource
         for who in ['RUSAGE_SELF','RUSAGE_CHILDREN']:
@@ -168,6 +172,7 @@ class DFXMLWriter:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
         
     def add_iostat(self,node):
+        # This is gross. Instead of including the text, we should include this in a structured form
         try:
             data = subprocess.check_output(['iostat','-x'],encoding='utf-8')
             ET.SubElement(node, 'iostat').text = data.replace("\n","&#10;")
@@ -286,6 +291,7 @@ class DFXMLWriter:
     def add_report(self,node,spark=True,rusage=True,vminfo=True):
         """Add the end of run report"""
         report = ET.SubElement(self.doc, 'report')
+        self.add_loadavg(report)
         if spark:
             self.add_spark(report)
         if rusage:
