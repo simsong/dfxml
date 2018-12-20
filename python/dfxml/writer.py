@@ -140,7 +140,10 @@ class DFXMLWriter:
         
 
     def add_loadavg(self,node):
-        avgs = os.getloadavg()
+        try:
+            avgs = os.getloadavg()
+        except AttributeError:
+            return
         ET.SubElement(node, 'loadavg', {'avg1':str(avgs[0]),'avg5':str(avgs[1]),'avg15':str(avgs[2])})
 
     def add_rusage(self,node):
