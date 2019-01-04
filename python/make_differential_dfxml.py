@@ -24,7 +24,7 @@ This program's main purpose is matching files correctly.  It only performs enoug
 
 __version__ = "0.12.1"
 
-import Objects
+import dfxml.objects as Objects
 import logging
 import xml.etree.ElementTree as ET
 import os

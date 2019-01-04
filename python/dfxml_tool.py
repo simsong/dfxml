@@ -159,7 +159,7 @@ def hash_file(fn,x,partno=None):
     
     try:
         f = open(fn)
-    except IOError,e:
+    except IOError as e:
         sys.stderr.write("%s: %s\n" % (fn,str(e)))
         return
 
@@ -292,10 +292,10 @@ def extract(fn):
     
 
 if(__name__=='__main__'):
-    from argparse import ArgumentParser
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     global args
 
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.usage =\
 """
  prog [args] file1 [file2...]   --- hash files and produce DFXML

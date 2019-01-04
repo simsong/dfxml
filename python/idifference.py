@@ -33,11 +33,14 @@ Process:
 
 __version__ = "0.2.0rfc5"
 
-import sys,fiwalk,dfxml,time
+import sys,time
 import copy
 import logging
 if sys.version_info < (3,1):
     raise RuntimeError("idifference.py now requires Python 3.1 or above")
+
+import dfxml
+import dfxml.fiwalk as fiwalk
 
 #Global variable, to be adjusted later
 global options

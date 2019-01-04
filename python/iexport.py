@@ -12,7 +12,7 @@ class Run:
         return "Run<%d--%d> (len %d)" % (self.start,self.end,self.len)
     def contains(self,b):
         """Returns true if b is inside self."""
-        print "%d <= %d <= %d = %s" % (self.start,b,self.end,(self.start <= b <= self.end))
+        print("%d <= %d <= %d = %s" % (self.start,b,self.end,(self.start <= b <= self.end)))
         return self.start <= b <= self.end
     def intersects_run(self,r):
         """Return true if self intersects r.  This may be because r.start is
@@ -55,17 +55,4 @@ runs to be split. Finally all of the remaining runs can be removed."""
             if after_len>0:
                 self.runs.append(Run(r.end,after_len))
                 
-
-if __name__=="__main__":
-    r1 = Run(0,1000)
-    r2 = Run(50,60)
-    assert r1.intersects_run(r2)
-    assert r2.intersects_run(r1)
-
-    disk = RunDB(0,1000)
-    print disk
-    disk.remove(Run(50,60))
-    disk.remove(Run(0,10))
-    disk.remove(Run(40,20))
-    print disk
 

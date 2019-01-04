@@ -28,7 +28,7 @@ import functools
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
-import Objects
+import dfxml.objects as Objects
 
 #Exclude md6 from hash list borrowed from Objects.py - hashlib doesn't support md6.
 walk_default_hashes = Objects.FileObject._hash_properties - {"md6"}

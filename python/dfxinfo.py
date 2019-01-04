@@ -12,19 +12,17 @@ import time
 import xml
 import xml.etree
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 
-try:
-    import dfxml, fiwalk
-except ImportError:
-    raise ImportError('This script requires the dfxml and fiwalk modules for Python.')
+import dfxml
+import dfxml.fiwalk as fiwalk
+import dfxml.histogram as histogram
 
-__version__='0.1.0'
+__version__='0.2.0'
 
 MAXSIZE = 1024*1024*16
 
 
-import fiwalk,dfxml
-from histogram import histogram
 
 class DiskSet:
     """DiskSet maintains a database of the file objects within a disk.
@@ -61,6 +59,7 @@ def get_text(tree,tag):
         return ""
 
 def dfxml_info(fn):
+    import statistics 
     try:
         tree = ET.parse(fn)
     except xml.etree.ElementTree.ParseError as e:
@@ -81,6 +80,27 @@ def dfxml_info(fn):
     if maxrss:
         memory_usage = '{} MiB'.format(int(maxrss[0].text)//1024)
     print("{}    {} {:>7}   {:>10}".format(command_line,start_time,elapsed_seconds,memory_usage))
+
+    # See if there are timers
+    timers = tree.findall("timer")
+    times  = defaultdict(list)
+    for timer in timers:
+        try:
+            name = timer.attrib['name']
+            elapsed = float(timer.attrib['elapsed'])
+            times[name].append(elapsed)
+        except KeyError as e:
+            continue
+    if timers:
+        print("Timers:")
+        fmt = "   {:>6}   {:>5}  {:>9.4}  {:>9.4}  {:>9.4}"
+        print(fmt.format("name","#","min","med.","max"))
+        for name in times:
+            data = times[name]
+            print(fmt.format(name, len(data), min(data), statistics.median(data), max(data)))
+
+            
+
 
 
 if __name__=="__main__":

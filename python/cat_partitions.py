@@ -29,7 +29,7 @@ will create a single DFXML file with two volumes and their file objects containe
 
 __version__ = "0.2.2"
 
-import Objects
+import dfxml.objects as Objects
 import logging
 import os
 import sys

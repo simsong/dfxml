@@ -25,7 +25,7 @@ import traceback
 _logger = logging.getLogger(os.path.basename(__file__))
 
 import dfxml
-import Objects
+import dfxml.objects as Objects
 
 XMLNS_EXTRACTOR = "#Extractor.py"
 
@@ -72,7 +72,7 @@ def extract_files(image_path, outdir, dfxml_path=None, file_predicate=is_file, f
     #Set up base manifest to track extracted files
     base_manifest = Objects.DFXMLObject(version="1.2.0")
     base_manifest.program = sys.argv[0]
-    if sys.argv[0] == os.path.basename(__file__)):
+    if sys.argv[0] == os.path.basename(__file__):
         base_manifest.program_version = __version__
         #Otherwise, this DFXMLObject would need to be passed back to the calling function.
     base_manifest.command_line = " ".join(sys.argv)
@@ -196,4 +196,5 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
-    extract_files(args.image, args.output_directory, args.xml, is_file, name_with_part_path, args.dry_run, args.output_manifest, args.error_manifest, args.keep_going)
+    extract_files(args.image, args.output_directory, args.xml, is_file, 
+                  name_with_part_path, args.dry_run, args.output_manifest, args.error_manifest, args.keep_going)

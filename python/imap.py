@@ -5,10 +5,7 @@ Produces a map of imagefile0.iso, using the other image files as "hints" for mis
 data. Only reports files that have been allocated; deleted files are reported only if
 they can be found allocated in another file.
 """
-
-
-import fiwalk
-
+import dfxml.fiwalk as fiwalk
 
 ################################################################
 if __name__=="__main__":

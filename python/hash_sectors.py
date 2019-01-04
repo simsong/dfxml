@@ -14,7 +14,7 @@
 
 __version__ = "0.3.0"
 
-import Objects
+import dfxml.objects as Objects
 import logging
 import os
 import hashlib
