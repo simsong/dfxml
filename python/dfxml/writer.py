@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 import __main__
 import atexit
 import psutil
+import logging
 
 __version__="0.1"
 
@@ -63,23 +64,41 @@ class DFXMLTimer:
         stop = time.time()
         ET.SubElement(self.dfxml, 'timer', {'name':self.name, 'start':str(self.t0), 'stop':str(stop), 'elapsed':str(stop-self.t0)})
 
+class DFXMLLoggingHandler(logging.Handler):
+    """This class allows the DFXML system to grab all of the Python logging messages. To use:
+        logger = logging.getLogger('yourname')
+        logger.addHandler(dfxml.logHandler())
+    """
+    IGNORE_ATTRS = set(['getMessage'])
+    def __init__(self,doc):
+        super(self.__class__, self).__init__()
+        self.doc = doc
+        self.log = ET.SubElement(doc, 'log')
+
+    def emit(self,record):
+        attrs = {attr:str(getattr(record,attr)) for attr in dir(record) if not attr.startswith("__") and attr not in self.IGNORE_ATTRS}
+        ET.SubElement(self.log, 'record', attrs)
+
 class DFXMLWriter:
-    def __init__(self,heartbeat=None,filename=None,prettyprint=False,logger=None):
+    def __init__(self,heartbeat=None,filename=None,prettyprint=False):
         """Create a DFXML file. 
         @param heartbeat is not currently implemented.
         @param filename is where the file should be written.
-        @param logger is a function that takes a string (NOT a python logger). If passed in, then timestamps and comments are sent there as well.
+        @param logfunc is a function that takes a string (NOT a python logger). If passed in, then timestamps and comments are sent there as well.
         """
         self.t0 = time.time()
         self.tlast = time.time()
         self.doc = ET.Element('dfxml')
         self.add_DFXML_creator(self.doc)
         self.filename = filename
-        self.logger = logger
         self.timers = {}
         if self.filename:
             # Set up to automatically write to filename on exit...
             atexit.register(self._exiting,prettyprint=prettyprint)
+
+    def logHandler(self):
+        """Return a subclass of logging.Handler for use with Python logging system"""
+        return DFXMLLoggingHandler(self.doc)
 
     def timer(self,name):
         if name not in self.timers:
@@ -133,9 +152,6 @@ class DFXMLWriter:
         ET.SubElement(self.doc, 'timestamp', {'name':name,
                                               'delta':str(now - self.tlast),
                                               'total':str(now - self.t0)})
-        if self.logger:
-            self.logger("timestamp name:{}  delta:{:.4f}  total:{}".
-                        format(name,now-self.tlast,now-self.t0))
         self.tlast = now
         
 
@@ -157,8 +173,6 @@ class DFXMLWriter:
 
             for i in range(len(rusage_fields)):
                 ET.SubElement(ru, rusage_fields[i]).text = str(rusage[i])
-                if rusage_fields[i] in ['maxrss'] and self.logger:
-                    self.logger("{}: {}".format(rusage_fields[i],rusage[i]))
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
 
 
@@ -216,10 +230,8 @@ class DFXMLWriter:
                 pass
 
     def comment(self,s):
-        """Insert a comment in the DFXML file and in a logger if we have one"""
+        """Insert a comment in the DFXML file and in a logfunc if we have one"""
         self.doc.insert(len(list(self.doc)), ET.Comment(s))
-        if self.logger:
-            self.logger(s)
 
     def asString(self):
         return ET.tostring(self.doc).decode('utf-8')
