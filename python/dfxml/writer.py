@@ -116,7 +116,6 @@ class DFXMLWriter:
             self.done()
             self.writeToFilename(self.filename,prettyprint=prettyprint)
 
-
     def add_DFXML_creator(self,e):
         import __main__
         ee = ET.SubElement(e, 'creator', {'version':'1.0'})
