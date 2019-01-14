@@ -34,3 +34,4 @@ python/demo.dfxml
 .cache
 .pytest_cache
 
+demo.dfxml
