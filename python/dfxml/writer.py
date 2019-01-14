@@ -11,6 +11,7 @@ import sys
 import datetime
 import subprocess
 import xml.etree.ElementTree as ET
+import xml.parsers.expat
 import __main__
 import atexit
 import psutil
@@ -138,12 +139,30 @@ class DFXMLWriter:
         ET.SubElement(ee, 'command_line').text = " ".join([sys.executable] + sys.argv)
         ET.SubElement(ee, 'uid').text = str(os.getuid())
         ET.SubElement(ee, 'username').text = pwd.getpwuid(os.getuid())[0]
+        ET.SubElement(ee, 'cwd').text = os.getcwd()
         ET.SubElement(ee, 'start_time').text = datetime.datetime.now().isoformat()
         try:
             import psutil
             ET.SubElement(ee, 'boot_time').text = datetime.datetime.fromtimestamp(psutil.boot_time()).isoformat()
         except ImportError:
             pass
+        env = ET.SubElement(ee, 'vars')
+        count = 0
+
+        # output the environment. Unfortunately, quoteattr doesn'doesn't quote enough, so we need to have it quote
+        # every possible invalid value that might be in the environment
+        entities = {}
+        for ch in range(0,32):
+            entities[chr(ch)] = "\\%03o" % ch
+        for ch in range(127,256):
+            entities[chr(ch)] = "\\%03o" % ch
+
+
+        from xml.sax.saxutils import quoteattr,escape
+        for (name,value) in os.environ.items():
+            ET.SubElement(env, 'var', {'name':escape(name,entities), 'value':escape(value,entities)})
+
+
 
     def timestamp(self,name):
         """Create a timestamp object in the DFXML file, with the specified name"""
@@ -356,6 +375,7 @@ if __name__=="__main__":
     dfxml.comment("Thanks")
     if args.write:
         dfxml.writeToFilename(args.write,prettyprint=True)
+
     if args.debug or not args.write:
         print(dfxml.prettyprint())
 
