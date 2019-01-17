@@ -96,6 +96,7 @@ class DFXMLWriter:
         if self.filename:
             # Set up to automatically write to filename on exit...
             atexit.register(self._exiting,prettyprint=prettyprint)
+        self.application = None
 
     def logHandler(self):
         """Return a subclass of logging.Handler for use with Python logging system"""
@@ -116,6 +117,13 @@ class DFXMLWriter:
         if self.filename:
             self.done()
             self.writeToFilename(self.filename,prettyprint=prettyprint)
+
+    def add_application_kva(self,key,value=None,attr=None):
+        if self.application==None:
+            self.application = ET.SubElement(self.doc, 'application')
+        elem = ET.SubElement(self.application, key, attr)
+        if value:
+            elem.text = value
 
     def add_DFXML_creator(self,e):
         import __main__
@@ -172,7 +180,6 @@ class DFXMLWriter:
                                               'total':str(now - self.t0)})
         self.tlast = now
         
-
     def add_loadavg(self,node):
         try:
             avgs = os.getloadavg()
@@ -193,10 +200,10 @@ class DFXMLWriter:
                 ET.SubElement(ru, rusage_fields[i]).text = str(rusage[i])
             ET.SubElement(ru, 'pagesize').text = str(resource.getpagesize())
 
-
     def add_cpuinfo(self,node,interval=0.1):
         import psutil
-        ET.SubElement(node, 'cpuinfo', {'interval':str(interval)}).text = str( psutil.cpu_percent(interval=interval,percpu=True) )
+        cpuinfo = str( psutil.cpu_percent(interval=interval,percpu=True) )
+        ET.SubElement(node, 'cpuinfo', {'interval':str(interval)}).text = cpuinfo
 
     def add_vminfo(self,node):
         import psutil
