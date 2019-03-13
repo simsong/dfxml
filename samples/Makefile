@@ -22,10 +22,11 @@ SAMPLE_FILES__PASS := \
   difference_test_0.xml \
   difference_test_1.xml \
   difference_test_2.xml \
-  difference_test_3.xml
+  difference_test_3.xml \
+  fileobjectexample.xml
 
+# TODO Any remaining issues with the upstream tool should be resolved.
 SAMPLE_FILES__SKIP := \
-  fileobjectexample.xml \
   piecewise.xml \
   simple.xml
 
