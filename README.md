@@ -38,6 +38,9 @@ or, more succinctly:
 $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp
 ```
 
+### Usage with the DFXML Schema
+The [DFXML schema](https://github.com/dfxml-working-group/dfxml_schema) is tracked here as a Git submodule.  It is only necessary to check out this submodule if you are testing validation of DFXML content against the schema.
+
 # Release Notes
 - 2018-07-22 @simsong Significant redesign of the Python library.
   - Configure Python module with a module directory and moved most of `dfxml.py` to `__init__.py`.
