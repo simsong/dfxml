@@ -14,23 +14,22 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-# run 'make clean' under py.test
+# run 'make check' and 'make clean' under py.test
+
+# TODO Some of the tests in the Makefile are currently known to be redundantly called when using py.test.
 
 import subprocess
 import os
-import os.path
 import sys
 
 def test_make_all():
     if sys.platform=='win32':
         return                  # don't run on win32
     os.chdir( os.path.dirname(__file__) )
-    subprocess.run(['make','all'], check=True)
+    subprocess.call(['make','check'])
 
 def test_make_clean():
     if sys.platform=='win32':
         return                  # don't run on win32
     os.chdir( os.path.dirname(__file__) )
-    subprocess.run(['make','clean'], check=True)
-
-                       
+    subprocess.call(['make','clean'])
