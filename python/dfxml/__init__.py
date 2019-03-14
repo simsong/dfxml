@@ -108,7 +108,7 @@ def parse_iso8601(ts):
     raise RuntimeError("parse_iso8601: ISO8601 format {} not recognized".format(ts))
 
 
-rx_iso8601 = re.compile("(\d\d\d\d)-(\d\d)-(\d\d)[T ](\d\d):(\d\d):(\d\d)(\.\d+)?(Z|[-+]\d\d:?\d\d)?")
+rx_iso8601 = re.compile(r"(\d\d\d\d)-(\d\d)-(\d\d)[T ](\d\d):(\d\d):(\d\d)(\.\d+)?(Z|[-+]\d\d:?\d\d)?")
 def iso8601Tdatetime(s):
     """SLG's conversion of ISO8601 to datetime"""
     m = rx_iso8601.search(s)
@@ -145,7 +145,7 @@ def iso8601Tdatetime(s):
                                  microseconds)
 
 #This format is as specified in RFC 822, section 5.1, and matches the adjustments in RFC 1123, section 5.2.14.  It appears in email and HTTP headers.
-rx_rfc822datetime = re.compile("(?P<day>\d{1,2}) (?P<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?P<year>\d{4}) (?P<hours>\d\d):(?P<minutes>\d\d):(?P<seconds>\d\d) (?P<timezone>Z|[-+]\d\d:?\d\d)")
+rx_rfc822datetime = re.compile(r"(?P<day>\d{1,2}) (?P<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?P<year>\d{4}) (?P<hours>\d\d):(?P<minutes>\d\d):(?P<seconds>\d\d) (?P<timezone>Z|[-+]\d\d:?\d\d)")
 three_letter_month_dict = {
   "Jan": 1,
   "Feb": 2,

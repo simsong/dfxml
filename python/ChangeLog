@@ -1,5 +1,6 @@
 2019-03-14    <alexander.nelson@nist.gov>
 
+	* __init__.py: Address deprecated escape sequence warning
 	* Python: Adjust unit test subprocess call to work in pytest, Pythons 2 and 3
 
 2018-07-06    <alexander.nelson@nist.gov>
