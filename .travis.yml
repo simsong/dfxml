@@ -1,0 +1,71 @@
+
+# This software was developed at the National Institute of Standards
+# and Technology by employees of the Federal Government in the course
+# of their official duties. Pursuant to title 17 Section 105 of the
+# United States Code this software is not subject to copyright
+# protection and is in the public domain. NIST assumes no
+# responsibility whatsoever for its use by other parties, and makes
+# no guarantees, expressed or implied, about its quality,
+# reliability, or any other characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
+# Multilanguage tips c/o:
+#   https://stackoverflow.com/a/44054333
+
+#TODO
+# The matrices in this file are hand-unrolled because of an unknown issue only causing the first entry in deeply-nested lists to be built.
+# E.g. this was observed to only build python2.7:
+#
+#...
+#    - language: python
+#      python:
+#        - 2.7
+#        - 3.5
+#        - 3.7
+#      before_script:
+#        - cd python
+#      script:
+#        - pytest
+#...
+
+dist: xenial
+
+matrix:
+  include:
+    - language: python
+      python: 2.7
+      before_script:
+        - cd python
+      script:
+        - pytest
+    - language: python
+      python: 3.5
+      before_script:
+        - cd python
+      script:
+        # Note py.test is in Python 3.5, but 3.6 onward it's pytest.
+        #   c/o: https://stackoverflow.com/a/41262275
+        - py.test
+    - language: python
+      python: 3.7
+      before_script:
+        - cd python
+      script:
+        - pytest
+    - language: cpp
+      os: linux
+      before_script:
+        - cd src
+      script:
+        - ./bootstrap.sh && ./configure && make && make check
+    - language: cpp
+      os: osx
+      before_script:
+        - cd src
+      script:
+        - ./bootstrap.sh && ./configure && make && make check
+
+notifications:
+  email:
+    - alexander.nelson@nist.gov

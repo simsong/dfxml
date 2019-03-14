@@ -1,3 +1,9 @@
+2019-03-14    <alexander.nelson@nist.gov>
+
+	* Project: Add Travis Continuous Integration
+	* __init__.py: Address deprecated escape sequence warning
+	* Python: Adjust unit test subprocess call to work in pytest, Pythons 2 and 3
+
 2018-07-06    <alexander.nelson@nist.gov>
 
 	* walk_to_dfxml.py: Add property-ignoring flag
