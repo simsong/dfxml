@@ -11,6 +11,7 @@ python/dfxml/      - The Python DFXML module
 python/dfxml/tests - Unit tests for the DFXML modules.
 python/tools       - Tools written in Python for processing DFXML files.
 python/tools/tests - Unit tests for the DFXML tools.
+schema/            - The DFXML schema.  Not directly tracked; run `make schema-init` to retrieve.
 src/               - The C language DFXML implementation for both writing and reading DFXML files. Includes a few tools, mostly demos.
 ```
 
@@ -38,7 +39,7 @@ $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp
 ```
 
 ### Usage with the DFXML Schema
-The [DFXML schema](https://github.com/dfxml-working-group/dfxml_schema) is tracked here as a Git submodule.  It is only necessary to check out this submodule if you are testing validation of DFXML content against the schema.
+The [DFXML schema](https://github.com/dfxml-working-group/dfxml_schema) is tracked here similarly to a Git submodule, but without using the Git submodule mechanism to avoid some operational deployment issues.  If you would like to check out the tracked schema version, run `make schema-init`.  It is only necessary to check this out if you are testing validation of DFXML content against the schema.
 
 # Release Notes
 - 2018-07-22 @simsong Significant redesign of the Python library.
