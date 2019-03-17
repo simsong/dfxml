@@ -6,7 +6,6 @@ DFXML is a file format designed to capture metadata and provenance information a
 This repository contains original DFXML implements in C and Python for writing DFXML files, as well as an assortment of tools (mostly in Python) for reading and processing DFXML files.  The folder layout is as follows:
 
 ```
-dtd/               - the DFXML DTD, somewhat out of date.
 python/            - Python source files
 python/dfxml/      - The Python DFXML module
 python/dfxml/tests - Unit tests for the DFXML modules.
@@ -37,6 +36,9 @@ or, more succinctly:
 ```
 $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp
 ```
+
+### Usage with the DFXML Schema
+The [DFXML schema](https://github.com/dfxml-working-group/dfxml_schema) is tracked here as a Git submodule.  It is only necessary to check out this submodule if you are testing validation of DFXML content against the schema.
 
 # Release Notes
 - 2018-07-22 @simsong Significant redesign of the Python library.
