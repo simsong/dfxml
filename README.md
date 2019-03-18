@@ -6,7 +6,6 @@ DFXML is a file format designed to capture metadata and provenance information a
 This repository contains original DFXML implements in C and Python for writing DFXML files, as well as an assortment of tools (mostly in Python) for reading and processing DFXML files.  The folder layout is as follows:
 
 ```
-dtd/               - the DFXML DTD, somewhat out of date.
 python/            - Python source files
 python/dfxml/      - The Python DFXML module
 python/dfxml/tests - Unit tests for the DFXML modules.
