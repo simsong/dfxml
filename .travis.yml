@@ -33,6 +33,16 @@ dist: xenial
 
 matrix:
   include:
+    - language: generic
+      # https://docs.travis-ci.com/user/installing-dependencies/#installing-dependencies-on-multiple-operating-systems
+      addons:
+        apt:
+          packages:
+            - libxml2-utils
+      before_script:
+        - cd samples
+      script:
+        - make check
     - language: python
       python: 2.7
       before_script:
