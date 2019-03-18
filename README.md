@@ -1,4 +1,6 @@
 # DFXML
+[![Build Status](https://travis-ci.com/simsong/dfxml.svg?branch=master)](https://travis-ci.com/simsong/dfxml)
+
 Welcome to the Digital Forensics XML (DFXML) git repository.
 
 DFXML is a file format designed to capture metadata and provenance information about the operation of software tools in a systematic fashion. The original motivation was to represent the output of digital forensics tools, and specifically the SleuthKit tools. DFXML was expanded to operate with the `bulk_extractor` digital forensics tool. DFXML was then expanded to cover the output of the `tcpflow` tool. With the lessons we learned form handling all of those programs, we were able to separate out use of DFXML for documenting runtime provenance of any program, and the use of DFXML to represent specific digital forensics artifacts like files and hash sets.
