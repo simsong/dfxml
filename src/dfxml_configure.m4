@@ -13,7 +13,12 @@ AC_CHECK_HEADERS([err.h expat.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/
 AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf ])
 
 AC_LANG_PUSH(C++)
-AC_CHECK_HEADERS([exiv2/image.hpp])
+AC_CHECK_HEADERS([exiv2/image.hpp exiv2/exiv2.hpp exiv2/version.hpp], [], [],
+[#include <exiv2/exiv2.hpp>
+#ifdef EXIV2_VERSION
+#include <exiv2/version.hpp>
+#endif
+])
 AC_LANG_POP()    
 
 
