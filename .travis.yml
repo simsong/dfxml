@@ -40,6 +40,7 @@ matrix:
           packages:
             - libxml2-utils
       before_script:
+        - make schema-init
         - cd samples
       script:
         - make check

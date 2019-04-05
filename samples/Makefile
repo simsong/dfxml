@@ -49,16 +49,16 @@ all:
 
 %.validates.log: \
   % \
-  ../deps/dfxml_schema/dfxml.xsd
+  ../schema/dfxml.xsd
 	$(XMLLINT) \
 	  --noout \
-	  --schema ../deps/dfxml_schema/dfxml.xsd \
+	  --schema ../schema/dfxml.xsd \
 	  $< \
 	  2> $<.err.log
 	touch $@
 
-../deps/dfxml_schema/dfxml.xsd:
-	@echo "dfxml.xsd not found.  To check out the DFXML schema (necessary to run unit tests in the /samples directory), please run 'git submodule init ; git submodule update' in the repository root." >&2
+../schema/dfxml.xsd:
+	@echo "dfxml.xsd not found.  To check out the DFXML schema (necessary to run unit tests in the /samples directory), please run 'make schema-init' in the repository root." >&2
 	exit 2
 
 check: \
