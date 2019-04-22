@@ -11,7 +11,7 @@ if __name__=="__main__":
     parser = OptionParser()
     parser.usage = '%prog [options] imagefile-or-xmlfile s1 [s2 s3 s3 ...]'
     parser.add_option("--offset",help="values are byte offsets, not sectors",action="store_true")
-    parser.add_option("--blocksize",help="specify sector blockszie",default=512)
+    parser.add_option("--blocksize",help="specify sector blocksize",default=512)
     (options,args) = parser.parse_args()
 
     if len(args)<1:

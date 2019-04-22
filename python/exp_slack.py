@@ -3,7 +3,7 @@
 # exp_slack.py: experiment on the slack space 
 # quantify slack space
 #
-# (c) Martin Mulazzani, 2012 mmulazzani@sba-research.org
+# (c) Martin Mulazzani, 2012
 # Additions by Simson Garfinkel
 
 import re

@@ -45,7 +45,7 @@ def sanitize_filename(fname):
     return fname
     
 class xml_sanitizer:
-    """Read and write the XML, but sanitize the filename elementss."""
+    """Read and write the XML, but sanitize the filename elements."""
     def __init__(self,out):
         self.out = out
         self.cdata = ""
@@ -88,7 +88,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     global options
     parser = OptionParser()
-    parser.add_option("-t","--test",help='Test a specific pathanme to sanitize')
+    parser.add_option("-t","--test",help='Test a specific pathname to sanitize')
     (options,args) = parser.parse_args()
 
     if options.test:

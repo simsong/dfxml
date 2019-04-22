@@ -1,5 +1,5 @@
 #!/bin/sh
-# have automake do an initial population iff necessary
+# have automake do an initial population if necessary
 #
 # this file is public domain
 #

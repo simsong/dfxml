@@ -40,9 +40,9 @@ Conditions:
   CONTAINS <a string> - any file that contains <a string>
 
 Actions:
-  SCRUB MATCH - Scrubs the pattern where it occures
-  SCRUB SECTOR - Scrubs the block where the patern occures
-  SCRUB FILE - Scrubs the file in which the pattern occures
+  SCRUB MATCH - Scrubs the pattern where it occurs
+  SCRUB SECTOR - Scrubs the block where the pattern occurs
+  SCRUB FILE - Scrubs the file in which the pattern occurs
 
 Actions:
    FILL 0x44	- overwrite by filling with character 0x44 ('D')
@@ -55,7 +55,7 @@ Example file:
 ===============
 
 MD5 3482347345345 SCRUB FILE
-MATCH simsong@acm.org SCRUB FILE
+MATCH example@acm.org SCRUB FILE
 MATCH foobar SCRUB BLOCK
 ================================================================
 Other actions in file:
@@ -190,7 +190,7 @@ class ignore_rule():
 
 ################################################################
 class redact_action():
-    """Instances of this class are objects that specify how a redaction shoudl be done."""
+    """Instances of this class are objects that specify how a redaction should be done."""
     def redact(self,rule,fileobject,rc):
         """Performs the redaction"""
         raise ValueError,"redact method of redact_action super class should not be called"

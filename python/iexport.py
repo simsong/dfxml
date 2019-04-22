@@ -25,7 +25,7 @@ class Run:
 
 class RunDB:
     """The RunDB maintains a list of all the runs in a disk image. The
-RunDB is created with a single run that represnts all of the sectors
+RunDB is created with a single run that represents all of the sectors
 in the disk image. Runs can then be removed, which causes existing
 runs to be split. Finally all of the remaining runs can be removed."""
     def __init__(self,start,len):
@@ -35,7 +35,7 @@ runs to be split. Finally all of the remaining runs can be removed."""
     def intersecting_runs(self,r):
         """Return a list of all the Runs that intersect with r.
         This may be because r.start is inside the run, r.end is inside
-        the run, because the run completely encloses r, or becuase r completely
+        the run, because the run completely encloses r, or because r completely
         encloses the run."""
         return filter(lambda x:x.intersects_run(r) , self.runs)
     def remove(self,r):

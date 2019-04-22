@@ -4,7 +4,7 @@
 
 
 /** cpustat.h -- Header for cpustat.cpp.
- * Copyright (c) 2004 Brad Fish (brad.fish@gmail.com).
+ * Copyright (c) 2004 Brad Fish.
  */
 
 #if !defined(MAIN_H)

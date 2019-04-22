@@ -297,7 +297,7 @@ class byte_run:
         
     def decode_sax_attributes(self,attr):
         for (key,value) in attr.items():
-            if key=='bytes': key=='len' # tag changed name; provide backwards compatiability 
+            if key=='bytes': key=='len' # tag changed name; provide backwards compatibility 
             try:
                 setattr(self,key,int(value))
             except ValueError:
@@ -437,7 +437,7 @@ class dftime(ComparableMixin):
         # return the datetime from parsing either iso8601 or from parsing timestamp
         try:
             self.datetime_ = self.ts2datetime(self.timestamp_)
-            # This needs to be in UTC offset. How annoying.
+            # This needs to be in UTC offset.
             return self.datetime_
         except AttributeError:
             self.datetime_ = iso8601Tdatetime(self.iso8601_)
@@ -813,7 +813,7 @@ class fileobject:
         if self.compressed() or imagefile.name.endswith(".aff") or imagefile.name.endswith(".E01"):
             if icat_fallback:
                 # 
-                # For now, compressed files rely on icat rather than python interface
+                # For now, compressed files rely on icat rather than Python interface
                 #
                 offset     = safeInt(self.volume.offset)
                 block_size = safeInt(self.volume.block_size)
