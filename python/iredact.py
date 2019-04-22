@@ -47,7 +47,7 @@ Actions:
 Actions:
    FILL 0x44	- overwrite by filling with character 0x44 ('D')
    ENCRYPT      - encrypts the data
-   FUZZ		- fuz the binary, but not the strings
+   FUZZ		- fuzz the binary, but not the strings
 
 Examples:
 
@@ -217,7 +217,7 @@ class redact_action_encrypt(redact_action):
     def redact(self,rule,fileobject,rc):
         for run in rule.runs_to_redact(fileobject):
             print("   encrypting at offset {}, {} bytes with cipher".format(run.img_offset,run.bytes))
-            raise ValueError,"Whoops; Didn't write this yet"
+            raise ValueError, "Didn't write this yet"
             
 class redact_action_fuzz(redact_action):
     """ Perform redaction by fuzzing x86 instructions """
