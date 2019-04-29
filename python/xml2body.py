@@ -5,7 +5,7 @@
 Generate a Sluethkit 'body' file from fiwalk XML files.
 
 
-Dave Dittrich <dittrich@u.washington.edu>
+Dave Dittrich
 
 """
 import sys,time

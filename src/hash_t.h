@@ -246,7 +246,7 @@ public:
     }
     hash__<md,SIZE> final() {
 	if(finalized){
-	  std::cerr << "currently friendly_geneator does not cache the final value\n";
+	  std::cerr << "currently friendly_generator does not cache the final value\n";
 	  assert(0);
           exit(1);                      // in case compiled with assertions disabled
 	}
@@ -269,7 +269,7 @@ public:
     }
 	
 #ifdef HAVE_MMAP
-    /** Static method allocateor */
+    /** Static method allocator */
     static hash__<md,SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY
 #ifdef O_BINARY

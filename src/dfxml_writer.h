@@ -83,7 +83,7 @@ private:
     int M;                              // placeholder
 #endif
     std::fstream outf;
-    std::ostream *out;                  // where it is being written; defaulst to stdout
+    std::ostream *out;                  // where it is being written; defaults to stdout
     stringset tags;                     // XML tags
     std::stack<std::string>tag_stack;
     std::string  tempfilename;

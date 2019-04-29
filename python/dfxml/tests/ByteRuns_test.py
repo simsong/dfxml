@@ -18,11 +18,7 @@ import os
 import sys
 import copy
 
-# "dfxml/python" directory where dfxml is the directory where repo is cloned
-# should be added to sys.path for when these files are run by themselves from Makefile
-dfxml_python_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if dfxml_python_dir not in sys.path:
-    sys.path.append(dfxml_python_dir)
+sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
 def test_all():

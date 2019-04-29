@@ -43,7 +43,7 @@ def main():
     d.program = sys.argv[0]
     d.program_version = __version__
     d.command_line = " ".join(sys.argv)
-    d.dc["type"] = "File system walk concatentation"
+    d.dc["type"] = "File system walk concatenation"
     d.add_creator_library("Python", ".".join(map(str, sys.version_info[0:3]))) #A bit of a bend, but gets the major version information out.
     d.add_creator_library("Objects.py", Objects.__version__)
     d.add_creator_library("dfxml.py", Objects.dfxml.__version__)

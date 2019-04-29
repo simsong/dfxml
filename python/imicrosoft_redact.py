@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-"""This is a small program written with the python fiwalk framework to
-break the microsoft executables from the m57 corpus. It does this by changing
+"""This is a small program written with the Python fiwalk framework to
+break the Microsoft executables from the m57 corpus. It does this by changing
 characters in the first 4096 bytes of the executable that are over hex 80 to
 hex FF"""
 

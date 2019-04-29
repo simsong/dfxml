@@ -21,7 +21,7 @@
 This module contains a number of classes for dealing with dfxml files,  both using
 the XML DOM model and using the EXPAT model.
 
-The following moduel functions are defined:
+The following module functions are defined:
  isone(x)   - returns true if something is equal to 1 (useful for <ALLOC>1</ALLOC>
  safeInt(x) - converts something to an int but never raises an exception
 
@@ -211,7 +211,7 @@ class byte_run:
 
     byte_runs have the following attributes:
     .img_offset  = offset of the byte run from the image start, in bytes
-    .len         = the length of the run, in bytes (prevoiusly called 'bytes')
+    .len         = the length of the run, in bytes (previously called 'bytes')
     .sector_size = sector size of the underlying media
 
     Originally this was an array,
@@ -297,7 +297,7 @@ class byte_run:
         
     def decode_sax_attributes(self,attr):
         for (key,value) in attr.items():
-            if key=='bytes': key=='len' # tag changed name; provide backwards compatiability 
+            if key=='bytes': key=='len' # tag changed name; provide backwards compatability 
             try:
                 setattr(self,key,int(value))
             except ValueError:
@@ -437,7 +437,7 @@ class dftime(ComparableMixin):
         # return the datetime from parsing either iso8601 or from parsing timestamp
         try:
             self.datetime_ = self.ts2datetime(self.timestamp_)
-            # This needs to be in UTC offset. How annoying.
+            # This needs to be in UTC offset.
             return self.datetime_
         except AttributeError:
             self.datetime_ = iso8601Tdatetime(self.iso8601_)
@@ -813,7 +813,7 @@ class fileobject:
         if self.compressed() or imagefile.name.endswith(".aff") or imagefile.name.endswith(".E01"):
             if icat_fallback:
                 # 
-                # For now, compressed files rely on icat rather than python interface
+                # For now, compressed files rely on icat rather than Python interface
                 #
                 offset     = safeInt(self.volume.offset)
                 block_size = safeInt(self.volume.block_size)
@@ -1320,7 +1320,7 @@ class volumeobject_reader(xml_reader):
         self.cdata = ""                  # new element; otherwise data is ignored
 
     def _end_element(self, name):
-        """Handles the end of an eleement for the XPAT scanner"""
+        """Handles the end of an element for the XPAT scanner"""
         assert(self.tagstack.pop()==name)
         if name=="volume":
             self.callback(self.volumeobject)
@@ -1359,7 +1359,7 @@ class creatorobject_reader(xml_reader):
             self.cdata = ""     # capture cdata for creatorobject
 
     def _end_element(self, name):
-        """Handles the end of an eleement for the XPAT scanner"""
+        """Handles the end of an element for the XPAT scanner"""
         assert(self.tagstack.pop()==name)
         if name=="creator":
             self.callback(self.creatorobject)

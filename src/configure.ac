@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*- 
 # Process this file with autoconf to produce a configure script. 
-# Order is largely irrevellant, although it must start with AC_INIT and end with AC_OUTPUT 
+# Order is largely irrelevant, although it must start with AC_INIT and end with AC_OUTPUT 
 # See http://autotoolset.sourceforge.net/tutorial.html 
 # and http://www.openismus.com/documents/linux/automake/automake.shtml 
 
