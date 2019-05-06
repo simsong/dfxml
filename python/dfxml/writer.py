@@ -283,7 +283,7 @@ class DFXMLWriter:
         from   urllib.request import urlopen
         import ssl
         if "SPARK_ENV_LOADED" not in os.environ:
-            return        # no spark
+            return        # no Spark
 
         spark = ET.SubElement(node, 'spark')
         try:
@@ -310,7 +310,7 @@ class DFXMLWriter:
             ET.SubElement(spark,'error').text = f"SPARK_ENV_LOADED present but no listener on {host} ports {p1}-{p2}"
             return
 
-        # Looks like we have spark!
+        # Looks like we have Spark!
         for app in json.loads(spark_data):
             app_id   = app['id']
             app_name = app['name']
@@ -388,4 +388,4 @@ if __name__=="__main__":
 
     # Demonstrate the failure system
     d2 = DFXMLWriter(filename="demo.dfxml",prettyprint=True)
-    exit(0)                     # whoops
+    exit(0)

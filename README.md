@@ -19,6 +19,6 @@ src/               - The C language DFXML implementation for both writing and re
 - 2018-07-22 @simsong Significant redesign of the Python library.
   - Configure Python module with a module directory and moved most of `dfxml.py` to `__init__.py`.
   - Renamed `Objects.py` to be `objects.py` since Python3 naming conventions use only lower case filenames.
-  - Moved tests to a `test/` subdirectory and redesigned most of them to work with py.test. The tests that require arguments on the Python command line were not updated.
+  - Moved tests to a `test/` subdirectory and redesigned most of them to work with py.test. The tests that require arguments on the python command line were not updated.
   - Removed calls to logging withing files and modules that are not tests, so that using DFXML doesn't inherently start emitting logging messages.
   - Removed calls to logging in Objects tests where the only thing that the test program was logging was the fact that it had run. py.test will provide similar logging now.
