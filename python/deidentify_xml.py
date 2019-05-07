@@ -88,7 +88,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     global options
     parser = OptionParser()
-    parser.add_option("-t","--test",help='Test a specific pathname to sanitize')
+    parser.add_option("-t","--test",help='Test a specific pathanme to sanitize')
     (options,args) = parser.parse_args()
 
     if options.test:
