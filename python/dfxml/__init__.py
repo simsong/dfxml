@@ -1229,7 +1229,7 @@ class fileobject_reader(xml_reader):
         
     def _start_element(self, name, attrs):
         """ Handles the start of an element for the XPAT scanner"""
-        _logger.debug("fileobject_reader._start_element: name = %r" % name)
+        #_logger.debug("fileobject_reader._start_element: name = %r" % name)
         self.tagstack.append(name)
         self.cdata = ""          # new element, so reset the data
         if name=="volume":

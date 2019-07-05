@@ -1,3 +1,7 @@
+2019-07-05    <alexander.nelson@nist.gov>
+
+	* __init__.py: Catch further commenting of _logger module-level object
+
 2019-03-14    <alexander.nelson@nist.gov>
 
 	* Project: Add Travis Continuous Integration
