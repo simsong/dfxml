@@ -50,6 +50,8 @@ matrix:
         - cd python
       script:
         - pytest
+        - cd tests/test_venv
+        - make check
     - language: python
       python: 3.5
       before_script:
@@ -58,12 +60,16 @@ matrix:
         # Note py.test is in Python 3.5, but 3.6 onward it's pytest.
         #   c/o: https://stackoverflow.com/a/41262275
         - py.test
+        - cd tests/test_venv
+        - make check
     - language: python
       python: 3.7
       before_script:
         - cd python
       script:
         - pytest
+        - cd tests/test_venv
+        - make check
     - language: cpp
       os: linux
       before_script:
