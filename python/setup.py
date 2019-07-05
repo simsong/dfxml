@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-from distutils.core import setup
+from setuptools import setup
 setup(
   name='dfxml',
   version='1.0.1',
