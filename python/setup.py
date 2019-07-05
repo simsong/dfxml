@@ -19,6 +19,5 @@ setup(
   version='1.0.1',
   url='https://github.com/simsong/dfxml',
 #  scripts=['idifference.py','rdifference.py'],
-  packages=find_packages(),
-  py_modules=['dfxml','fiwalk']
+  packages=find_packages()
 )
