@@ -25,7 +25,7 @@ import os
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
-import Objects
+import dfxml.objects as Objects
 import make_differential_dfxml
 import summarize_differential_dfxml
 

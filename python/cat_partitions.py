@@ -27,9 +27,9 @@ That is, this command:
 will create a single DFXML file with two volumes and their file objects contained.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.2"
 
-import Objects
+import dfxml.objects as Objects
 import logging
 import os
 import sys
@@ -38,11 +38,15 @@ import xml.etree.ElementTree as ET
 _logger = logging.getLogger(os.path.basename(__file__))
 
 def main():
-    d = Objects.DFXMLObject(version="1.1.1")
+    d = Objects.DFXMLObject(version="1.2.0")
 
     d.program = sys.argv[0]
     d.program_version = __version__
     d.command_line = " ".join(sys.argv)
+    d.dc["type"] = "File system walk concatentation"
+    d.add_creator_library("Python", ".".join(map(str, sys.version_info[0:3]))) #A bit of a bend, but gets the major version information out.
+    d.add_creator_library("Objects.py", Objects.__version__)
+    d.add_creator_library("dfxml.py", Objects.dfxml.__version__)
 
     _offsets_and_pxml_paths = []
     for (lxfno, lxf) in enumerate(args.labeled_xml_file):

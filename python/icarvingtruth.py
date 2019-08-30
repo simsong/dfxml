@@ -13,7 +13,8 @@ Process:
    - For all of the sectors not used in the final version, note which sectors of the original files survive.
 """
 
-import dfxml,fiwalk
+import dfxml
+import dfxml.fiwalk as fiwalk
 import sys
 import xml.dom.minidom
 from xml.dom.minidom import parseString
@@ -73,9 +74,9 @@ def print_ground_truth_fi(fi,out=sys.stdout):
         out.write("Original Filename: %s  in: %s\nSHA 1: %s\n" %
                   (fi.filename(),os.path.basename(image),fi.sha1()))
     except KeyError:
-        print "***",fi
-        print "***",fi.filename()
-        print "***",os.path.basename(image)
+        print("***",fi)
+        print("***",fi.filename())
+        print("***",os.path.basename(image))
     desc = "Location: "
     sector_size = 512
     for run in fi.byte_runs():
@@ -139,7 +140,8 @@ if __name__=="__main__":
 
     # Next, add the file object elements
     for fi in fileobjects:
-        if options.debug: print "adding ",fi
+        if options.debug: 
+            print("adding ",fi)
         newdoc = fi.doc.cloneNode(fi)
         add_reference(newdoc,image=masterfn,reason='resident file')
         groundtruth.childNodes[0].appendChild(newdoc)
@@ -149,7 +151,7 @@ if __name__=="__main__":
     # in the ground truth file but not previously discovered
 
     for ref in refs:
-        if options.debug: print "check files in ",ref
+        if options.debug: print("check files in ",ref)
         (d2,fobj2) = fiwalk.fileobjects_using_dom(imagefile=open(ref,"r"),
                                                   flags=fiwalk.ALLOC_ONLY)
         for fi in fobj2:
@@ -165,7 +167,7 @@ if __name__=="__main__":
     # space and report which of them (if any) are in the final file.
 
     for ref in refs:
-        if options.debug: print "check residual data in ",ref
+        if options.debug: print("check residual data in ",ref)
         ref_imagefile = open(ref,"r")
         (d2,fobj2) = fiwalk.fileobjects_using_dom(imagefile=ref_imagefile,
                                                   flags=fiwalk.ALLOC_ONLY)

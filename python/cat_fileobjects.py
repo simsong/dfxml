@@ -17,7 +17,7 @@
 Make a new DFXML file of all fileobjects in an input DFXML file.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 import sys
 import xml.etree.ElementTree as ET
@@ -38,7 +38,7 @@ def main():
 <dfxml
   xmlns="%s"
   xmlns:delta="%s"
-  version="1.1.1">
+  version="1.2.0">
   <metadata/>
   <creator>
     <program>%s</program>
