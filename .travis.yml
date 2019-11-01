@@ -48,12 +48,14 @@ matrix:
     - language: python
       python: 2.7
       before_script:
+        - make schema-init
         - cd python
       script:
         - pytest
     - language: python
       python: 3.5
       before_script:
+        - make schema-init
         - cd python
       script:
         # Note py.test is in Python 3.5, but 3.6 onward it's pytest.
@@ -62,6 +64,7 @@ matrix:
     - language: python
       python: 3.7
       before_script:
+        - make schema-init
         - cd python
       script:
         - pytest
