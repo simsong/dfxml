@@ -1,6 +1,7 @@
 2019-11-01    <alexander.nelson@nist.gov>
 
 	* Python: Remove copies of library files
+	* objects.py: Add test, and new test serialization and schema-validation framework, for DiskImageObject
 
 2019-07-05    <alexander.nelson@nist.gov>
 
