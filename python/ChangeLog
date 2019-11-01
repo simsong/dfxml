@@ -1,3 +1,7 @@
+2019-11-01    <alexander.nelson@nist.gov>
+
+	* Python: Remove copies of library files
+
 2019-07-05    <alexander.nelson@nist.gov>
 
 	* __init__.py: Catch further commenting of _logger module-level object
