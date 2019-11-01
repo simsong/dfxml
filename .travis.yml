@@ -31,14 +31,15 @@
 
 dist: xenial
 
+# https://docs.travis-ci.com/user/installing-dependencies/#installing-dependencies-on-multiple-operating-systems
+addons:
+  apt:
+    packages:
+      - libxml2-utils
+
 matrix:
   include:
     - language: generic
-      # https://docs.travis-ci.com/user/installing-dependencies/#installing-dependencies-on-multiple-operating-systems
-      addons:
-        apt:
-          packages:
-            - libxml2-utils
       before_script:
         - make schema-init
         - cd samples
