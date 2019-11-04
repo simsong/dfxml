@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import os
 import sys
@@ -28,7 +28,7 @@ _logger = logging.getLogger(os.path.basename(__file__))
 
 # TODO This script includes two functions that could stand to be in a shared library supporting the pytest tests.
 # * XML Schema conformance.
-# *  File round-tripping.
+# * File round-tripping.
 
 def _test_schema_conformance(dfxml_path):
     # Handle the desired error not existing before Python 3.3.
@@ -52,7 +52,7 @@ def _test_schema_conformance(dfxml_path):
 
 def _file_round_trip_dfxmlobject(dobj):
     """
-    Serializes the DFXMLObject (dobj) to a temporary file.  Parses that temporary file into a new DXMLObject.
+    Serializes the DFXMLObject (dobj) to a temporary file.  Parses that temporary file into a new DFXMLObject.
     For debugging review, the temporary file is left in place, and it is the caller's responsibility to delete this file (if OS cleanup is not expected to automatically handle it).
 
     Returns pair:
