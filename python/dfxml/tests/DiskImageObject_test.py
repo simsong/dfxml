@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import os
 import sys
@@ -30,7 +30,15 @@ _logger = logging.getLogger(os.path.basename(__file__))
 # * XML Schema conformance.
 # * File round-tripping.
 
-def _test_schema_conformance(dfxml_path):
+def _confirm_schema_conformance(dfxml_path):
+    """
+    This function takes a path to a DFXML file, and tests its conformance to the DFXML schema at the version tracked in this Git repository.
+    This function is potentially a NOP - if the schema is not downloaded (with 'make schema-init' run at the top of this repository), then to keep local unit testing operating smoothly, the test *will not* fail because of schema absence.  However, testing in the CI environment *will* use the schema.  If the schema is present, schema conformance will be checked regardless of the environment.
+
+    Environment variables:
+    PYTEST_REQUIRES_DFXML_SCHEMA - checked for the string value "1".  Set in .travis.yml.
+    """
+
     # Handle the desired error not existing before Python 3.3.
     #   Via: https://stackoverflow.com/a/21368457
     if sys.version_info < (3,3):
@@ -38,17 +46,25 @@ def _test_schema_conformance(dfxml_path):
     else:
         _FileNotFoundError = FileNotFoundError
 
+    # Confirm this function is acting from the expected directory relative to the repository root.
     top_srcdir = os.path.join(os.path.dirname(__file__), "..", "..", "..")
     if not os.path.exists(os.path.join(top_srcdir, "dfxml_schema_commit.txt")):
         raise _FileNotFoundError("This script (%r) tries to refer to the top Git-tracked DFXML directory, but could not find it based on looking for dfxml_schema_commit.txt." % os.path.basename(__file__))
+
+    # Use the schema file if it is present.
+    #   - Testing in the CI environment should require the file be present.
+    #   - Offline testing does not necessarily need to fail if the file wasn't downloaded.
     schema_path = os.path.join(top_srcdir, "schema", "dfxml.xsd")
-    if not os.path.exists(schema_path):
-        raise _FileNotFoundError("Tracked DFXML schema not found.  To retrieve it, run 'make schema-init' in the top-level source directory.")
-    command = ["xmllint", "--noout", "--schema", schema_path, dfxml_path]
-    try:
-        subprocess.check_call(command, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-    except:
-        subprocess.check_call(command)
+    if os.path.exists(schema_path):
+        command = ["xmllint", "--noout", "--schema", schema_path, dfxml_path]
+        try:
+            subprocess.check_call(command, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        except:
+            subprocess.check_call(command)
+    else:
+        # This variable is set in .travis.yml.
+        if os.environ.get("PYTEST_REQUIRES_DFXML_SCHEMA") == "1":
+            raise _FileNotFoundError("Tracked DFXML schema not found.  To retrieve it, run 'make schema-init' in the top-level source directory.")
 
 def _file_round_trip_dfxmlobject(dobj):
     """
@@ -65,7 +81,7 @@ def _file_round_trip_dfxmlobject(dobj):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".dfxml", delete=False) as out_fh:
             tmp_filename = out_fh.name
             dobj.print_dfxml(output_fh=out_fh)
-        _test_schema_conformance(tmp_filename)
+        _confirm_schema_conformance(tmp_filename)
         dobj_reconst = Objects.parse(tmp_filename)
     except:
         _logger.debug("tmp_filename = %r." % tmp_filename)

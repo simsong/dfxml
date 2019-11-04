@@ -1,3 +1,7 @@
+2019-11-04    <alexander.nelson@nist.gov>
+
+	* Python: Relax schema presence check for local pytest builds
+
 2019-11-01    <alexander.nelson@nist.gov>
 
 	* Python: Remove copies of library files

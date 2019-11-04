@@ -37,6 +37,9 @@ addons:
     packages:
       - libxml2-utils
 
+env:
+  - PYTEST_REQUIRES_DFXML_SCHEMA=1
+
 matrix:
   include:
     - language: generic
