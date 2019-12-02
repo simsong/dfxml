@@ -1,5 +1,6 @@
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py: Add parser transition for partition system containing file
 	* objects.py: Add parser transition for partition system without containing disk image
 	* objects.py: Whitespace-pad parser enums
 	* Schema: Track DFXML Schema branch add_partition_system_error
