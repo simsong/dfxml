@@ -4214,6 +4214,7 @@ class Parser(object):
 
     _VOLUME_START              = 400
     VOLUME_PRESTREAM           = 401
+    VOLUME_POSTSTREAM          = 402
     _VOLUME_END                = 499
 
     _FILE_START                = 500
@@ -4275,10 +4276,9 @@ class Parser(object):
         _FILE_END
       },
       _FILE_END: {
-        _DFXML_END,
-        _VOLUME_END,
         _FILE_START,
-        DFXML_POSTSTREAM
+        DFXML_POSTSTREAM,
+        VOLUME_POSTSTREAM
       },
       DFXML_PRESTREAM: {
         _DFXML_END,
@@ -4305,11 +4305,14 @@ class Parser(object):
         _PARTITION_END,
         _VOLUME_START
       },
+      VOLUME_POSTSTREAM: {
+        _VOLUME_END
+      },
       VOLUME_PRESTREAM: {
         _DISK_IMAGE_START,
         _VOLUME_START,
-        _VOLUME_END,
-        _FILE_START
+        _FILE_START,
+        VOLUME_POSTSTREAM
       }
     }
 
@@ -4390,6 +4393,9 @@ class Parser(object):
                         elem.clear()
                         elem_handled = True
                     elif ln == "volume":
+                        # A transition through the VOLUME_POSTSTREAM state may have to be inferred, if there were no poststream elements (such as 'error').
+                        if not self.state == Parser.VOLUME_POSTSTREAM:
+                            for eop in self.transition(Parser.VOLUME_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._VOLUME_END): yield eop
                         elem.clear()
                         elem_handled = True
@@ -4412,6 +4418,9 @@ class Parser(object):
                         # Note there is intentionally not an elem.clear() here.
                         elem_handled = True
                     elif ln == "dfxml":
+                        # A transition through the DFXML_POSTSTREAM state may have to be inferred, if there were no poststream elements (such as 'error').
+                        if not self.state == Parser.DFXML_POSTSTREAM:
+                            for eop in self.transition(Parser.DFXML_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._DFXML_END): yield eop
                         elem.clear()
                         elem_handled = True
