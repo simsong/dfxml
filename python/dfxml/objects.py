@@ -23,9 +23,9 @@ __version__ = "0.9.0"
 # Revision Log
 # 2018-07-22 @simsong - removed calls to logging, since this module shouldn't create log files.
 #                     - made to operate inside dfxml module
-#                    
+#
 
-#Remaining roadmap to 1.0.0:
+# Remaining roadmap to 1.0.0:
 # * Documentation.
 # * User testing.
 # * Compatibility with the DFXML schema, version >1.1.1.
@@ -48,14 +48,14 @@ import dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
-#Contains: (namespace, local name, class) qualified XML element name pairs, with a reference to the class that had the problem.
+# Contains: (namespace, local name, class) qualified XML element name pairs, with a reference to the class that had the problem.
 _warned_elements = set([])
 _warned_byterun_attribs = set([])
 
-#Contains: Unexpected 'facet' values on byte_runs elements.
+# Contains: Unexpected 'facet' values on byte_runs elements.
 _warned_byterun_facets = set([])
 
-#Issue some log statements only once per program invocation.
+# Issue some log statements only once per program invocation.
 _nagged_alloc = False
 _warned_byterun_badtypecomp = False
 _nagged_partition_file_alloc = False
@@ -72,7 +72,7 @@ def _ET_tostring(e):
     if sys.version_info[0] < 3:
         tmp = ET.tostring(e, encoding="UTF-8")
         if tmp[0:2] == "<?":
-            #Trim away first line; it's an XML prototype.  This only appears in Python 2's ElementTree output.
+            # Trim away first line; it's an XML prototype.  This only appears in Python 2's ElementTree output.
             retval = tmp[ tmp.find("?>\n")+3 : ]
         else:
             retval = tmp
@@ -142,7 +142,7 @@ def _read_differential_annotations(annodict, element, annoset):
     Uses the shorthand-to-attribute mappings of annodict to translate attributes of element into annoset.
     """
     #_logger.debug("annoset, before: %r." % annoset)
-    #Start with inverting the dictionary
+    # Start with inverting the dictionary.
     _d = { annodict[k].replace("delta:",""):k for k in annodict }
     #_logger.debug("Inverted dictionary: _d = %r" % _d)
     for attr in element.attrib:
@@ -211,7 +211,7 @@ class DFXMLObject(object):
         for f in kwargs.get("files", []):
             self.append(f)
 
-        #Add default namespaces
+        # Add default namespaces.
         self.add_namespace("", dfxml.XMLNS_DFXML)
         self.add_namespace("dc", dfxml.XMLNS_DC)
         self.add_namespace("dfxmlext", XMLNS_DFXML_EXT)
@@ -307,7 +307,7 @@ class DFXMLObject(object):
             elif (cns, cln) == (dfxml.XMLNS_DELTA, "file_ignore"):
                 self.diff_file_ignores.add(ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
-                #Put all non-DFXML-namespace elements into the externals list.
+                # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
 
     def print_dfxml(self, output_fh=sys.stdout):
@@ -316,7 +316,7 @@ class DFXMLObject(object):
         dfxml_wrapper = _ET_tostring(pe)
         #_logger.debug("print_dfxml:dfxml_wrapper = %r." % dfxml_wrapper)
         dfxml_foot = "</dfxml>"
-        #Check for an empty element
+        # Check for an empty element.
         if dfxml_wrapper.strip()[-3:] == " />":
             dfxml_head = dfxml_wrapper.strip()[:-3] + ">"
         elif dfxml_wrapper.strip()[-2:] == "/>":
@@ -431,8 +431,8 @@ class DFXMLObject(object):
         if self.version:
             outel.attrib["version"] = self.version
 
-        #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of DFXML.
-        #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
+        # Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of DFXML.
+        # Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
         for (prefix, url) in self.iter_namespaces():
             if prefix == "":
                 attrib_name = "xmlns"
@@ -654,7 +654,7 @@ class RegXMLObject(object):
         for cell in input_cells:
             self.append(cells)
 
-        #Add default namespaces
+        # Add default namespaces.
         #TODO This will cause a problem when the Objects bindings are used for a DFXML document and RegXML document in the same program.
         self.add_namespace("", XMLNS_REGXML)
 
@@ -686,7 +686,7 @@ class RegXMLObject(object):
         regxml_wrapper = _ET_tostring(self.to_partial_Element())
         #_logger.debug("regxml_wrapper = %r." % regxml_wrapper)
         regxml_foot = "</regxml>"
-        #Check for an empty element
+        # Check for an empty element.
         if regxml_wrapper.strip()[-3:] == " />":
             regxml_head = regxml_wrapper.strip()[:-3] + ">"
         elif regxml_wrapper.strip()[-2:] == "/>":
@@ -746,7 +746,7 @@ class RegXMLObject(object):
             tmpel1.text = self.command_line
             tmpel0.append(tmpel1)
 
-            #TODO Note libraries used at run-time
+            #TODO Note libraries used at run-time.
 
             outel.append(tmpel0)
 
@@ -758,8 +758,8 @@ class RegXMLObject(object):
                 tmpel0.append(tmpel1)
             outel.append(tmpel0)
 
-        #Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of RegXML.
-        #Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
+        # Apparently, namespace setting is only available with the write() function, which is memory-impractical for significant uses of RegXML.
+        # Ref: http://docs.python.org/3.3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
         for prefix in sorted(self._namespaces.keys()):
             if prefix == "":
                 attrib_name = "xmlns"
@@ -834,17 +834,17 @@ class DiskImageObject(object):
 
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["diskimageobject"]
-        #Look through only direct-child elements (recursively handing off grandchildren to other populate_from_Element calls)
+        # Look through only direct-child elements (recursively handing off grandchildren to other populate_from_Element calls).
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "byte_run":
-                #byte_runs' block recursively handles this element.
+                # byte_runs' block recursively handles this element.
                 continue
             elif ctn in DiskImageObject._all_properties:
                 setattr(self, ctn, ce.text)
@@ -862,7 +862,7 @@ class DiskImageObject(object):
 
         dfxml_foot = "</diskimageobject>"
 
-        #Deal with an empty element being printed as <elem/>
+        # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
             replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
             dfxml_head = replaced_dfxml_wrapper
@@ -990,7 +990,7 @@ class PartitionSystemObject(object):
         #TODO Make @property methods once properties listed in DFXML schema.
         self.block_size = None
         self.guid = None
-        self.volume_name = None #(This might only appear on Solaris disklabels that are directly nested in a partition.)
+        self.volume_name = None # (This might only appear on Solaris disklabels that are directly nested in a partition.)
 
     def __iter__(self):
         """Recursively yields all child Objects in depth-first order."""
@@ -1033,22 +1033,22 @@ class PartitionSystemObject(object):
 
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["partitionsystemobject"]
-        #Look through direct-child elements to populate object.
+        # Look through direct-child elements to populate object.
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "byte_run":
-                #byte_runs' block recursively handles this element.
+                # byte_runs' block recursively handles this element.
                 continue
             elif ctn in PartitionSystemObject._all_properties:
                 setattr(self, ctn, ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
-                #Put all non-DFXML-namespace elements into the externals list.
+                # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
@@ -1064,7 +1064,7 @@ class PartitionSystemObject(object):
 
         dfxml_foot = "</partitionsystemobject>"
 
-        #Deal with an empty element being printed as <elem/>
+        # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
             replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
             dfxml_head = replaced_dfxml_wrapper
@@ -1207,7 +1207,7 @@ class PartitionObject(object):
         self.externals = kwargs.get("externals", OtherNSElementList())
 
         self._byte_runs = None
-        self._child_objects = [] #For maintaining order of objects of different types.
+        self._child_objects = [] # For maintaining order of objects of different types.
         self._files = []
         self._partition_systems = []
         self._volumes = []
@@ -1220,7 +1220,7 @@ class PartitionObject(object):
         self.ftype_str = None
         self.guid = None
         self.partition_label = None
-        self.partition_system_offset = None #Unit: bytes.  Offset within partition system.  Could also be byte_run/@ps_offset, if that were defined in the ByteRun class.
+        self.partition_system_offset = None # Unit: bytes.  Offset within partition system.  Could also be byte_run/@ps_offset, if that were defined in the ByteRun class.
 
     def __iter__(self):
         """Recursively yields all child Objects in depth-first order."""
@@ -1266,22 +1266,22 @@ class PartitionObject(object):
 
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["partitionobject"]
-        #Look through direct-child elements to populate object.
+        # Look through direct-child elements to populate object.
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "byte_runs":
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "byte_run":
-                #byte_runs' block recursively handles this element.
+                # byte_runs' block recursively handles this element.
                 continue
             elif ctn in PartitionObject._all_properties:
                 setattr(self, ctn, ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
-                #Put all non-DFXML-namespace elements into the externals list.
+                # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
@@ -1297,7 +1297,7 @@ class PartitionObject(object):
 
         dfxml_foot = "</partitionobject>"
 
-        #Deal with an empty element being printed as <elem/>
+        # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
             replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
             dfxml_head = replaced_dfxml_wrapper
@@ -1508,7 +1508,7 @@ class VolumeObject(object):
     def __repr__(self):
         parts = []
         for prop in VolumeObject._all_properties:
-            #Skip outputting the files, file systems, and disk images lists.
+            # Skip outputting the files, file systems, and disk images lists.
             if prop in {
               "child_objects",
               "disk_images",
@@ -1547,7 +1547,7 @@ class VolumeObject(object):
             #_logger.debug("getattr(self, %r) = %r" % (prop, getattr(self, prop)))
             #_logger.debug("getattr(other, %r) = %r" % (prop, getattr(other, prop)))
 
-            #Allow file system type to be case-insensitive.
+            # Allow file system type to be case-insensitive.
             if prop == "ftype_str":
                 o = getattr(other, prop)
                 if o: o = o.lower()
@@ -1565,14 +1565,14 @@ class VolumeObject(object):
         _typecheck(e, (ET.Element, ET.ElementTree))
         #_logger.debug("e = %r" % e)
 
-        #Read differential annotations.
+        # Read differential annotations.
         _read_differential_annotations(VolumeObject._diff_attr_names, e, self.annos)
 
-        #Split into namespace and tagname.
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["volume", "original_volume"]
 
-        #Look through direct-child elements to populate object.
+        # Look through direct-child elements to populate object.
         for ce in e.findall("./*"):
             #_logger.debug("ce = %r" % ce)
             (cns, ctn) = _qsplit(ce.tag)
@@ -1582,15 +1582,15 @@ class VolumeObject(object):
                 self.byte_runs = ByteRuns()
                 self.byte_runs.populate_from_Element(ce)
             elif ctn == "byte_run":
-                #byte_runs' block recursively handles this element.
+                # byte_runs' block recursively handles this element.
                 continue
             elif ctn == "diskimageobject":
-                #(Note that in Parser.iterparse, encountering a diskimageobject element triggers vobj.populate_from_Element on a proxy element that won't have the child disk_image.  So, if we encounter a disk image element here, it's not iterparse calling this function, meaning this DiskImageObject isn't redundant.)
+                # (Note that in Parser.iterparse, encountering a diskimageobject element triggers vobj.populate_from_Element on a proxy element that won't have the child disk_image.  So, if we encounter a disk image element here, it's not iterparse calling this function, meaning this DiskImageObject isn't redundant.)
                 diobj = DiskImageObject()
                 diobj.populate_from_Element(ce)
                 self._disk_images.append(diobj)
             elif ctn == "volume":
-                #(As with the disk_image if-branch.)
+                # (As with the disk_image if-branch.)
                 vobj = VolumeObject()
                 vobj.populate_from_Element(ce)
                 self._volumes.append(vobj)
@@ -1602,7 +1602,7 @@ class VolumeObject(object):
                 setattr(self, ctn, ce.text)
                 #_logger.debug("getattr(self, %r) = %r" % (ctn, getattr(self, ctn)))
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
-                #Put all non-DFXML-namespace elements into the externals list.
+                # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
@@ -1619,7 +1619,7 @@ class VolumeObject(object):
 
         dfxml_foot = "</volume>"
 
-        #Deal with an empty element being printed as <elem/>.
+        # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
             replaced_dfxml_wrapper = dfxml_wrapper.replace(" />", ">")
             dfxml_head = replaced_dfxml_wrapper
@@ -1632,7 +1632,7 @@ class VolumeObject(object):
         for di in self._disk_images:
             di.print_dfxml(output_fh)
             output_fh.write("\n")
-        #(Example case where this happens: HFS file system wrapping HFS+ file system.)
+        # (Example case where this happens: HFS file system wrapping HFS+ file system.)
         _logger.debug("Writing %d volumes for this volume [sic.]." % len(self.volumes))
         for v in self._volumes:
             v.print_dfxml(output_fh)
@@ -1649,13 +1649,13 @@ class VolumeObject(object):
         global _nagged_volume_error_impldrift
         global _nagged_volume_error_standin
         outel = self.to_partial_Element()
-        #If there is an error reported on this volume, pop the element off of the partial element's end.
+        # If there is an error reported on this volume, pop the element off of the partial element's end.
         errorel = None
         if not (self.error is None or self.error == ""):
             if len(outel) == 0:
                 raise ValueError("Partial volume element has no children, but at least the error property was set.")
             if _qsplit(outel[-1].tag)[1] == "error":
-                #(ET.Element does not have pop().)
+                # (ET.Element does not have pop().)
                 errorel = outel[-1]
                 del(outel[-1])
             else:
@@ -1678,7 +1678,7 @@ class VolumeObject(object):
             for obj in child_list:
                 tmpel = obj.to_Element()
                 outel.append(tmpel)
-        #The error element comes after the fileobject list in the schema.
+        # The error element comes after the fileobject list in the schema.
         if not errorel is None:
             outel.append(errorel)
         return outel
@@ -1690,7 +1690,7 @@ class VolumeObject(object):
         annos_whittle_set = copy.deepcopy(self.annos)
         diffs_whittle_set = copy.deepcopy(self.diffs)
 
-        #Add differential annotations
+        # Add differential annotations.
         for annodiff in VolumeObject._diff_attr_names:
             if annodiff in annos_whittle_set:
                 outel.attrib[VolumeObject._diff_attr_names[annodiff]] = "1"
@@ -1739,12 +1739,12 @@ class VolumeObject(object):
         ]:
             _append_str(prop)
 
-        #Output the one Boolean property
+        # Output the one Boolean property.
         _append_bool("allocated_only")
 
-        #Output the original volume's properties
+        # Output the original volume's properties.
         if not self.original_volume is None or "original_volume" in diffs_whittle_set:
-            #Skip FileObject list, if any
+            # Skip FileObject list, if any.
             if self.original_volume is None:
                 tmpel = ET.Element("delta:original_volume")
             else:
@@ -1756,8 +1756,8 @@ class VolumeObject(object):
 
             outel.append(tmpel)
 
-        #Output the error property (which will be popped and re-appended after the file list in to_Element)
-        #The error should come last because of the two spots extended elements can be placed; this is to simplify the file-listing VolumeObject.to_Element() method.
+        # Output the error property (which will be popped and re-appended after the file list in to_Element).
+        # The error should come last because of the two spots extended elements can be placed; this is to simplify the file-listing VolumeObject.to_Element() method.
         _append_str("error")
 
         if len(diffs_whittle_set) > 0:
@@ -1964,7 +1964,7 @@ class HiveObject(object):
             if ignore_original and prop == "original_hive":
                 continue
 
-            #Allow file system type to be case-insensitive
+            # Allow file system type to be case-insensitive.
             if getattr(self, prop) != getattr(other, prop):
                 diffs.add(prop)
         return diffs
@@ -1973,7 +1973,7 @@ class HiveObject(object):
         pe = self.to_partial_Element()
         xml_wrapper = _ET_tostring(pe)
         xml_foot = "</hive>"
-        #Check for an empty element
+        # Check for an empty element.
         if xml_wrapper.strip()[-3:] == " />":
             xml_head = xml_wrapper.strip()[:-3] + ">"
         elif xml_wrapper.strip()[-2:] == "/>":
@@ -2093,15 +2093,15 @@ class ByteRun(object):
         Joins two ByteRun objects into a single run if possible.  Returns a new object of the concatenation if successful, None if not.
         """
         _typecheck(other, ByteRun)
-        #Don't glom fills of different values
+        # Don't glom fills of different values.
         if self.fill != other.fill:
             return None
 
-        #Don't glom typed byte runs (particularly since type has been observed to be 'resident')
+        # Don't glom typed byte runs (particularly since type has been observed to be 'resident').
         if self.type != other.type:
             return None
 
-        #Don't glom compressed runs
+        # Don't glom compressed runs.
         if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
@@ -2118,7 +2118,7 @@ class ByteRun(object):
         return None
 
     def __eq__(self, other):
-        #Check type
+        # Check type.
         if other is None:
             return False
         if not isinstance(other, ByteRun):
@@ -2127,7 +2127,7 @@ class ByteRun(object):
                 _warned_byterun_badtypecomp = True
             return False
 
-        #Check values
+        # Check values.
         return \
           self.img_offset == other.img_offset and \
           self.fs_offset == other.fs_offset and \
@@ -2151,20 +2151,20 @@ class ByteRun(object):
     def populate_from_Element(self, e):
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn == "byte_run"
 
         copied_attrib = copy.deepcopy(e.attrib)
 
-        #Populate run properties from element attributes
+        # Populate run properties from element attributes.
         for prop in ByteRun._all_properties:
             if prop in copied_attrib:
                 val = copied_attrib.get(prop)
                 if not val is None:
                     setattr(self, prop, val)
                 del copied_attrib[prop]
-        #Note remaining properties
+        # Note remaining properties.
         for prop in copied_attrib:
             if prop not in _warned_byterun_attribs:
                 _warned_byterun_attribs.add(prop)
@@ -2174,7 +2174,7 @@ class ByteRun(object):
         outel = ET.Element("byte_run")
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
-            #Skip null properties
+            # Skip null properties.
             if val is None:
                 continue
 
@@ -2213,10 +2213,10 @@ class ByteRun(object):
                 raise NotImplementedError("Received a %d-length fill byte string for a byte run.  Only 1-byte fill strings are accepted for now, pending further discussion.")
             self._fill = val
         elif isinstance(val, int):
-            #This is the easiest way between Python 2 and 3.  int.to_bytes would be better, but that is only in >=3.2.
+            # This is the easiest way between Python 2 and 3.  int.to_bytes would be better, but that is only in >=3.2.
             self._fill = struct.pack("b", val)
         elif isinstance(val, str) and val.isdigit():
-            #Recurse, changing type
+            # Recurse, changing type.
             self.fill = int(val)
 
     @property
@@ -2264,17 +2264,17 @@ class ByteRuns(object):
     """
     A list-like object for ByteRun objects.
     """
-    #Must define these methods to adhere to the list protocol:
-    #__len__
-    #__getitem__
-    #__setitem__
-    #__delitem__
-    #__iter__
-    #append
+    # Must define these methods to adhere to the list protocol:
+    # __len__
+    # __getitem__
+    # __setitem__
+    # __delitem__
+    # __iter__
+    # append
     #
-    #Refs:
-    #http://www.rafekettler.com/magicmethods.html
-    #http://stackoverflow.com/a/8841520
+    # Refs:
+    # http://www.rafekettler.com/magicmethods.html
+    # http://stackoverflow.com/a/8841520
 
     _facet_values = [None, "data", "inode", "name"]
 
@@ -2290,7 +2290,7 @@ class ByteRuns(object):
 
     def __eq__(self, other):
         """Compares the byte run lists and the facet (allowing a null facet to match "data")."""
-        #Check type
+        # Check type.
         if other is None:
             return False
         _typecheck(other, ByteRuns)
@@ -2375,7 +2375,7 @@ class ByteRuns(object):
         if not statlog is None:
             status_fh = open(errlog, "wb")
 
-        #The exit status of the last img_cat.
+        # The exit status of the last img_cat.
         last_status = None
 
         try:
@@ -2385,13 +2385,13 @@ class ByteRuns(object):
 
                 len_to_read = run.len
 
-                #If we have a fill character, just pump out that character
+                # If we have a fill character, just pump out that character.
                 if not run.fill is None and len(run.fill) > 0:
                     while len_to_read > 0:
-                        #This multiplication and slice should handle multi-byte fill characters, in case that ever comes up.
+                        # This multiplication and slice should handle multi-byte fill characters, in case that ever comes up.
                         yield (run.fill * buffer_size)[ : min(len_to_read, buffer_size)]
                         len_to_read -= buffer_size
-                    #Next byte run
+                    # Next byte run.
                     continue
 
                 if run.img_offset is None:
@@ -2407,21 +2407,21 @@ class ByteRuns(object):
                 cmd.append(raw_image)
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
 
-                #Do the buffered read
+                # Do the buffered read.
                 while len_to_read > 0:
                     buffer_data = p.stdout.read(buffer_size)
                     yield_data = buffer_data[ : min(len_to_read, buffer_size)]
                     if len(yield_data) > 0:
                         yield yield_data
                     else:
-                        #Let the subprocess terminate so we can see the exit status
+                        # Let the subprocess terminate so we can see the exit status.
                         p.wait()
                         last_status = p.returncode
                         if last_status != 0:
                             raise subprocess.CalledProcessError(last_status, " ".join(cmd), "img_cat failed.")
                     len_to_read -= buffer_size
         except Exception as e:
-            #Cleanup in an exception
+            # Cleanup in an exception.
             if not stderr_fh is None:
                 stderr_fh.close()
 
@@ -2433,7 +2433,7 @@ class ByteRuns(object):
                 status_fh.close()
             raise e
 
-        #Cleanup when all's gone well.
+        # Cleanup when all's gone well.
         if not status_fh is None:
             if not last_status is None:
                 status_fh.write(last_status)
@@ -2444,14 +2444,14 @@ class ByteRuns(object):
     def populate_from_Element(self, e):
         _typecheck(e, (ET.Element, ET.ElementTree))
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn == "byte_runs"
 
         if "facet" in e.attrib:
             self.facet = e.attrib["facet"]
 
-        #Look through direct-child elements to populate run array.
+        # Look through direct-child elements to populate run array.
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "byte_run":
@@ -2508,7 +2508,7 @@ class TimestampObject(object):
         self._timestamp = None
 
     def __eq__(self, other):
-        #Check type
+        # Check type.
         if other is None:
             return False
         _typecheck(other, TimestampObject)
@@ -2645,7 +2645,7 @@ class TimestampObject(object):
             checked_value = dfxml.dftime(value)
             #_logger.debug("checked_value.timestamp() = %r" % checked_value.timestamp())
             self._time = checked_value
-            #Propagate timestamp value to other formats
+            # Propagate timestamp value to other formats.
             self._timestamp = self._time.timestamp()
 
     @property
@@ -2753,7 +2753,7 @@ class FileObject(object):
     }
 
     def __init__(self, *args, **kwargs):
-        #Prime all the properties
+        # Prime all the properties.
         for prop in FileObject._all_properties:
             if prop == "annos":
                 continue
@@ -2782,7 +2782,7 @@ class FileObject(object):
         parts = []
 
         for prop in sorted(FileObject._all_properties):
-            #Save data byte runs for the end, as their lists can get really long.  Skip parent-volume reference.
+            # Save data byte runs for the end, as their lists can get really long.  Skip parent-volume reference.
             if prop not in ["byte_runs", "data_brs", "externals", "volume_object"]:
                 value = getattr(self, prop)
                 if not value is None:
@@ -2849,7 +2849,7 @@ class FileObject(object):
             if self.volume_object:
                 _partition_offset = self.volume_object.partition_offset
 
-        #Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
+        # Try using icat; needs inode number and volume offset.  We're additionally requiring the filesize be known.
         #TODO The icat needs a little more experimentation.
         if False and facet == "content" and \
           not self.filesize is None and \
@@ -2858,7 +2858,7 @@ class FileObject(object):
           not _partition_offset is None:
             _logger.debug("Extracting with icat: %r." % self)
 
-            #Set up logging if desired
+            # Set up logging if desired.
             stderr_fh = sys.stderr
             if not errlog is None:
                 stderr_fh = open(errlog, "wb")
@@ -2867,7 +2867,7 @@ class FileObject(object):
             if not statlog is None:
                 status_fh = open(errlog, "w")
 
-            #Set up icat process
+            # Set up icat process.
             cmd = ["icat"]
             cmd.append("-b")
             cmd.append(str(sector_size))
@@ -2880,7 +2880,7 @@ class FileObject(object):
             cmd.append(str(self.inode))
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fh)
 
-            #Do a buffered read
+            # Do a buffered read.
             len_to_read = self.filesize
             while len_to_read > 0:
                 buffer_data = p.stdout.read(buffer_size)
@@ -2888,20 +2888,20 @@ class FileObject(object):
                 if len(yield_data) > 0:
                     yield yield_data
                 else:
-                    #Let the subprocess terminate so we can see the exit status
+                    # Let the subprocess terminate so we can see the exit status.
                     p.wait()
                     last_status = p.returncode
 
-                    #Log the status if requested
+                    # Log the status if requested.
                     if not status_fh is None:
                         status_fh.write(last_status)
 
-                    #Act on a bad status
+                    # Act on a bad status.
                     if last_status != 0:
                         raise subprocess.CalledProcessError(last_status, " ".join(cmd), "icat failed.")
                 len_to_read -= buffer_size
 
-            #Clean up file handles
+            # Clean up file handles.
             if status_fh: status_fh.close()
             if stderr_fh: stderr_fh.close()
 
@@ -2918,7 +2918,7 @@ class FileObject(object):
                 return None
             else:
                 return self.alloc
-        #Partial allocation information at this point is assumed False.  In some file systems, like FAT, we only need one of alloc_inode and alloc_name for allocation status.  Guidelines on which should win out haven't been set yet, though, so wait on this.
+        # Partial allocation information at this point is assumed False.  In some file systems, like FAT, we only need one of alloc_inode and alloc_name for allocation status.  Guidelines on which should win out haven't been set yet, though, so wait on this.
         return False
 
     def populate_from_Element(self, e):
@@ -2928,21 +2928,21 @@ class FileObject(object):
 
         #_logger.debug("FileObject.populate_from_Element(%r)" % e)
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["fileobject", "original_fileobject", "parent_object"]
 
-        #Map "delta:" attributes of <fileobject>s into the self.annos set
+        # Map "delta:" attributes of <fileobject>s into the self.annos set.
         #_logger.debug("self.annos, before: %r." % self.annos)
         _read_differential_annotations(FileObject._diff_attr_names, e, self.annos)
         #_logger.debug("self.annos, after: %r." % self.annos)
 
-        #Look through direct-child elements for other properties
+        # Look through direct-child elements for other properties.
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             #_logger.debug("Populating from child element: %r." % ce.tag)
 
-            #Inherit any marked changes
+            # Inherit any marked changes.
             for attr in ce.attrib:
                 #_logger.debug("Inspecting attr for diff. annos: %r." % attr)
                 (ns, an) = _qsplit(attr)
@@ -2961,7 +2961,7 @@ class FileObject(object):
                         self.diffs.add(ctn)
 
             if ctn == "byte_runs":
-                #byte_runs might be for file contents, the inode/MFT entry, or the directory entry naming the file.  Use the facet attribute to determine which.  If facet is absent, assume they're data byte runs.
+                # byte_runs might be for file contents, the inode/MFT entry, or the directory entry naming the file.  Use the facet attribute to determine which.  If facet is absent, assume they're data byte runs.
                 if "facet" in ce.attrib:
                     if ce.attrib["facet"] not in FileObject._br_facet_to_property:
                         if not ce.attrib["facet"] in _warned_byterun_facets:
@@ -3002,7 +3002,7 @@ class FileObject(object):
             elif ctn in FileObject._all_properties:
                 setattr(self, ctn, ce.text)
             elif cns not in [dfxml.XMLNS_DFXML, ""]:
-                #Put all non-DFXML-namespace elements into the externals list.
+                # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
                 if (cns, ctn) not in _warned_elements:
@@ -3036,7 +3036,7 @@ class FileObject(object):
             self.gid = s.st_gid
         if not _should_ignore("filesize"):
             self.filesize = s.st_size
-        #s.st_dev is ignored for now.
+        # s.st_dev is ignored for now.
 
         if not _should_ignore("inode"):
             if platform.system() == "Windows":
@@ -3097,7 +3097,7 @@ class FileObject(object):
                 #_logger.debug("diffs_whittle_set = %r." % diffs_whittle_set)
                 diffs_whittle_set.remove(prop)
 
-        #Recall that Element text must be a string
+        # Recall that Element text must be a string.
         def _append_str(name, value):
             """Note that empty elements should be created if the element was removed."""
             if not value is None or name in diffs_whittle_set:
@@ -3162,7 +3162,7 @@ class FileObject(object):
                     tmpel = obj.to_Element()
                 else:
                     tmpel = ET.Element(name)
-                #Set the tag name here for properties like parent_object, a FileObject without being wholly a FileObject.
+                # Set the tag name here for properties like parent_object, a FileObject without being wholly a FileObject.
                 if namespace_prefix:
                     tmpel.tag = namespace_prefix + name
                 else:
@@ -3179,7 +3179,7 @@ class FileObject(object):
                 _anno_hash(tmpel)
                 outel.append(tmpel)
 
-        #The parent object is a one-off.  Duplicating the whole parent is wasteful, so create a shadow object that just outputs the important bits.
+        # The parent object is a one-off.  Duplicating the whole parent is wasteful, so create a shadow object that just outputs the important bits.
         if not self.parent_object is None:
             parent_object_shadow = FileObject()
             parent_object_shadow.inode = self.parent_object.inode
@@ -3241,7 +3241,7 @@ class FileObject(object):
         """Note that setting .alloc will affect the value of .unalloc, and vice versa.  The last one to set wins."""
         global _nagged_alloc
         if not _nagged_alloc:
-            #alloc isn't deprecated yet.
+            #TODO alloc isn't deprecated yet.
             #_logger.warning("The FileObject.alloc property is deprecated.  Use .alloc_inode and/or .alloc_name instead.  .alloc is proxied as True if alloc_inode and alloc_name are both True.")
             _nagged_alloc = True
         if self.alloc_inode and self.alloc_name:
@@ -3680,18 +3680,18 @@ class FileObject(object):
 
 
 class OtherNSElementList(list):
-    #Note that super() must be called with arguments to work in Python 2.
+    # Note that super() must be called with arguments to work in Python 2.
 
     @classmethod
     def _check_qname(cls, tagname):
         (ns, ln) = _qsplit(tagname)
         if ns == dfxml.XMLNS_DFXML:
             raise ValueError("'External' elements must be a non-DFXML namespace.")
-        #Register qname for later output
-        #TODO Devise a module-level interface for namespace abreviations.
+        # Register qname for later output.
+        #TODO Devise a module-level interface for namespace abbreviations.
 
     def __repr__(self):
-        #Unwrap the string representation of this class's type name (necessary because we don't necessarily know if it'll be Objects.Other... or just Other...).
+        # Unwrap the string representation of this class's type name (necessary because we don't necessarily know if it'll be Objects.Other... or just Other...).
         _typestr = str(type(self))[ len("<class '") : -len("'>") ]
         return _typestr + "(" + super(OtherNSElementList, self).__repr__() + ")"
 
@@ -3740,7 +3740,7 @@ class CellObject(object):
     ])
 
     def __init__(self, *args, **kwargs):
-        #These properties must be assigned first for sanity check dependencies
+        # These properties must be assigned first for sanity check dependencies.
         self.name_type = kwargs.get("name_type")
 
         for prop in CellObject._all_properties:
@@ -3804,14 +3804,14 @@ class CellObject(object):
 
         _read_differential_annotations(CellObject._diff_attr_names, e, self.annos)
 
-        #Split into namespace and tagname
+        # Split into namespace and tagname.
         (ns, tn) = _qsplit(e.tag)
         assert tn in ["cellobject", "original_cellobject", "parent_object"]
 
         if e.attrib.get("root"):
             self.root = e.attrib["root"]
 
-        #Look through direct-child elements for other properties
+        # Look through direct-child elements for other properties.
         for ce in e.findall("./*"):
             (cns, ctn) = _qsplit(ce.tag)
             if ctn == "alloc":
@@ -3888,7 +3888,7 @@ class CellObject(object):
             if el.tag in self.diffs:
                 el.attrib["delta:changed_property"] = "1"
                 diffs_whittle_set.remove(el.tag)
-            #Do an additional check for data_encoding, which is serialized as an attribute.
+            # Do an additional check for data_encoding, which is serialized as an attribute.
             if el.tag == "data" and "data_encoding" in self.diffs:
                 el.attrib["delta:changed_property"] = "1"
                 diffs_whittle_set.remove("data_encoding")
@@ -3901,7 +3901,7 @@ class CellObject(object):
                 _anno_change(tmpel)
                 outel.append(tmpel)
 
-        #Recall that Element text must be a string
+        # Recall that Element text must be a string.
         def _append_str(name, value):
             if not value is None or name in diffs_whittle_set:
                 tmpel = ET.Element(name)
@@ -3936,7 +3936,7 @@ class CellObject(object):
         _append_str("data_type", self.data_type)
         _append_str("data", self.data)
 
-        #The experimental conversions element needs its own code
+        # The experimental conversions element needs its own code.
         if not self.data_conversions is None or "data_conversions" in diffs_whittle_set:
             tmpel = ET.Element("data_conversions")
             if not self.data_conversions is None:
@@ -4162,7 +4162,7 @@ class CellObject(object):
 
 class Parser(object):
 
-    #Set up state machine.  (Would use enum if supported in Python 2.)
+    # Set up state machine.  (Would use enum if supported in Python 2.)
     _INPUT_START               =  -1
 
     _DFXML_START               =   0
@@ -4300,31 +4300,31 @@ class Parser(object):
         for event in events:
             self.iterparse_events.add(event)
 
-        #Throughout this loop, "eop" stands for "(event, object) pair."
+        # Throughout this loop, "eop" stands for "(event, object) pair."
         for (ETevent, elem) in ET.iterparse(fh, events=("start-ns", "start", "end")):
-            #View the object event stream in debug mode
+            # View the object event stream in debug mode.
             #_logger.debug("(event, elem) = (%r, %r)" % (ETevent, elem))
             #if ETevent in ("start", "end"):
             #    _logger.debug("_ET_tostring(elem) = %r" % _ET_tostring(elem))
 
-            #Track namespaces
+            # Track namespaces.
             if ETevent == "start-ns":
                 self.dobj.add_namespace(*elem)
                 ET.register_namespace(*elem)
                 continue
 
-            #Split tag name into namespace and local name
+            # Split tag name into namespace and local name.
             (ns, ln) = _qsplit(elem.tag)
 
             if ETevent == "start":
                 if ln == "dfxml":
                     for eop in self.transition(Parser._DFXML_START): yield eop
                     for k in elem.attrib:
-                        #Note that xmlns declarations don't appear in elem.attrib.
+                        # Note that xmlns declarations don't appear in elem.attrib.
                         self.proxy_element_stack[-1].attrib[k] = elem.attrib[k]
                     for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
                 elif ln == "metadata":
-                    #This transition is to resolve an ambiguity in handling external-namespace elements in the DFXML_PRESTREAM state.
+                    # This transition is to resolve an ambiguity in handling external-namespace elements in the DFXML_PRESTREAM state.
                     for eop in self.transition(Parser._DFXML_METADATA_START): yield eop
                 elif ln == "diskimageobject":
                     for eop in self.transition(Parser._DISK_IMAGE_START): yield eop
@@ -4342,14 +4342,14 @@ class Parser(object):
                     for eop in self.transition(Parser.VOLUME_PRESTREAM): yield eop
                 elif ln == "fileobject":
                     for eop in self.transition(Parser._FILE_START): yield eop
-                    #All other work happens at the fileobject's end event.
+                    # All other work happens at the fileobject's end event.
                 else:
                     pass
             elif ETevent == "end":
-                #If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
+                # If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
                 if ln == "fileobject":
                     for eop in self.transition(Parser._FILE_END): yield eop
-                    #No need to use the proxy element stack for file objects.  Handle emitting here.
+                    # No need to use the proxy element stack for file objects.  Handle emitting here.
                     fobj = FileObject()
                     fobj.populate_from_Element(elem)
                     if isinstance(self.object_stack[-1], VolumeObject):
@@ -4357,7 +4357,7 @@ class Parser(object):
                     #_logger.debug("fi = %r" % fobj)
                     if "end" in self.iterparse_events:
                         yield ("end", fobj)
-                    #Reset
+                    # Reset.
                     elem.clear()
                 elif ln == "volume":
                     for eop in self.transition(Parser._VOLUME_END): yield eop
@@ -4378,7 +4378,7 @@ class Parser(object):
                 elif ln == "dfxml":
                     for eop in self.transition(Parser._DFXML_END): yield eop
                     elem.clear()
-                #Branches after here have to reason based on the parse self.state value.
+                # Branches after here have to reason based on the parse self.state value.
                 elif self.state in {
                   Parser.DFXML_PRESTREAM,
                   Parser.DISK_IMAGE_PRESTREAM,
@@ -4392,7 +4392,7 @@ class Parser(object):
 
     def transition(self, to_state):
         """
-        Internal function.  Updates _state variable and parallel object/element stacks (local to iterparse() call).  Returns ordered list of (event, object) pairs that result from transitioning to/from states.
+        Internal function.  Updates _state variable and parallel object/element stacks (local to iterparse() call).  Returns ordered list of (event, object) pairs (shorthanded in the calling code as "eop") that result from transitioning to/from states.
         """
 
         retval = []
@@ -4405,9 +4405,9 @@ class Parser(object):
         #_logger.debug("_transition:from_state = %r." % from_state)
         #_logger.debug("_transition:to_state = %r." % to_state)
 
-        #Handle transitioning away from old state.  Mostly, this is emitting start events for Objects that have potentially large streams of child objects.
+        # Handle transitioning away from old state.  Mostly, this is emitting start events for Objects that have potentially large streams of child objects.
         if from_state == Parser.DFXML_PRESTREAM:
-            #Cut; stash DFXMLObject event now.
+            # Cut; stash DFXMLObject event now.
             self.dobj.populate_from_Element(self.proxy_element_stack[0])
             if "start" in self.iterparse_events:
                 retval.append(("start", self.dobj))
@@ -4424,12 +4424,12 @@ class Parser(object):
             if "start" in self.iterparse_events:
                 retval.append(("start", self.object_stack[-1]))
         elif from_state == Parser.VOLUME_PRESTREAM:
-            #Cut; stash VolumeObject event now.
+            # Cut; stash VolumeObject event now.
             self.object_stack[-1].populate_from_Element(self.proxy_element_stack[-1])
             if "start" in self.iterparse_events:
                 retval.append(("start", self.object_stack[-1]))
 
-        #Handle transitioning to new state.
+        # Handle transitioning to new state.
         if to_state == Parser._DFXML_START:
             if from_state != Parser._INPUT_START:
                 raise ValueError("Encountered a <dfxml> element, but the parser isn't in its start state.  Recursive <dfxml> declarations aren't supported at this time.")
@@ -4508,13 +4508,13 @@ class Parser(object):
         _typecheck(value, set)
         self._iterparse_events = value
 
-    #No setter.
+    # No setter.
     @property
     def object_stack(self):
         """An object stack is necessary to track start and stop events for the same object in light of complicated nestings (e.g. a ISO9660 file system containing an El Torito disk image, which ultimately contains another file system)."""
         return self._object_stack
 
-    #No setter.
+    # No setter.
     @property
     def proxy_element_stack(self):
         """It doesn't seem ElementTree allows fetching parents of Elements that are incomplete (just hit the "start" event).  So, build a volume Element when we've hit "<volume ... >", glomming all elements until the first child object is hit.  Likewise with the Element for the DFXMLObject, and anything else with child-object lists."""
@@ -4541,7 +4541,7 @@ def iterparse(filename, events=("start","end"), **kwargs):
     @param fiwalk: Optional.  Path to a particular fiwalk build you want to run.
     """
 
-    #The DFXML stream file handle.
+    # The DFXML stream file handle.
     fh = None
 
     subp = None
@@ -4565,9 +4565,9 @@ def iterparse(filename, events=("start","end"), **kwargs):
     for (event, obj) in parser.iterparse(fh, _events, **kwargs):
         yield (event, obj)
 
-    #If we called Fiwalk, double-check that it exited successfully.
+    # If we called Fiwalk, double-check that it exited successfully.
     if not subp is None:
-        _logger.debug("Calling wait() to let the Fiwalk subprocess terminate...") #Just reading from subp.stdout doesn't let the process terminate; it only finishes working.
+        _logger.debug("Calling wait() to let the Fiwalk subprocess terminate...") # Just reading from subp.stdout doesn't let the process terminate; it only finishes working.
         subp.wait()
         if subp.returncode != 0:
             e = subprocess.CalledProcessError("There was an error running Fiwalk.")
@@ -4603,7 +4603,7 @@ def parse(filename):
                 raise NotImplementedError("parse:Unexpected object type with start-event: %r." % type(obj))
         elif event == "end":
             if isinstance(obj, DFXMLObject):
-                #Let object_stack retain bottom DFXMLObject.
+                # Let object_stack retain bottom DFXMLObject.
                 pass
             elif isinstance(obj, (
               DiskImageObject,
@@ -4623,4 +4623,3 @@ def parse(filename):
         return object_stack[0]
     else:
         return None
-
