@@ -4440,6 +4440,7 @@ class Parser(object):
       },
       _FILE_END: {
         _FILE_START,
+        _PARTITION_SYSTEM_END,
         DFXML_POSTSTREAM,
         VOLUME_POSTSTREAM
       },
@@ -4461,6 +4462,7 @@ class Parser(object):
         _VOLUME_START
       },
       PARTITION_SYSTEM_PRESTREAM: {
+        _FILE_START,
         _PARTITION_SYSTEM_END,
         _PARTITION_START
       },
