@@ -60,8 +60,6 @@ _nagged_alloc = False
 _warned_byterun_badtypecomp = False
 _nagged_partition_file_alloc = False
 _nagged_partitionsystem_file_alloc = False
-_nagged_volume_error_impldrift = False
-_nagged_volume_error_standin = False
 
 XMLNS_REGXML = "http://www.forensicswiki.org/wiki/RegXML"
 XMLNS_DFXML_EXT = dfxml.XMLNS_DFXML + "#extensions"
@@ -856,7 +854,9 @@ class DiskImageObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-        if len(pe) == 0 and len(self.child_objects) == 0:
+
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
@@ -1058,7 +1058,9 @@ class PartitionSystemObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-        if len(pe) == 0 and len(self.partitions) == 0:
+
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
@@ -1291,7 +1293,9 @@ class PartitionObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-        if len(pe) == 0 and len(self.child_objects) == 0:
+
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
@@ -1609,15 +1613,51 @@ class VolumeObject(object):
                     _warned_elements.add((cns, ctn, VolumeObject))
                     _logger.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
+    def pop_poststream_elements(self, volume_element):
+        """
+        This function is a utility function for the two whole-object serialization methods, print_dfxml (to string) and to_Element (to ET.Element).
+
+        This function will mutate the input argument volume_element, removing the 'poststream' elements.  volume_element is expected to be the element created by self.to_partial_Element.
+
+        Returns a list of child elements in DFXML Schema order.  List might be empty.
+
+        This subroutine implements a re-serialization implementation decision: elements in extension namespaces can appear at the beginning or end of the volume XML child list, per the DFXML Schema.  All of the externals are put into the beginning of the element in to_partial_Element.  Hence, error will be the last child.
+        """
+        retval = []
+
+        errorel = None
+        if not (self.error is None or self.error == ""):
+            if len(volume_element) == 0:
+                raise ValueError("Inconsistent serialization state: Partial volume XML element has no child elements, but at least the 'error' object property was set.")
+            if _qsplit(volume_element[-1].tag)[1] == "error":
+                # (ET.Element does not have pop().)
+                errorel = volume_element[-1]
+                del(volume_element[-1])
+            else:
+                # This branch of code should only be reached in unit testing, as it depends on the output of self.to_partial_Element.
+                if volume_element.find("error"):
+                    raise ValueError("Inconsistent serialization state: Partial volume XML element has an immediate child named 'error', but not as the last child as expected from the schema.")
+        if not errorel is None:
+            retval.append(errorel)
+
+        return retval
+
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
-        dfxml_wrapper = _ET_tostring(pe)
 
-        if len(pe) == 0 and len(self._files) == 0:
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
+            dfxml_wrapper = _ET_tostring(pe)
             output_fh.write(dfxml_wrapper)
             return
 
         dfxml_foot = "</volume>"
+
+        # Deal with "poststream"-section elements.  At the time of this writing, that is just the "error" element.
+        # This needs to be done before child-counting, string rendering, and manipulation.
+        poststream_elements = self.pop_poststream_elements(pe)
+
+        dfxml_wrapper = _ET_tostring(pe)
 
         # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
@@ -1642,33 +1682,18 @@ class VolumeObject(object):
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
+
+        for poststream_element in poststream_elements:
+            output_fh.write(_ET_tostring(poststream_element))
         output_fh.write(dfxml_foot)
+
         output_fh.write("\n")
 
     def to_Element(self):
-        global _nagged_volume_error_impldrift
-        global _nagged_volume_error_standin
         outel = self.to_partial_Element()
-        # If there is an error reported on this volume, pop the element off of the partial element's end.
-        errorel = None
-        if not (self.error is None or self.error == ""):
-            if len(outel) == 0:
-                raise ValueError("Partial volume element has no children, but at least the error property was set.")
-            if _qsplit(outel[-1].tag)[1] == "error":
-                # (ET.Element does not have pop().)
-                errorel = outel[-1]
-                del(outel[-1])
-            else:
-                if outel.find("error"):
-                    if not _nagged_volume_error_impldrift:
-                        _logger.error("Implementation drift - when this code was initially written, the error element was the last to be appended to the partial element.  Leaving the found error element in place for now, but this may fail validation against the schema because of child ordering.")
-                        _nagged_volume_error_impldrift = True
-                else:
-                    if not _nagged_volume_error_standin:
-                        _logger.warning("Could not find 'error' child on partial volume element.  Creating a replacement.")
-                        _nagged_volume_error_standin = True
-                    errorel = ET.Element("error")
-                    errorel.text = str(self.error)
+
+        poststream_elements = self.pop_poststream_elements(outel)
+
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
           self.disk_images,
@@ -1678,9 +1703,11 @@ class VolumeObject(object):
             for obj in child_list:
                 tmpel = obj.to_Element()
                 outel.append(tmpel)
-        # The error element comes after the fileobject list in the schema.
-        if not errorel is None:
-            outel.append(errorel)
+
+        # These elements come after the fileobject list in the schema.
+        for poststream_element in poststream_elements:
+            outel.append(poststream_element)
+
         return outel
 
     def to_partial_Element(self):
@@ -4187,6 +4214,7 @@ class Parser(object):
 
     _VOLUME_START              = 400
     VOLUME_PRESTREAM           = 401
+    VOLUME_POSTSTREAM          = 402
     _VOLUME_END                = 499
 
     _FILE_START                = 500
@@ -4248,10 +4276,9 @@ class Parser(object):
         _FILE_END
       },
       _FILE_END: {
-        _DFXML_END,
-        _VOLUME_END,
         _FILE_START,
-        DFXML_POSTSTREAM
+        DFXML_POSTSTREAM,
+        VOLUME_POSTSTREAM
       },
       DFXML_PRESTREAM: {
         _DFXML_END,
@@ -4278,11 +4305,14 @@ class Parser(object):
         _PARTITION_END,
         _VOLUME_START
       },
+      VOLUME_POSTSTREAM: {
+        _VOLUME_END
+      },
       VOLUME_PRESTREAM: {
         _DISK_IMAGE_START,
         _VOLUME_START,
-        _VOLUME_END,
-        _FILE_START
+        _FILE_START,
+        VOLUME_POSTSTREAM
       }
     }
 
@@ -4346,49 +4376,90 @@ class Parser(object):
                 else:
                     pass
             elif ETevent == "end":
-                # If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
-                if ln == "fileobject":
-                    for eop in self.transition(Parser._FILE_END): yield eop
-                    # No need to use the proxy element stack for file objects.  Handle emitting here.
-                    fobj = FileObject()
-                    fobj.populate_from_Element(elem)
-                    if isinstance(self.object_stack[-1], VolumeObject):
-                        fobj.volume_object = self.object_stack[-1]
-                    #_logger.debug("fi = %r" % fobj)
-                    if "end" in self.iterparse_events:
-                        yield ("end", fobj)
-                    # Reset.
-                    elem.clear()
-                elif ln == "volume":
-                    for eop in self.transition(Parser._VOLUME_END): yield eop
-                    elem.clear()
-                elif ln == "partitionobject":
-                    for eop in self.transition(Parser._PARTITION_END): yield eop
-                    elem.clear()
-                elif ln == "partitionsystemobject":
-                    for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop
-                    elem.clear()
-                elif ln == "diskimageobject":
-                    for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
-                    elem.clear()
-                elif ln == "metadata":
-                    for eop in self.transition(Parser._DFXML_METADATA_END): yield eop
-                    self.proxy_element_stack[0].append(elem)
-                    for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
-                elif ln == "dfxml":
-                    for eop in self.transition(Parser._DFXML_END): yield eop
-                    elem.clear()
+                elem_handled = False
+                if ns == dfxml.XMLNS_DFXML:
+                    # If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
+                    if ln == "fileobject":
+                        for eop in self.transition(Parser._FILE_END): yield eop
+                        # No need to use the proxy element stack for file objects.  Handle emitting here.
+                        fobj = FileObject()
+                        fobj.populate_from_Element(elem)
+                        if isinstance(self.object_stack[-1], VolumeObject):
+                            fobj.volume_object = self.object_stack[-1]
+                        #_logger.debug("fi = %r" % fobj)
+                        if "end" in self.iterparse_events:
+                            yield ("end", fobj)
+                        # Reset.
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "volume":
+                        # A transition through the VOLUME_POSTSTREAM state may have to be inferred, if there were no poststream elements (such as 'error').
+                        if not self.state == Parser.VOLUME_POSTSTREAM:
+                            for eop in self.transition(Parser.VOLUME_POSTSTREAM): yield eop
+                        for eop in self.transition(Parser._VOLUME_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "partitionobject":
+                        for eop in self.transition(Parser._PARTITION_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "partitionsystemobject":
+                        for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "diskimageobject":
+                        for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "metadata":
+                        for eop in self.transition(Parser._DFXML_METADATA_END): yield eop
+                        self.proxy_element_stack[0].append(elem)
+                        for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
+                        # Note there is intentionally not an elem.clear() here.
+                        elem_handled = True
+                    elif ln == "dfxml":
+                        # A transition through the DFXML_POSTSTREAM state may have to be inferred, if there were no poststream elements (such as 'error').
+                        if not self.state == Parser.DFXML_POSTSTREAM:
+                            for eop in self.transition(Parser.DFXML_POSTSTREAM): yield eop
+                        for eop in self.transition(Parser._DFXML_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "error":
+                        #_logger.debug("ns = %r." % ns)
+                        # The error element can be the child of a file or a container.  The schema allows the error element after the potentially long child-element streams in containers.  Transition to that container's post-stream state.
+                        if self.state == Parser._FILE_START:
+                            continue
+
+                        if isinstance(self.object_stack[-1], DFXMLObject):
+                            for eop in self.transition(Parser.DFXML_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], VolumeObject):
+                            for eop in self.transition(Parser.VOLUME_POSTSTREAM): yield eop
+
+                        if self.in_poststream_state():
+                            # The created object should be updated with a manual call.  This is likely not the most elegant approach, as the implied code maintenance is needing to review the schema for elements that can occur after child streams; but, it saves an accidental object reinstantiation.
+                            self.object_stack[-1].error = elem.text
+                        else:
+                            # The proxy element is less useful for the post stream, as an Object has already been created on transitioning away from the *_PRESTREAM state.
+                            self.proxy_element_stack[-1].append(elem)
+
+                        elem_handled = True
+
                 # Branches after here have to reason based on the parse self.state value.
-                elif self.state in {
-                  Parser.DFXML_PRESTREAM,
-                  Parser.DISK_IMAGE_PRESTREAM,
-                  Parser.PARTITION_SYSTEM_PRESTREAM,
-                  Parser.PARTITION_PRESTREAM,
-                  Parser.VOLUME_PRESTREAM
-                }:
-                    self.proxy_element_stack[-1].append(elem)
-                else:
-                    pass
+                if not elem_handled:
+                    if self.state in {
+                      Parser.DFXML_PRESTREAM,
+                      Parser.DISK_IMAGE_PRESTREAM,
+                      Parser.PARTITION_SYSTEM_PRESTREAM,
+                      Parser.PARTITION_PRESTREAM,
+                      Parser.VOLUME_PRESTREAM
+                    }:
+                        self.proxy_element_stack[-1].append(elem)
+
+    def in_poststream_state(self):
+        return self.state in {
+          Parser.DFXML_POSTSTREAM,
+          Parser.VOLUME_POSTSTREAM
+        }
 
     def transition(self, to_state):
         """
@@ -4587,6 +4658,7 @@ def parse(filename):
     object_stack = []
 
     for (event, obj) in iterparse(filename):
+        #_logger.debug("(event, type(obj)) = %r." % ((event, type(obj)),))
         if event == "start":
             if isinstance(obj, DFXMLObject):
                 object_stack.append(obj)
@@ -4601,6 +4673,7 @@ def parse(filename):
                 object_stack.append(obj)
             else:
                 raise NotImplementedError("parse:Unexpected object type with start-event: %r." % type(obj))
+            #_logger.debug("Pushed onto object stack a %r." % type(obj))
         elif event == "end":
             if isinstance(obj, DFXMLObject):
                 # Let object_stack retain bottom DFXMLObject.
@@ -4612,7 +4685,7 @@ def parse(filename):
               VolumeObject
             )):
                 popped = object_stack.pop()
-                #_logger.debug("Popped from stack a %r." % type(popped))
+                #_logger.debug("Popped from object stack a %r." % type(popped))
             elif isinstance(obj, FileObject):
                 object_stack[-1].append(obj)
             else:
