@@ -4377,7 +4377,7 @@ class Parser(object):
                     pass
             elif ETevent == "end":
                 elem_handled = False
-                if True: #TODO This is a placeholder for another test about to be implemented.
+                if ns == dfxml.XMLNS_DFXML:
                     # If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
                     if ln == "fileobject":
                         for eop in self.transition(Parser._FILE_END): yield eop
@@ -4424,6 +4424,25 @@ class Parser(object):
                         for eop in self.transition(Parser._DFXML_END): yield eop
                         elem.clear()
                         elem_handled = True
+                    elif ln == "error":
+                        #_logger.debug("ns = %r." % ns)
+                        # The error element can be the child of a file or a container.  The schema allows the error element after the potentially long child-element streams in containers.  Transition to that container's post-stream state.
+                        if self.state == Parser._FILE_START:
+                            continue
+
+                        if isinstance(self.object_stack[-1], DFXMLObject):
+                            for eop in self.transition(Parser.DFXML_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], VolumeObject):
+                            for eop in self.transition(Parser.VOLUME_POSTSTREAM): yield eop
+
+                        if self.in_poststream_state():
+                            # The created object should be updated with a manual call.  This is likely not the most elegant approach, as the implied code maintenance is needing to review the schema for elements that can occur after child streams; but, it saves an accidental object reinstantiation.
+                            self.object_stack[-1].error = elem.text
+                        else:
+                            # The proxy element is less useful for the post stream, as an Object has already been created on transitioning away from the *_PRESTREAM state.
+                            self.proxy_element_stack[-1].append(elem)
+
+                        elem_handled = True
 
                 # Branches after here have to reason based on the parse self.state value.
                 if not elem_handled:
@@ -4435,6 +4454,12 @@ class Parser(object):
                       Parser.VOLUME_PRESTREAM
                     }:
                         self.proxy_element_stack[-1].append(elem)
+
+    def in_poststream_state(self):
+        return self.state in {
+          Parser.DFXML_POSTSTREAM,
+          Parser.VOLUME_POSTSTREAM
+        }
 
     def transition(self, to_state):
         """
@@ -4633,6 +4658,7 @@ def parse(filename):
     object_stack = []
 
     for (event, obj) in iterparse(filename):
+        #_logger.debug("(event, type(obj)) = %r." % ((event, type(obj)),))
         if event == "start":
             if isinstance(obj, DFXMLObject):
                 object_stack.append(obj)
@@ -4647,6 +4673,7 @@ def parse(filename):
                 object_stack.append(obj)
             else:
                 raise NotImplementedError("parse:Unexpected object type with start-event: %r." % type(obj))
+            #_logger.debug("Pushed onto object stack a %r." % type(obj))
         elif event == "end":
             if isinstance(obj, DFXMLObject):
                 # Let object_stack retain bottom DFXMLObject.
@@ -4658,7 +4685,7 @@ def parse(filename):
               VolumeObject
             )):
                 popped = object_stack.pop()
-                #_logger.debug("Popped from stack a %r." % type(popped))
+                #_logger.debug("Popped from object stack a %r." % type(popped))
             elif isinstance(obj, FileObject):
                 object_stack[-1].append(obj)
             else:
