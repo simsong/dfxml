@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import logging
 import os
