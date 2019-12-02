@@ -4353,35 +4353,35 @@ class CellObject(object):
 class Parser(object):
 
     # Set up state machine.  (Would use enum if supported in Python 2.)
-    _INPUT_START               =  -1
+    _INPUT_START                =  -1
 
-    _DFXML_START               =   0
-    DFXML_PRESTREAM            =   1
-    DFXML_POSTSTREAM           =   2
-    _DFXML_END                 = 999
+    _DFXML_START                =   0
+    DFXML_PRESTREAM             =   1
+    DFXML_POSTSTREAM            =   2
+    _DFXML_END                  = 999
 
-    _DFXML_METADATA_START      =  10
-    _DFXML_METADATA_END        =  19
+    _DFXML_METADATA_START       =  10
+    _DFXML_METADATA_END         =  19
 
-    _DISK_IMAGE_START          = 100
-    DISK_IMAGE_PRESTREAM       = 101
-    _DISK_IMAGE_END            = 199
+    _DISK_IMAGE_START           = 100
+    DISK_IMAGE_PRESTREAM        = 101
+    _DISK_IMAGE_END             = 199
 
-    _PARTITION_SYSTEM_START    = 200
-    PARTITION_SYSTEM_PRESTREAM = 201
-    _PARTITION_SYSTEM_END      = 299
+    _PARTITION_SYSTEM_START     = 200
+    PARTITION_SYSTEM_PRESTREAM  = 201
+    _PARTITION_SYSTEM_END       = 299
 
-    _PARTITION_START           = 300
-    PARTITION_PRESTREAM        = 301
-    _PARTITION_END             = 399
+    _PARTITION_START            = 300
+    PARTITION_PRESTREAM         = 301
+    _PARTITION_END              = 399
 
-    _VOLUME_START              = 400
-    VOLUME_PRESTREAM           = 401
-    VOLUME_POSTSTREAM          = 402
-    _VOLUME_END                = 499
+    _VOLUME_START               = 400
+    VOLUME_PRESTREAM            = 401
+    VOLUME_POSTSTREAM           = 402
+    _VOLUME_END                 = 499
 
-    _FILE_START                = 500
-    _FILE_END                  = 599
+    _FILE_START                 = 500
+    _FILE_END                   = 599
 
     transitions = {
       _INPUT_START: {
