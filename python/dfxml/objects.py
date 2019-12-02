@@ -856,7 +856,9 @@ class DiskImageObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-        if len(pe) == 0 and len(self.child_objects) == 0:
+
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
@@ -1058,7 +1060,9 @@ class PartitionSystemObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-        if len(pe) == 0 and len(self.partitions) == 0:
+
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
@@ -1291,7 +1295,9 @@ class PartitionObject(object):
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
-        if len(pe) == 0 and len(self.child_objects) == 0:
+
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
@@ -1613,7 +1619,8 @@ class VolumeObject(object):
         pe = self.to_partial_Element()
         dfxml_wrapper = _ET_tostring(pe)
 
-        if len(pe) == 0 and len(self._files) == 0:
+        if len(pe) == 0 \
+          and len(self.child_objects) == 0:
             output_fh.write(dfxml_wrapper)
             return
 
