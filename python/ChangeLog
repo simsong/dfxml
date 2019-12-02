@@ -1,3 +1,17 @@
+2019-12-02    <alexander.nelson@nist.gov>
+
+	* Python: Bump versions of updated scripts
+	* objects.py tests: Test round-trip of external-namespace elements
+	* objects.py tests: Test ways to encounter error element
+	* objects.py: Revise handling of error element in parser
+	* objects.py: Add poststream state to Element-stream parser
+	* objects.py: Handle post-child-stream elements with independent function
+	* objects.py: Handle state-based parse check with flag variable
+	* objects.py: Adjust 'empty' object tests with child list checks
+	* objects.py tests: Export objects.py round-trip functions to library
+	* objects.py and tests: Add documenting comments
+	* objects.py and tests: Adjust whitespace and variable name scheme
+
 2019-11-04    <alexander.nelson@nist.gov>
 
 	* Python: Relax schema presence check for local pytest builds
