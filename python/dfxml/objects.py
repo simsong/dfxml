@@ -4447,6 +4447,7 @@ class Parser(object):
         _DFXML_END,
         _DFXML_METADATA_START,
         _DISK_IMAGE_START,
+        _PARTITION_SYSTEM_START,
         _VOLUME_START,
         _FILE_START,
         DFXML_POSTSTREAM

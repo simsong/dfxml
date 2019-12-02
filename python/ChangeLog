@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py: Add parser transition for partition system without containing disk image
 	* objects.py: Whitespace-pad parser enums
 	* objects.py: Confirm DiskImageObject can have FileObject 
 	* objects.py tests: Confirm PartitionObject can have FileObject 
