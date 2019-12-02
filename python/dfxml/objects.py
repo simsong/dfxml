@@ -4353,49 +4353,59 @@ class Parser(object):
                 else:
                     pass
             elif ETevent == "end":
-                # If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
-                if ln == "fileobject":
-                    for eop in self.transition(Parser._FILE_END): yield eop
-                    # No need to use the proxy element stack for file objects.  Handle emitting here.
-                    fobj = FileObject()
-                    fobj.populate_from_Element(elem)
-                    if isinstance(self.object_stack[-1], VolumeObject):
-                        fobj.volume_object = self.object_stack[-1]
-                    #_logger.debug("fi = %r" % fobj)
-                    if "end" in self.iterparse_events:
-                        yield ("end", fobj)
-                    # Reset.
-                    elem.clear()
-                elif ln == "volume":
-                    for eop in self.transition(Parser._VOLUME_END): yield eop
-                    elem.clear()
-                elif ln == "partitionobject":
-                    for eop in self.transition(Parser._PARTITION_END): yield eop
-                    elem.clear()
-                elif ln == "partitionsystemobject":
-                    for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop
-                    elem.clear()
-                elif ln == "diskimageobject":
-                    for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
-                    elem.clear()
-                elif ln == "metadata":
-                    for eop in self.transition(Parser._DFXML_METADATA_END): yield eop
-                    self.proxy_element_stack[0].append(elem)
-                    for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
-                elif ln == "dfxml":
-                    for eop in self.transition(Parser._DFXML_END): yield eop
-                    elem.clear()
+                elem_handled = False
+                if True: #TODO This is a placeholder for another test about to be implemented.
+                    # If-branches listed here in reverse-depth order (starting with most frequent "leaf" objects of object tree); followed by a "misc" branch for high-level metadata elements.
+                    if ln == "fileobject":
+                        for eop in self.transition(Parser._FILE_END): yield eop
+                        # No need to use the proxy element stack for file objects.  Handle emitting here.
+                        fobj = FileObject()
+                        fobj.populate_from_Element(elem)
+                        if isinstance(self.object_stack[-1], VolumeObject):
+                            fobj.volume_object = self.object_stack[-1]
+                        #_logger.debug("fi = %r" % fobj)
+                        if "end" in self.iterparse_events:
+                            yield ("end", fobj)
+                        # Reset.
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "volume":
+                        for eop in self.transition(Parser._VOLUME_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "partitionobject":
+                        for eop in self.transition(Parser._PARTITION_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "partitionsystemobject":
+                        for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "diskimageobject":
+                        for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+                    elif ln == "metadata":
+                        for eop in self.transition(Parser._DFXML_METADATA_END): yield eop
+                        self.proxy_element_stack[0].append(elem)
+                        for eop in self.transition(Parser.DFXML_PRESTREAM): yield eop
+                        # Note there is intentionally not an elem.clear() here.
+                        elem_handled = True
+                    elif ln == "dfxml":
+                        for eop in self.transition(Parser._DFXML_END): yield eop
+                        elem.clear()
+                        elem_handled = True
+
                 # Branches after here have to reason based on the parse self.state value.
-                elif self.state in {
-                  Parser.DFXML_PRESTREAM,
-                  Parser.DISK_IMAGE_PRESTREAM,
-                  Parser.PARTITION_SYSTEM_PRESTREAM,
-                  Parser.PARTITION_PRESTREAM,
-                  Parser.VOLUME_PRESTREAM
-                }:
-                    self.proxy_element_stack[-1].append(elem)
-                else:
-                    pass
+                if not elem_handled:
+                    if self.state in {
+                      Parser.DFXML_PRESTREAM,
+                      Parser.DISK_IMAGE_PRESTREAM,
+                      Parser.PARTITION_SYSTEM_PRESTREAM,
+                      Parser.PARTITION_PRESTREAM,
+                      Parser.VOLUME_PRESTREAM
+                    }:
+                        self.proxy_element_stack[-1].append(elem)
 
     def transition(self, to_state):
         """

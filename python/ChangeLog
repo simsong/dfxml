@@ -1,5 +1,6 @@
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py: Handle state-based parse check with flag variable
 	* objects.py: Adjust 'empty' object tests with child list checks
 	* objects.py tests: Export objects.py round-trip functions to library
 	* objects.py and tests: Add documenting comments
