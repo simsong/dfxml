@@ -1,5 +1,6 @@
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* Schema: Track DFXML Schema branch add_partition_system_error
 	* Python: Bump versions of updated scripts
 	* objects.py tests: Test round-trip of external-namespace elements
 	* objects.py tests: Test ways to encounter error element
