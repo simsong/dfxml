@@ -1,5 +1,6 @@
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test round-trip of external-namespace elements
 	* objects.py tests: Test ways to encounter error element
 	* objects.py: Revise handling of error element in parser
 	* objects.py: Add poststream state to Element-stream parser
