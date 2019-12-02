@@ -44,6 +44,7 @@ def test_all():
     except TypeError:
         failed = True
     except:
+        # There's only one kind of error expected here.  Raise anything else.
         failed = True
         raise
     _logger.debug("After:  " + repr(vobj.externals))
@@ -81,7 +82,7 @@ def test_all():
     e.text = "yes"
     vobj.externals.append(e)
 
-    # Test serialization.
+    # Test serialization to Element.
     s = Objects._ET_tostring(vobj.to_Element()) #TODO Maybe this should be more than an internal function.
     _logger.debug(s)
     if s.find("scan_results") == -1:

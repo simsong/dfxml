@@ -1,5 +1,6 @@
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py and tests: Add documenting comments
 	* objects.py and tests: Adjust whitespace and variable name scheme
 
 2019-11-04    <alexander.nelson@nist.gov>

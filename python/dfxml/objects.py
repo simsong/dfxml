@@ -4392,7 +4392,7 @@ class Parser(object):
 
     def transition(self, to_state):
         """
-        Internal function.  Updates _state variable and parallel object/element stacks (local to iterparse() call).  Returns ordered list of (event, object) pairs that result from transitioning to/from states.
+        Internal function.  Updates _state variable and parallel object/element stacks (local to iterparse() call).  Returns ordered list of (event, object) pairs (shorthanded in the calling code as "eop") that result from transitioning to/from states.
         """
 
         retval = []
