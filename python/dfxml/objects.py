@@ -2110,11 +2110,27 @@ class ByteRun(object):
       "file_offset",
       "fill",
       "len",
+      "md5",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512",
       "type",
       "uncompressed_len"
     ])
 
+    _hash_properties = set([
+      "md5",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512"
+    ])
+
     def __init__(self, *args, **kwargs):
+        self._has_hash_property = False
         for prop in ByteRun._all_properties:
             setattr(self, prop, kwargs.get(prop))
 
@@ -2133,6 +2149,10 @@ class ByteRun(object):
 
         # Don't glom compressed runs.
         if not self.uncompressed_len is None or not other.uncompressed_len is None:
+            return None
+
+        #Don't glom runs with hashes
+        if self.has_hash_property or other.has_hash_property:
             return None
 
         if self.len is None or other.len is None:
@@ -2174,6 +2194,15 @@ class ByteRun(object):
                 _warned_byterun_badtypecomp = True
             return False
 
+        #TODO Determine a way to set an ignore flag for comparison of byte run hashes.  Maybe byte_run/@has_hash_property, as a virtual XPath reference?
+        #Check hashes
+        if self.has_hash_property or other.has_hash_property:
+            for hash_name in ByteRun._hash_properties:
+                if self.hash_name is None or other.hash_name is None:
+                    continue
+                if self.hash_name != other.hash_name:
+                    return False
+
         # Check values.
         return \
           self.img_offset == other.img_offset and \
@@ -2196,6 +2225,9 @@ class ByteRun(object):
         return "ByteRun(" + ", ".join(parts) + ")"
 
     def populate_from_Element(self, e):
+        global _warned_elements
+        global _warned_hashes
+
         _typecheck(e, (ET.Element, ET.ElementTree))
 
         # Split into namespace and tagname.
@@ -2217,14 +2249,50 @@ class ByteRun(object):
                 _warned_byterun_attribs.add(prop)
                 _logger.warning("No instructions present for processing this attribute found on a byte run: %r." % prop)
 
+        # Look through direct-child elements for other properties.
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            #_logger.debug("Populating from child element: %r." % ce.tag)
+            if ctn == "hashdigest":
+                type_lower = ce.attrib["type"].lower()
+                if type_lower in ByteRun._hash_properties:
+                    setattr(self, type_lower, ce.text)
+                else:
+                    if (type_lower, ByteRun) not in _warned_hashes:
+                        _warned_hashes.add((type_lower, ByteRun))
+                        _logger.warning("Uncertain what to do with this hash encountered in a ByteRun: %r." % type_lower)
+            else:
+                if (cns, ctn, ByteRun) not in _warned_elements:
+                    _warned_elements.add((cns, ctn, ByteRun))
+                    _logger.warning("Uncertain what to do with this element in a ByteRun: %r" % ce)
+
     def to_Element(self):
         outel = ET.Element("byte_run")
+
+        if self.has_hash_property:
+            def _append_hash(name):
+                value = getattr(self, name)
+                if not value is None:
+                    tmpel = ET.Element("hashdigest")
+                    tmpel.attrib["type"] = name
+                    tmpel.text = value
+                    outel.append(tmpel)
+
+            for prop in sorted(ByteRun._hash_properties):
+                _append_hash(prop)
+
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
+
             # Skip null properties.
             if val is None:
                 continue
 
+            #Hash properties become child elements - handled in sort order.
+            if prop in ByteRun._hash_properties:
+                continue
+
+            # Everything else becomes attributes.
             if isinstance(val, bytes):
                 outel.attrib[prop] = str(struct.unpack("b", val)[0])
             else:
@@ -2275,6 +2343,14 @@ class ByteRun(object):
         self._fs_offset = _intcast(val)
 
     @property
+    def has_hash_property(self):
+        """
+        has_hash_property is a convenience variable without a setter, not to be serialized.
+        This property intentionally has no setter.
+        """
+        return self._has_hash_property
+
+    @property
     def img_offset(self):
         return self._img_offset
 
@@ -2289,6 +2365,66 @@ class ByteRun(object):
     @len.setter
     def len(self, val):
         self._len = _intcast(val)
+
+    @property
+    def md5(self):
+        return self._md5
+
+    @md5.setter
+    def md5(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._md5 = _strcast(val)
+
+    @property
+    def sha1(self):
+        return self._sha1
+
+    @sha1.setter
+    def sha1(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha1 = _strcast(val)
+
+    @property
+    def sha224(self):
+        return self._sha224
+
+    @sha224.setter
+    def sha224(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha224 = _strcast(val)
+
+    @property
+    def sha256(self):
+        return self._sha256
+
+    @sha256.setter
+    def sha256(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha256 = _strcast(val)
+
+    @property
+    def sha384(self):
+        return self._sha384
+
+    @sha384.setter
+    def sha384(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha384 = _strcast(val)
+
+    @property
+    def sha512(self):
+        return self._sha512
+
+    @sha512.setter
+    def sha512(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha512 = _strcast(val)
 
     @property
     def type(self):

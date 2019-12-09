@@ -1,5 +1,8 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test glomming of byte runs with hashes
+	* objects.py tests: Test byte run hash serialization
+	* objects.py: Add hash properties to byte runs
 	* objects.py tests: Test glomming of out-of-order byte runs
 	* objects.py: Correct byte run contiguity tests across independently-ordered properties
 	* objects.py tests: Test byte run glomming with fill-byte
