@@ -1216,6 +1216,7 @@ class PartitionObject(object):
       "partition_label",
       "partition_system_offset",
       "partition_systems",
+      "partitions",
       "ptype",
       "ptype_str",
       "volumes"
@@ -1228,6 +1229,7 @@ class PartitionObject(object):
         self._child_objects = [] # For maintaining order of objects of different types.
         self._files = []
         self._partition_systems = []
+        self._partitions = []
         self._volumes = []
         self._ptype = None
         self._ptype_str = None
@@ -1256,6 +1258,7 @@ class PartitionObject(object):
               "externals",
               "files",
               "partition_systems",
+              "partitions",
               "volumes"
             }:
                 continue
@@ -1267,6 +1270,8 @@ class PartitionObject(object):
     def append(self, obj):
         if isinstance(obj, PartitionSystemObject):
             self.partition_systems.append(obj)
+        elif isinstance(obj, PartitionObject):
+            self.partitions.append(obj)
         elif isinstance(obj, VolumeObject):
             self.volumes.append(obj)
         elif isinstance(obj, FileObject):
@@ -1326,14 +1331,22 @@ class PartitionObject(object):
 
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+
         _logger.debug("Writing %d partition system objects for this partition." % len(self.partition_systems))
         for ps in self.partition_systems:
             ps.print_dfxml(output_fh)
             output_fh.write("\n")
+
+        _logger.debug("Writing %d partition objects for this partition." % len(self.partitions))
+        for p in self.partitions:
+            p.print_dfxml(output_fh)
+            output_fh.write("\n")
+
         _logger.debug("Writing %d volume objects for this partition." % len(self.volumes))
         for v in self.volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d file objects for this partition." % len(self.files))
         for f in self.files:
             e = f.to_Element()
@@ -1347,6 +1360,7 @@ class PartitionObject(object):
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
           self.partition_systems,
+          self.partitions,
           self.volumes,
           self.files
         ]:
@@ -1434,6 +1448,11 @@ class PartitionObject(object):
     def partition_systems(self):
         """List of partition system objects directly attached to this PartitionObject.  No setter for now."""
         return self._partition_systems
+
+    @property
+    def partitions(self):
+        """List of partition objects directly attached to this PartitionObject.  No setter for now."""
+        return self._partitions
 
     @property
     def ptype(self):
@@ -4430,6 +4449,7 @@ class Parser(object):
       _PARTITION_END: {
         _PARTITION_START,
         _FILE_START,
+        PARTITION_POSTSTREAM,
         PARTITION_SYSTEM_POSTSTREAM
       },
       _VOLUME_START: {
@@ -4489,6 +4509,7 @@ class Parser(object):
         _PARTITION_END
       },
       PARTITION_PRESTREAM: {
+        _PARTITION_START,
         _PARTITION_SYSTEM_START,
         _VOLUME_START,
         _FILE_START,

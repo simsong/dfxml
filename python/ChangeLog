@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py: Add partition object as child of partition object
 	* Schema: Track DFXML Schema branch add_partition_child_of_partition
 	* objects.py tests: Add I/O round-trip to storage layers tests
 	* objects.py: Implement "poststream" de-serialization of remaining storage layers
