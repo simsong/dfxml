@@ -146,6 +146,78 @@ def test_glomming_simple():
             _logger.debug("br0_br1__br2 = %r." % br0_br1__br2)
             raise
 
+def test_glom_fragmented_file_outoforder():
+    """
+    Three contiguous sectors on disk, i0_i1_i2, contain three out-of-order sectors of the file on disk, f0_f2_f1.
+    """
+
+    br0 = Objects.ByteRun()
+    br1 = Objects.ByteRun()
+    br2 = Objects.ByteRun()
+
+    br0.len = 512
+    br1.len = 512
+    br2.len = 512
+
+    br0.img_offset = 0 * 512
+    br1.img_offset = 1 * 512
+    br2.img_offset = 2 * 512
+
+    br0.file_offset = 0 * 512
+    br1.file_offset = 2 * 512
+    br2.file_offset = 1 * 512
+
+    br0_br1 = br0 + br1
+    br1_br2 = br1 + br2
+
+    try:
+        assert br0_br1 is None
+    except:
+        _logger.debug("br0_br1 = %r." % br0_br1)
+        raise
+
+    try:
+        assert br1_br2 is None
+    except:
+        _logger.debug("br1_br2 = %r." % br1_br2)
+        raise
+
+def test_glom_fragmented_file_discontiguous():
+    """
+    Three out-of-order sectors of the file on disk, f0_f1_f2, are at discontiguous offsets i0, i0+1KiB, i0+1MiB.
+    """
+
+    br0 = Objects.ByteRun()
+    br1 = Objects.ByteRun()
+    br2 = Objects.ByteRun()
+
+    br0.len = 512
+    br1.len = 512
+    br2.len = 512
+
+    br0.img_offset = 0
+    br1.img_offset = br0.img_offset + 2**10
+    br2.img_offset = br0.img_offset + 2**20
+
+    br0.file_offset = 0 * 512
+    br1.file_offset = 1 * 512
+    br2.file_offset = 2 * 512
+
+    br0_br1 = br0 + br1
+    br1_br2 = br1 + br2
+
+    try:
+        assert br0_br1 is None
+    except:
+        _logger.debug("br0_br1 = %r." % br0_br1)
+        raise
+
+    try:
+        assert br1_br2 is None
+    except:
+        _logger.debug("br1_br2 = %r." % br1_br2)
+        raise
+
 def test_glomming_fill():
     (br0, br1, br2) = _gen_glom_samples()
 
