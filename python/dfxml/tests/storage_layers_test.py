@@ -30,6 +30,7 @@ _logger = logging.getLogger(os.path.basename(__file__))
 TEST_BYTE_STRING_1 = b"Test string 1"
 TEST_BYTE_STRING_2 = b"Test string 2"
 TEST_BYTE_STRING_3 = b"Test string 3"
+TEST_BYTE_STRING_4 = b"Test string 4"
 
 tmphash = hashlib.sha512()
 tmphash.update(TEST_BYTE_STRING_1)
@@ -42,6 +43,10 @@ TEST_HASH_2 = tmphash.hexdigest()
 tmphash = hashlib.sha512()
 tmphash.update(TEST_BYTE_STRING_3)
 TEST_HASH_3 = tmphash.hexdigest()
+
+tmphash = hashlib.sha512()
+tmphash.update(TEST_BYTE_STRING_4)
+TEST_HASH_4 = tmphash.hexdigest()
 
 def test_file_in_non_fs_levels_deep():
     """
@@ -60,6 +65,13 @@ def test_file_in_non_fs_levels_deep():
     diobj = Objects.DiskImageObject()
     dobj.append(diobj)
 
+    # Add file to disk image.
+    fobj_diobj = Objects.FileObject()
+    fobj_diobj.alloc_inode = False
+    fobj_diobj.alloc_name = False
+    fobj_diobj.sha512 = TEST_HASH_2
+    diobj.append(fobj_diobj)
+
     # Add partition system to disk image.
     psobj = Objects.PartitionSystemObject()
     diobj.append(psobj)
@@ -68,7 +80,7 @@ def test_file_in_non_fs_levels_deep():
     fobj_psobj = Objects.FileObject()
     fobj_psobj.alloc_inode = False
     fobj_psobj.alloc_name = False
-    fobj_psobj.sha512 = TEST_HASH_2
+    fobj_psobj.sha512 = TEST_HASH_3
     psobj.append(fobj_psobj)
 
     # Add partition to partition system.
@@ -79,7 +91,7 @@ def test_file_in_non_fs_levels_deep():
     fobj_pobj = Objects.FileObject()
     fobj_pobj.alloc_inode = False
     fobj_pobj.alloc_name = False
-    fobj_pobj.sha512 = TEST_HASH_3
+    fobj_pobj.sha512 = TEST_HASH_4
     pobj.append(fobj_pobj)
 
 def test_file_in_non_fs_levels_flat():
@@ -99,6 +111,13 @@ def test_file_in_non_fs_levels_flat():
     diobj = Objects.DiskImageObject()
     dobj.append(diobj)
 
+    # Add file to disk image.
+    fobj_diobj = Objects.FileObject()
+    fobj_diobj.alloc_inode = False
+    fobj_diobj.alloc_name = False
+    fobj_diobj.sha512 = TEST_HASH_2
+    diobj.append(fobj_diobj)
+
     # Add partition system.
     psobj = Objects.PartitionSystemObject()
     dobj.append(psobj)
@@ -107,7 +126,7 @@ def test_file_in_non_fs_levels_flat():
     fobj_psobj = Objects.FileObject()
     fobj_psobj.alloc_inode = False
     fobj_psobj.alloc_name = False
-    fobj_psobj.sha512 = TEST_HASH_2
+    fobj_psobj.sha512 = TEST_HASH_3
     psobj.append(fobj_psobj)
 
     # Add partition.
@@ -118,7 +137,7 @@ def test_file_in_non_fs_levels_flat():
     fobj_pobj = Objects.FileObject()
     fobj_pobj.alloc_inode = False
     fobj_pobj.alloc_name = False
-    fobj_pobj.sha512 = TEST_HASH_3
+    fobj_pobj.sha512 = TEST_HASH_4
     pobj.append(fobj_pobj)
 
 def test_solaris_ps_in_partition():
@@ -177,3 +196,9 @@ def test_disk_image_in_file_system():
 
     diobj = Objects.DiskImageObject()
     vobj.append(diobj)
+
+    fobj_diobj = Objects.FileObject()
+    fobj_diobj.alloc_inode = False
+    fobj_diobj.alloc_name = False
+    fobj_diobj.sha512 = TEST_HASH_2
+    diobj.append(fobj_diobj)
