@@ -1,3 +1,13 @@
+2019-12-09    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Test glomming of out-of-order byte runs
+	* objects.py: Correct byte run contiguity tests across independently-ordered properties
+	* objects.py tests: Test byte run glomming with fill-byte
+	* objects.py tests: Test glomming of contiguous byte runs
+	* objects.py tests: Move byte run tests into single script call
+	* objects.py: Treat hash property population with loop
+	* objects.py: Correct population of _warned_elements
+
 2019-12-02    <alexander.nelson@nist.gov>
 
 	* Python: Bump versions of updated scripts

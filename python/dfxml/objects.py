@@ -52,6 +52,9 @@ _logger = logging.getLogger(os.path.basename(__file__))
 _warned_elements = set([])
 _warned_byterun_attribs = set([])
 
+# Contains: (hash name, class) pairs, indicating the hash type and on what class it was found.
+_warned_hashes = set([])
+
 # Contains: Unexpected 'facet' values on byte_runs elements.
 _warned_byterun_facets = set([])
 
@@ -847,7 +850,7 @@ class DiskImageObject(object):
             elif ctn in DiskImageObject._all_properties:
                 setattr(self, ctn, ce.text)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, DiskImageObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, DiskImageObject))
                     _logger.warning("Unsure what to do with this element in a DiskImageObject: %r" % ce)
 
@@ -1051,7 +1054,7 @@ class PartitionSystemObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, PartitionSystemObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, PartitionSystemObject))
                     _logger.warning("Unsure what to do with this element in a PartitionSystemObject: %r" % ce)
 
@@ -1286,7 +1289,7 @@ class PartitionObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, PartitionObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, PartitionObject))
                     _logger.warning("Unsure what to do with this element in a PartitionObject: %r" % ce)
 
@@ -1609,7 +1612,7 @@ class VolumeObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, VolumeObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, VolumeObject))
                     _logger.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
@@ -2132,16 +2135,33 @@ class ByteRun(object):
         if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
-        if None in [self.len, other.len]:
+        if self.len is None or other.len is None:
             return None
 
+        # Test for contiguity.
+        contiguous = None
         for prop in ["img_offset", "fs_offset", "file_offset"]:
-            if None in [getattr(self, prop), getattr(other, prop)]:
-                continue
-            if getattr(self, prop) + self.len == getattr(other, prop):
-                retval = copy.deepcopy(self)
-                retval.len += other.len
-                return retval
+            self_prop = getattr(self, prop)
+            other_prop = getattr(other, prop)
+
+            if self_prop is None or other_prop is None:
+                if self_prop is None and other_prop is None:
+                    # Both properties are absent - this is fine.
+                    continue
+                else:
+                    # Incomparable information present.  Do not glom.
+                    # As a design decision, if other properties are present, they are NOT used to infer this semi-present property.
+                    return None
+
+            # Test contiguity for THIS property.  If any fail, the loop concludes.
+            if self_prop + self.len == other_prop:
+                contiguous = True
+            else:
+                return None
+        if contiguous:
+            retval = copy.deepcopy(self)
+            retval.len += other.len
+            return retval
         return None
 
     def __eq__(self, other):
@@ -2951,6 +2971,7 @@ class FileObject(object):
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
+        global _warned_hashes
         _typecheck(e, (ET.Element, ET.ElementTree))
 
         #_logger.debug("FileObject.populate_from_Element(%r)" % e)
@@ -3003,20 +3024,13 @@ class FileObject(object):
                     self.byte_runs = ByteRuns()
                     self.byte_runs.populate_from_Element(ce)
             elif ctn == "hashdigest":
-                if ce.attrib["type"].lower() == "md5":
-                    self.md5 = ce.text
-                elif ce.attrib["type"].lower() == "md6":
-                    self.md6 = ce.text
-                elif ce.attrib["type"].lower() == "sha1":
-                    self.sha1 = ce.text
-                elif ce.attrib["type"].lower() == "sha224":
-                    self.sha224 = ce.text
-                elif ce.attrib["type"].lower() == "sha256":
-                    self.sha256 = ce.text
-                elif ce.attrib["type"].lower() == "sha384":
-                    self.sha384 = ce.text
-                elif ce.attrib["type"].lower() == "sha512":
-                    self.sha512 = ce.text
+                type_lower = ce.attrib["type"].lower()
+                if type_lower in FileObject._hash_properties:
+                    setattr(self, type_lower, ce.text)
+                else:
+                    if (type_lower, FileObject) not in _warned_hashes:
+                        _warned_hashes.add((type_lower, FileObject))
+                        _logger.warning("Uncertain what to do with this hash encountered in a FileObject: %r." % type_lower)
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
@@ -3032,7 +3046,7 @@ class FileObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, FileObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, FileObject))
                     _logger.warning("Uncertain what to do with this element in a FileObject: %r" % ce)
 
@@ -3881,7 +3895,7 @@ class CellObject(object):
                 self.parent_object = CellObject()
                 self.parent_object.populate_from_Element(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, CellObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, CellObject))
                     _logger.warning("Uncertain what to do with this element in a CellObject: %r" % ce)
 
