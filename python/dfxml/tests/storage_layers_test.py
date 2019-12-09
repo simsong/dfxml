@@ -110,6 +110,10 @@ def test_file_in_non_fs_levels_flat():
     fobj_psobj.sha512 = TEST_HASH_2
     psobj.append(fobj_psobj)
 
+    # Add partition.
+    pobj = Objects.PartitionObject()
+    dobj.append(pobj)
+
 def test_solaris_ps_in_partition():
     dobj = Objects.DFXMLObject(version="1.2.0")
 
