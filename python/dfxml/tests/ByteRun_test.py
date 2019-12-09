@@ -296,3 +296,18 @@ def test_hash_properties():
         _logger.debug("tmp_filename = %r." % tmp_filename)
         raise
     os.remove(tmp_filename)
+
+def test_glomming_hash():
+    (br0, br1, br2) = _gen_glom_samples()
+
+    hash_object = hashlib.sha512()
+    hash_object.update(TEST_BYTE_STRING)
+    br0.sha512 = hash_object.hexdigest()
+
+    br0_br1 = br0 + br1
+
+    try:
+        assert br0_br1 is None
+    except:
+        _logger.debug("br0_br1 = %r." % br0_br1)
+        raise
