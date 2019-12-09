@@ -79,7 +79,6 @@ check-versioned:
 	$$PY diffing_ByteRuns_test.py
 	$$PY diffing_TimestampObject_test.py
 	$$PY diffing_VolumeObject_test.py
-	$$PY storage_layers_test.py
 	$$PY ByteRuns_test.py
 	$$PY CellObject_test.py
 	$$PY DFXMLObject_program_test.py $(SAMPLES_DIR)/difference_test_0.xml vi 8.0
