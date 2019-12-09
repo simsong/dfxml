@@ -145,3 +145,26 @@ def test_glomming_simple():
         except:
             _logger.debug("br0_br1__br2 = %r." % br0_br1__br2)
             raise
+
+def test_glomming_fill():
+    (br0, br1, br2) = _gen_glom_samples()
+
+    br0.fill = b'\x00'
+    br1.fill = b'\x01'
+    br2.fill = b'\x01'
+
+    br0_br1 = br0 + br1
+    br1_br2 = br1 + br2
+
+    try:
+        assert br0_br1 is None
+    except:
+        _logger.debug("br0_br1 = %r." % br0_br1)
+        raise
+
+    try:
+        assert br1_br2.img_offset == 20
+        assert br1_br2.len == 40
+    except:
+        _logger.debug("br1_br2 = %r." % br1_br2)
+        raise
