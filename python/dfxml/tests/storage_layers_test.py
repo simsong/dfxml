@@ -217,6 +217,32 @@ def test_solaris_ps_in_partition():
         raise
     os.remove(tmp_filename)
 
+def test_partition_in_partition():
+    #TODO Remove "+" on DFXML Schema 1.3.0 tracking.
+    dobj = Objects.DFXMLObject(version="1.2.0+")
+
+    psobj = Objects.PartitionSystemObject()
+    psobj.pstype_str = "mbr"
+    dobj.append(psobj)
+
+    pobj_outer = Objects.PartitionObject()
+    psobj.append(pobj_outer)
+
+    pobj_inner = Objects.PartitionObject()
+    pobj_outer.append(pobj_inner)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        psobj_reconst = dobj_reconst.partition_systems[0]
+        pobj_outer_reconst = psobj_reconst.partitions[0]
+        pobj_inner_reconst = pobj_outer_reconst.partitions[0]
+        assert isinstance(pobj_inner_reconst, Objects.PartitionObject)
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
 def test_hfsplus_in_hfs():
     dobj = Objects.DFXMLObject(version="1.2.0")
     vobj_outer = Objects.VolumeObject()
