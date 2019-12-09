@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test glomming of contiguous byte runs
 	* objects.py tests: Move byte run tests into single script call
 	* objects.py: Treat hash property population with loop
 	* objects.py: Correct population of _warned_elements
