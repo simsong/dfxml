@@ -265,14 +265,15 @@ class DFXMLObject(object):
             self.disk_images.append(value)
         elif isinstance(value, PartitionSystemObject):
             self.partition_systems.append(value)
-        # PartitionObjects not included in this list; no application thought of so far.
+        elif isinstance(value, PartitionObject):
+            self.partitions.append(value)
         elif isinstance(value, VolumeObject):
             self.volumes.append(value)
         elif isinstance(value, FileObject):
             self.files.append(value)
         else:
             _logger.debug("value = %r" % value)
-            raise TypeError("Expecting a DiskImageObject, PartitionSystemObject, VolumeObject, or a FileObject.  Got instead this type: %r." % type(value))
+            raise TypeError("Expecting a DiskImageObject, PartitionSystemObject, PartitionObject, VolumeObject, or a FileObject.  Got instead this type: %r." % type(value))
 
         self.child_objects.append(value)
 
@@ -328,23 +329,33 @@ class DFXMLObject(object):
         output_fh.write("""<?xml version="1.0"?>\n""")
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+
         _logger.debug("Writing %d disk image objects for the document object." % len(self.disk_images))
         for di in self._disk_images:
             di.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d partition system objects for the document object." % len(self.partition_systems))
         for ps in self._partition_systems:
             ps.print_dfxml(output_fh)
             output_fh.write("\n")
+
+        _logger.debug("Writing %d partition objects for the document object." % len(self.partitions))
+        for p in self._partitions:
+            p.print_dfxml(output_fh)
+            output_fh.write("\n")
+
         _logger.debug("Writing %d volume objects for the document object." % len(self.volumes))
         for v in self._volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d file objects for the document object." % len(self.files))
         for f in self._files:
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
+
         output_fh.write(dfxml_foot)
         output_fh.write("\n")
 

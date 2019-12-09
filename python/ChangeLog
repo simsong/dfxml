@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py: Confirm DFXMLObject can have PartitionObject
 	* objects.py tests: Restructure storage layers test to pytest style
 	* objects.py tests: Move accessors into try-except block
 	* objects.py tests: Test glomming of byte runs with hashes
