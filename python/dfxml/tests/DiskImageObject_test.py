@@ -26,10 +26,6 @@ import libtest
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
-# TODO This script includes two functions that could stand to be in a shared library supporting the pytest tests.
-# * XML Schema conformance.
-# * File round-tripping.
-
 def test_sector_size():
     dobj = Objects.DFXMLObject(version="1.2.0")
     diobj = Objects.DiskImageObject()
