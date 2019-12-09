@@ -847,7 +847,7 @@ class DiskImageObject(object):
             elif ctn in DiskImageObject._all_properties:
                 setattr(self, ctn, ce.text)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, DiskImageObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, DiskImageObject))
                     _logger.warning("Unsure what to do with this element in a DiskImageObject: %r" % ce)
 
@@ -1051,7 +1051,7 @@ class PartitionSystemObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, PartitionSystemObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, PartitionSystemObject))
                     _logger.warning("Unsure what to do with this element in a PartitionSystemObject: %r" % ce)
 
@@ -1286,7 +1286,7 @@ class PartitionObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, PartitionObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, PartitionObject))
                     _logger.warning("Unsure what to do with this element in a PartitionObject: %r" % ce)
 
@@ -1609,7 +1609,7 @@ class VolumeObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, VolumeObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, VolumeObject))
                     _logger.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
@@ -3032,7 +3032,7 @@ class FileObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, FileObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, FileObject))
                     _logger.warning("Uncertain what to do with this element in a FileObject: %r" % ce)
 
@@ -3881,7 +3881,7 @@ class CellObject(object):
                 self.parent_object = CellObject()
                 self.parent_object.populate_from_Element(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, CellObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, CellObject))
                     _logger.warning("Uncertain what to do with this element in a CellObject: %r" % ce)
 
