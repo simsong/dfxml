@@ -39,8 +39,8 @@ def test_sector_size():
 
     # Do file I/O round trip.
     (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
-    diobj_reconst = dobj_reconst.disk_images[0]
     try:
+        diobj_reconst = dobj_reconst.disk_images[0]
         assert diobj_reconst.sector_size == 2048
         assert diobj.sector_size == diobj_reconst.sector_size
     except:
