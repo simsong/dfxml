@@ -19,11 +19,16 @@ import os
 import sys
 import copy
 import logging
+import hashlib
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
+import libtest
+
 _logger = logging.getLogger(os.path.basename(__file__))
+
+TEST_BYTE_STRING = b"test"
 
 def test_fill():
     _logger = logging.getLogger(os.path.basename(__file__))
@@ -240,3 +245,54 @@ def test_glomming_fill():
     except:
         _logger.debug("br1_br2 = %r." % br1_br2)
         raise
+
+def test_hash_properties():
+    dobj = Objects.DFXMLObject(version="1.2.0")
+
+    fobj = Objects.FileObject()
+    dobj.append(fobj)
+
+    fobj.byte_runs = Objects.ByteRuns()
+    br = Objects.ByteRun()
+    fobj.byte_runs.append(br)
+
+    fobj.filesize = len(TEST_BYTE_STRING)
+    br.len = len(TEST_BYTE_STRING)
+
+    hash_functions = {
+      "md5",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512"
+    }
+
+    # Key: Hash function.
+    # Value: Hash of the byte string b"test".
+    hash_values = dict()
+
+    for hash_function in sorted(hash_functions):
+        hash_object = getattr(hashlib, hash_function)()
+        hash_object.update(TEST_BYTE_STRING)
+        hash_values[hash_function] = hash_object.hexdigest()
+        _logger.debug("hash_values[%r] = %r." % (hash_function, hash_values[hash_function]))
+
+        setattr(fobj, hash_function, hash_values[hash_function])
+        setattr(br, hash_function, hash_values[hash_function])
+
+        assert getattr(fobj, hash_function) == hash_values[hash_function]
+        assert getattr(br, hash_function) == hash_values[hash_function]
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        fobj_reconst = dobj_reconst.files[0]
+        br_reconst = fobj_reconst.byte_runs[0]
+        for hash_function in sorted(hash_functions):
+            assert getattr(fobj_reconst, hash_function) == hash_values[hash_function]
+            assert getattr(br_reconst, hash_function) == hash_values[hash_function]
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
