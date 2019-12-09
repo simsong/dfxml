@@ -114,6 +114,13 @@ def test_file_in_non_fs_levels_flat():
     pobj = Objects.PartitionObject()
     dobj.append(pobj)
 
+    # Add file to partition.
+    fobj_pobj = Objects.FileObject()
+    fobj_pobj.alloc_inode = False
+    fobj_pobj.alloc_name = False
+    fobj_pobj.sha512 = TEST_HASH_3
+    pobj.append(fobj_pobj)
+
 def test_solaris_ps_in_partition():
     dobj = Objects.DFXMLObject(version="1.2.0")
 
