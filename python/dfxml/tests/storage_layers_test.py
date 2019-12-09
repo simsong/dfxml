@@ -94,6 +94,21 @@ def test_file_in_non_fs_levels_deep():
     fobj_pobj.sha512 = TEST_HASH_4
     pobj.append(fobj_pobj)
 
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        diobj_reconst = dobj_reconst.disk_images[0]
+        psobj_reconst = diobj_reconst.partition_systems[0]
+        pobj_reconst = psobj_reconst.partitions[0]
+        assert dobj_reconst.files[0].sha512 == TEST_HASH_1
+        assert diobj_reconst.files[0].sha512 == TEST_HASH_2
+        assert psobj_reconst.files[0].sha512 == TEST_HASH_3
+        assert pobj_reconst.files[0].sha512 == TEST_HASH_4
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
 def test_file_in_non_fs_levels_flat():
     """
     This test follows a simple, horizontal storage layer stack (every container attached to top document object), and adds a file for each container.
@@ -140,6 +155,21 @@ def test_file_in_non_fs_levels_flat():
     fobj_pobj.sha512 = TEST_HASH_4
     pobj.append(fobj_pobj)
 
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        diobj_reconst = dobj_reconst.disk_images[0]
+        psobj_reconst = dobj_reconst.partition_systems[0]
+        pobj_reconst = dobj_reconst.partitions[0]
+        assert dobj_reconst.files[0].sha512 == TEST_HASH_1
+        assert diobj_reconst.files[0].sha512 == TEST_HASH_2
+        assert psobj_reconst.files[0].sha512 == TEST_HASH_3
+        assert pobj_reconst.files[0].sha512 == TEST_HASH_4
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
 def test_solaris_ps_in_partition():
     dobj = Objects.DFXMLObject(version="1.2.0")
 
@@ -173,6 +203,20 @@ def test_solaris_ps_in_partition():
     fobj_psobj_inner.sha512 = TEST_HASH_3
     psobj_inner.append(fobj_psobj_inner)
 
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        psobj_outer_reconst = dobj_reconst.partition_systems[0]
+        pobj_reconst = psobj_outer_reconst.partitions[0]
+        psobj_inner_reconst = pobj_reconst.partition_systems[0]
+        assert psobj_outer_reconst.files[0].sha512 == TEST_HASH_1
+        assert pobj_reconst.files[0].sha512 == TEST_HASH_2
+        assert psobj_inner_reconst.files[0].sha512 == TEST_HASH_3
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
 def test_hfsplus_in_hfs():
     dobj = Objects.DFXMLObject(version="1.2.0")
     vobj_outer = Objects.VolumeObject()
@@ -182,6 +226,19 @@ def test_hfsplus_in_hfs():
     vobj_inner = Objects.VolumeObject()
     vobj_inner.ftype_str = "hfsplus"
     vobj_outer.append(vobj_inner)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        vobj_outer_reconst = dobj_reconst.volumes[0]
+        vobj_inner_reconst = vobj_outer_reconst.volumes[0]
+        assert isinstance(vobj_inner_reconst, Objects.VolumeObject)
+        assert vobj_outer_reconst.ftype_str == "hfs"
+        assert vobj_inner_reconst.ftype_str == "hfsplus"
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
 
 def test_disk_image_in_file_system():
     dobj = Objects.DFXMLObject(version="1.2.0")
@@ -202,3 +259,15 @@ def test_disk_image_in_file_system():
     fobj_diobj.alloc_name = False
     fobj_diobj.sha512 = TEST_HASH_2
     diobj.append(fobj_diobj)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        vobj_reconst = dobj_reconst.volumes[0]
+        diobj_reconst = vobj_reconst.disk_images[0]
+        assert vobj_reconst.files[0].sha512 == TEST_HASH_1
+        assert diobj_reconst.files[0].sha512 == TEST_HASH_2
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)

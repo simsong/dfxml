@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Add I/O round-trip to storage layers tests
 	* objects.py: Implement "poststream" de-serialization of remaining storage layers
 	* objects.py: Add parser transition for partition system containing file
 	* objects.py: Add parser transition for partition system without containing disk image
