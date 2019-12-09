@@ -837,6 +837,8 @@ class DiskImageObject(object):
             self.partition_systems.append(obj)
         elif isinstance(obj, VolumeObject):
             self.volumes.append(obj)
+        elif isinstance(obj, FileObject):
+            self.files.append(obj)
         else:
             raise ValueError("Unexpected object type passed to DiskImageObject.append(): %r." % type(obj))
         self.child_objects.append(obj)

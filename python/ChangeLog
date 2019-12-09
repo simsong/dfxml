@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py: Confirm DiskImageObject can have FileObject 
 	* objects.py tests: Confirm PartitionObject can have FileObject 
 	* objects.py: Confirm DFXMLObject can have PartitionObject
 	* objects.py tests: Restructure storage layers test to pytest style
