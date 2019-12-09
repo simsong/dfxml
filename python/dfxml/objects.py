@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 
 # Revision Log
 # 2018-07-22 @simsong - removed calls to logging, since this module shouldn't create log files.
@@ -51,6 +51,9 @@ _logger = logging.getLogger(os.path.basename(__file__))
 # Contains: (namespace, local name, class) qualified XML element name pairs, with a reference to the class that had the problem.
 _warned_elements = set([])
 _warned_byterun_attribs = set([])
+
+# Contains: (hash name, class) pairs, indicating the hash type and on what class it was found.
+_warned_hashes = set([])
 
 # Contains: Unexpected 'facet' values on byte_runs elements.
 _warned_byterun_facets = set([])
@@ -262,14 +265,15 @@ class DFXMLObject(object):
             self.disk_images.append(value)
         elif isinstance(value, PartitionSystemObject):
             self.partition_systems.append(value)
-        # PartitionObjects not included in this list; no application thought of so far.
+        elif isinstance(value, PartitionObject):
+            self.partitions.append(value)
         elif isinstance(value, VolumeObject):
             self.volumes.append(value)
         elif isinstance(value, FileObject):
             self.files.append(value)
         else:
             _logger.debug("value = %r" % value)
-            raise TypeError("Expecting a DiskImageObject, PartitionSystemObject, VolumeObject, or a FileObject.  Got instead this type: %r." % type(value))
+            raise TypeError("Expecting a DiskImageObject, PartitionSystemObject, PartitionObject, VolumeObject, or a FileObject.  Got instead this type: %r." % type(value))
 
         self.child_objects.append(value)
 
@@ -325,23 +329,33 @@ class DFXMLObject(object):
         output_fh.write("""<?xml version="1.0"?>\n""")
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+
         _logger.debug("Writing %d disk image objects for the document object." % len(self.disk_images))
         for di in self._disk_images:
             di.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d partition system objects for the document object." % len(self.partition_systems))
         for ps in self._partition_systems:
             ps.print_dfxml(output_fh)
             output_fh.write("\n")
+
+        _logger.debug("Writing %d partition objects for the document object." % len(self.partitions))
+        for p in self._partitions:
+            p.print_dfxml(output_fh)
+            output_fh.write("\n")
+
         _logger.debug("Writing %d volume objects for the document object." % len(self.volumes))
         for v in self._volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d file objects for the document object." % len(self.files))
         for f in self._files:
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
+
         output_fh.write(dfxml_foot)
         output_fh.write("\n")
 
@@ -823,6 +837,8 @@ class DiskImageObject(object):
             self.partition_systems.append(obj)
         elif isinstance(obj, VolumeObject):
             self.volumes.append(obj)
+        elif isinstance(obj, FileObject):
+            self.files.append(obj)
         else:
             raise ValueError("Unexpected object type passed to DiskImageObject.append(): %r." % type(obj))
         self.child_objects.append(obj)
@@ -847,7 +863,7 @@ class DiskImageObject(object):
             elif ctn in DiskImageObject._all_properties:
                 setattr(self, ctn, ce.text)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, DiskImageObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, DiskImageObject))
                     _logger.warning("Unsure what to do with this element in a DiskImageObject: %r" % ce)
 
@@ -1053,7 +1069,7 @@ class PartitionSystemObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, PartitionSystemObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, PartitionSystemObject))
                     _logger.warning("Unsure what to do with this element in a PartitionSystemObject: %r" % ce)
 
@@ -1346,7 +1362,7 @@ class PartitionObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, PartitionObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, PartitionObject))
                     _logger.warning("Unsure what to do with this element in a PartitionObject: %r" % ce)
 
@@ -1669,7 +1685,7 @@ class VolumeObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, VolumeObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, VolumeObject))
                     _logger.warning("Unsure what to do with this element in a VolumeObject: %r" % ce)
 
@@ -2167,11 +2183,27 @@ class ByteRun(object):
       "file_offset",
       "fill",
       "len",
+      "md5",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512",
       "type",
       "uncompressed_len"
     ])
 
+    _hash_properties = set([
+      "md5",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha512"
+    ])
+
     def __init__(self, *args, **kwargs):
+        self._has_hash_property = False
         for prop in ByteRun._all_properties:
             setattr(self, prop, kwargs.get(prop))
 
@@ -2192,16 +2224,37 @@ class ByteRun(object):
         if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
-        if None in [self.len, other.len]:
+        #Don't glom runs with hashes
+        if self.has_hash_property or other.has_hash_property:
             return None
 
+        if self.len is None or other.len is None:
+            return None
+
+        # Test for contiguity.
+        contiguous = None
         for prop in ["img_offset", "fs_offset", "file_offset"]:
-            if None in [getattr(self, prop), getattr(other, prop)]:
-                continue
-            if getattr(self, prop) + self.len == getattr(other, prop):
-                retval = copy.deepcopy(self)
-                retval.len += other.len
-                return retval
+            self_prop = getattr(self, prop)
+            other_prop = getattr(other, prop)
+
+            if self_prop is None or other_prop is None:
+                if self_prop is None and other_prop is None:
+                    # Both properties are absent - this is fine.
+                    continue
+                else:
+                    # Incomparable information present.  Do not glom.
+                    # As a design decision, if other properties are present, they are NOT used to infer this semi-present property.
+                    return None
+
+            # Test contiguity for THIS property.  If any fail, the loop concludes.
+            if self_prop + self.len == other_prop:
+                contiguous = True
+            else:
+                return None
+        if contiguous:
+            retval = copy.deepcopy(self)
+            retval.len += other.len
+            return retval
         return None
 
     def __eq__(self, other):
@@ -2213,6 +2266,15 @@ class ByteRun(object):
                 _logger.warning("A ByteRun comparison was called against a non-ByteRun object: " + repr(other) + ".")
                 _warned_byterun_badtypecomp = True
             return False
+
+        #TODO Determine a way to set an ignore flag for comparison of byte run hashes.  Maybe byte_run/@has_hash_property, as a virtual XPath reference?
+        #Check hashes
+        if self.has_hash_property or other.has_hash_property:
+            for hash_name in ByteRun._hash_properties:
+                if self.hash_name is None or other.hash_name is None:
+                    continue
+                if self.hash_name != other.hash_name:
+                    return False
 
         # Check values.
         return \
@@ -2236,6 +2298,9 @@ class ByteRun(object):
         return "ByteRun(" + ", ".join(parts) + ")"
 
     def populate_from_Element(self, e):
+        global _warned_elements
+        global _warned_hashes
+
         _typecheck(e, (ET.Element, ET.ElementTree))
 
         # Split into namespace and tagname.
@@ -2257,14 +2322,50 @@ class ByteRun(object):
                 _warned_byterun_attribs.add(prop)
                 _logger.warning("No instructions present for processing this attribute found on a byte run: %r." % prop)
 
+        # Look through direct-child elements for other properties.
+        for ce in e.findall("./*"):
+            (cns, ctn) = _qsplit(ce.tag)
+            #_logger.debug("Populating from child element: %r." % ce.tag)
+            if ctn == "hashdigest":
+                type_lower = ce.attrib["type"].lower()
+                if type_lower in ByteRun._hash_properties:
+                    setattr(self, type_lower, ce.text)
+                else:
+                    if (type_lower, ByteRun) not in _warned_hashes:
+                        _warned_hashes.add((type_lower, ByteRun))
+                        _logger.warning("Uncertain what to do with this hash encountered in a ByteRun: %r." % type_lower)
+            else:
+                if (cns, ctn, ByteRun) not in _warned_elements:
+                    _warned_elements.add((cns, ctn, ByteRun))
+                    _logger.warning("Uncertain what to do with this element in a ByteRun: %r" % ce)
+
     def to_Element(self):
         outel = ET.Element("byte_run")
+
+        if self.has_hash_property:
+            def _append_hash(name):
+                value = getattr(self, name)
+                if not value is None:
+                    tmpel = ET.Element("hashdigest")
+                    tmpel.attrib["type"] = name
+                    tmpel.text = value
+                    outel.append(tmpel)
+
+            for prop in sorted(ByteRun._hash_properties):
+                _append_hash(prop)
+
         for prop in ByteRun._all_properties:
             val = getattr(self, prop)
+
             # Skip null properties.
             if val is None:
                 continue
 
+            #Hash properties become child elements - handled in sort order.
+            if prop in ByteRun._hash_properties:
+                continue
+
+            # Everything else becomes attributes.
             if isinstance(val, bytes):
                 outel.attrib[prop] = str(struct.unpack("b", val)[0])
             else:
@@ -2315,6 +2416,14 @@ class ByteRun(object):
         self._fs_offset = _intcast(val)
 
     @property
+    def has_hash_property(self):
+        """
+        has_hash_property is a convenience variable without a setter, not to be serialized.
+        This property intentionally has no setter.
+        """
+        return self._has_hash_property
+
+    @property
     def img_offset(self):
         return self._img_offset
 
@@ -2329,6 +2438,66 @@ class ByteRun(object):
     @len.setter
     def len(self, val):
         self._len = _intcast(val)
+
+    @property
+    def md5(self):
+        return self._md5
+
+    @md5.setter
+    def md5(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._md5 = _strcast(val)
+
+    @property
+    def sha1(self):
+        return self._sha1
+
+    @sha1.setter
+    def sha1(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha1 = _strcast(val)
+
+    @property
+    def sha224(self):
+        return self._sha224
+
+    @sha224.setter
+    def sha224(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha224 = _strcast(val)
+
+    @property
+    def sha256(self):
+        return self._sha256
+
+    @sha256.setter
+    def sha256(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha256 = _strcast(val)
+
+    @property
+    def sha384(self):
+        return self._sha384
+
+    @sha384.setter
+    def sha384(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha384 = _strcast(val)
+
+    @property
+    def sha512(self):
+        return self._sha512
+
+    @sha512.setter
+    def sha512(self, val):
+        if not val is None:
+            self._has_hash_property = True
+        self._sha512 = _strcast(val)
 
     @property
     def type(self):
@@ -3011,6 +3180,7 @@ class FileObject(object):
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
+        global _warned_hashes
         _typecheck(e, (ET.Element, ET.ElementTree))
 
         #_logger.debug("FileObject.populate_from_Element(%r)" % e)
@@ -3063,20 +3233,13 @@ class FileObject(object):
                     self.byte_runs = ByteRuns()
                     self.byte_runs.populate_from_Element(ce)
             elif ctn == "hashdigest":
-                if ce.attrib["type"].lower() == "md5":
-                    self.md5 = ce.text
-                elif ce.attrib["type"].lower() == "md6":
-                    self.md6 = ce.text
-                elif ce.attrib["type"].lower() == "sha1":
-                    self.sha1 = ce.text
-                elif ce.attrib["type"].lower() == "sha224":
-                    self.sha224 = ce.text
-                elif ce.attrib["type"].lower() == "sha256":
-                    self.sha256 = ce.text
-                elif ce.attrib["type"].lower() == "sha384":
-                    self.sha384 = ce.text
-                elif ce.attrib["type"].lower() == "sha512":
-                    self.sha512 = ce.text
+                type_lower = ce.attrib["type"].lower()
+                if type_lower in FileObject._hash_properties:
+                    setattr(self, type_lower, ce.text)
+                else:
+                    if (type_lower, FileObject) not in _warned_hashes:
+                        _warned_hashes.add((type_lower, FileObject))
+                        _logger.warning("Uncertain what to do with this hash encountered in a FileObject: %r." % type_lower)
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
@@ -3092,7 +3255,7 @@ class FileObject(object):
                 # Put all non-DFXML-namespace elements into the externals list.
                 self.externals.append(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, FileObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, FileObject))
                     _logger.warning("Uncertain what to do with this element in a FileObject: %r" % ce)
 
@@ -3941,7 +4104,7 @@ class CellObject(object):
                 self.parent_object = CellObject()
                 self.parent_object.populate_from_Element(ce)
             else:
-                if (cns, ctn) not in _warned_elements:
+                if (cns, ctn, CellObject) not in _warned_elements:
                     _warned_elements.add((cns, ctn, CellObject))
                     _logger.warning("Uncertain what to do with this element in a CellObject: %r" % ce)
 
@@ -4262,6 +4425,7 @@ class Parser(object):
 
     _DISK_IMAGE_START           = 100
     DISK_IMAGE_PRESTREAM        = 101
+    DISK_IMAGE_POSTSTREAM       = 102
     _DISK_IMAGE_END             = 199
 
     _PARTITION_SYSTEM_START     = 200
@@ -4271,6 +4435,7 @@ class Parser(object):
 
     _PARTITION_START            = 300
     PARTITION_PRESTREAM         = 301
+    PARTITION_POSTSTREAM        = 302
     _PARTITION_END              = 399
 
     _VOLUME_START               = 400
@@ -4301,6 +4466,8 @@ class Parser(object):
       _DISK_IMAGE_END: {
         _DFXML_END,
         _DISK_IMAGE_START,
+        _FILE_START,
+        _PARTITION_SYSTEM_START,
         _VOLUME_END,
         DFXML_POSTSTREAM
       },
@@ -4309,17 +4476,20 @@ class Parser(object):
       },
       _PARTITION_SYSTEM_END: {
         _DFXML_END,
-        _DISK_IMAGE_END,
         _PARTITION_SYSTEM_START,
-        _PARTITION_END,
+        _PARTITION_START,
         _VOLUME_START,
-        DFXML_POSTSTREAM
+        _FILE_START,
+        DFXML_POSTSTREAM,
+        DISK_IMAGE_POSTSTREAM,
+        PARTITION_POSTSTREAM
       },
       _PARTITION_START: {
         PARTITION_PRESTREAM
       },
       _PARTITION_END: {
         _PARTITION_START,
+        _FILE_START,
         PARTITION_SYSTEM_POSTSTREAM
       },
       _VOLUME_START: {
@@ -4327,11 +4497,12 @@ class Parser(object):
       },
       _VOLUME_END: {
         _DFXML_END,
-        _DISK_IMAGE_END,
-        _PARTITION_END,
         _VOLUME_START,
         _VOLUME_END,
-        DFXML_POSTSTREAM
+        DFXML_POSTSTREAM,
+        DISK_IMAGE_POSTSTREAM,
+        PARTITION_POSTSTREAM,
+        VOLUME_POSTSTREAM
       },
       _FILE_START: {
         _FILE_END
@@ -4340,7 +4511,9 @@ class Parser(object):
         _FILE_START,
         _PARTITION_SYSTEM_END,
         DFXML_POSTSTREAM,
+        DISK_IMAGE_POSTSTREAM,
         PARTITION_SYSTEM_POSTSTREAM,
+        PARTITION_POSTSTREAM,
         VOLUME_POSTSTREAM
       },
       DFXML_PRESTREAM: {
@@ -4355,10 +4528,17 @@ class Parser(object):
       DFXML_POSTSTREAM: {
         _DFXML_END
       },
+      DISK_IMAGE_POSTSTREAM: {
+        _DISK_IMAGE_END
+      },
       DISK_IMAGE_PRESTREAM: {
-        _DISK_IMAGE_END,
         _PARTITION_SYSTEM_START,
-        _VOLUME_START
+        _VOLUME_START,
+        _FILE_START,
+        DISK_IMAGE_POSTSTREAM
+      },
+      PARTITION_SYSTEM_POSTSTREAM: {
+        _PARTITION_SYSTEM_END
       },
       PARTITION_SYSTEM_POSTSTREAM: {
         _PARTITION_SYSTEM_END
@@ -4368,10 +4548,14 @@ class Parser(object):
         _PARTITION_START,
         PARTITION_SYSTEM_POSTSTREAM
       },
+      PARTITION_POSTSTREAM: {
+        _PARTITION_END
+      },
       PARTITION_PRESTREAM: {
         _PARTITION_SYSTEM_START,
-        _PARTITION_END,
-        _VOLUME_START
+        _VOLUME_START,
+        _FILE_START,
+        PARTITION_POSTSTREAM
       },
       VOLUME_POSTSTREAM: {
         _VOLUME_END
@@ -4468,6 +4652,9 @@ class Parser(object):
                         elem.clear()
                         elem_handled = True
                     elif ln == "partitionobject":
+                        # A transition through the PARTITION_POSTSTREAM state may have to be inferred.
+                        if not self.state == Parser.PARTITION_POSTSTREAM:
+                            for eop in self.transition(Parser.PARTITION_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._PARTITION_END): yield eop
                         elem.clear()
                         elem_handled = True
@@ -4479,6 +4666,9 @@ class Parser(object):
                         elem.clear()
                         elem_handled = True
                     elif ln == "diskimageobject":
+                        # A transition through the DISK_IMAGE_POSTSTREAM state may have to be inferred.
+                        if not self.state == Parser.DISK_IMAGE_POSTSTREAM:
+                            for eop in self.transition(Parser.DISK_IMAGE_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
                         elem.clear()
                         elem_handled = True
@@ -4503,8 +4693,12 @@ class Parser(object):
 
                         if isinstance(self.object_stack[-1], DFXMLObject):
                             for eop in self.transition(Parser.DFXML_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], DiskImageObject):
+                            for eop in self.transition(Parser.DISK_IMAGE_POSTSTREAM): yield eop
                         elif isinstance(self.object_stack[-1], PartitionSystemObject):
                             for eop in self.transition(Parser.PARTITION_SYSTEM_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], PartitionObject):
+                            for eop in self.transition(Parser.PARTITION_POSTSTREAM): yield eop
                         elif isinstance(self.object_stack[-1], VolumeObject):
                             for eop in self.transition(Parser.VOLUME_POSTSTREAM): yield eop
 
@@ -4531,7 +4725,9 @@ class Parser(object):
     def in_poststream_state(self):
         return self.state in {
           Parser.DFXML_POSTSTREAM,
+          Parser.DISK_IMAGE_POSTSTREAM,
           Parser.PARTITION_SYSTEM_POSTSTREAM,
+          Parser.PARTITION_POSTSTREAM,
           Parser.VOLUME_POSTSTREAM
         }
 
