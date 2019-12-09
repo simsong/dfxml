@@ -2135,16 +2135,33 @@ class ByteRun(object):
         if not self.uncompressed_len is None or not other.uncompressed_len is None:
             return None
 
-        if None in [self.len, other.len]:
+        if self.len is None or other.len is None:
             return None
 
+        # Test for contiguity.
+        contiguous = None
         for prop in ["img_offset", "fs_offset", "file_offset"]:
-            if None in [getattr(self, prop), getattr(other, prop)]:
-                continue
-            if getattr(self, prop) + self.len == getattr(other, prop):
-                retval = copy.deepcopy(self)
-                retval.len += other.len
-                return retval
+            self_prop = getattr(self, prop)
+            other_prop = getattr(other, prop)
+
+            if self_prop is None or other_prop is None:
+                if self_prop is None and other_prop is None:
+                    # Both properties are absent - this is fine.
+                    continue
+                else:
+                    # Incomparable information present.  Do not glom.
+                    # As a design decision, if other properties are present, they are NOT used to infer this semi-present property.
+                    return None
+
+            # Test contiguity for THIS property.  If any fail, the loop concludes.
+            if self_prop + self.len == other_prop:
+                contiguous = True
+            else:
+                return None
+        if contiguous:
+            retval = copy.deepcopy(self)
+            retval.len += other.len
+            return retval
         return None
 
     def __eq__(self, other):
