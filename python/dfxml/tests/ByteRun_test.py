@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # This software was developed at the National Institute of Standards
 # and Technology in whole or in part by employees of the Federal
@@ -12,16 +13,19 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__="0.1.0"
+__version__ = "0.1.0"
 
 import os
 import sys
 import copy
+import logging
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
-def test_all():
+_logger = logging.getLogger(os.path.basename(__file__))
+
+def test_img_offset_len():
     br1 = Objects.ByteRun()
     br1.img_offset = 512
     br1.len = 20
@@ -33,3 +37,36 @@ def test_all():
     br2.img_offset += br1.len
 
     assert (br1 + br2).len == 40
+
+def test_fill():
+    _logger = logging.getLogger(os.path.basename(__file__))
+    logging.basicConfig(level=logging.DEBUG)
+
+    br = Objects.ByteRun()
+    _logger.debug("br = %r." % br)
+
+    assert br.fill is None
+
+    br.fill = b'\x00'
+    _logger.debug("br.fill = %r." % br.fill)
+    assert br.fill == b'\x00'
+
+    #Catch current implementation decision.
+    multibyte_failed = None
+    try:
+        br.fill = b'\x00\x01'
+    except NotImplementedError as e:
+        multibyte_failed = True
+    assert multibyte_failed
+
+    br.fill = 0
+    _logger.debug("br.fill = %r." % br.fill)
+    assert br.fill == b'\x00'
+
+    br.fill = "0"
+    _logger.debug("br.fill = %r." % br.fill)
+    assert br.fill == b'\x00'
+
+    br.fill = 1
+    _logger.debug("br.fill = %r." % br.fill)
+    assert br.fill == b'\x01'
