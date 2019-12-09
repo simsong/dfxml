@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 import os
 import sys
@@ -26,10 +26,6 @@ import libtest
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
-# TODO This script includes two functions that could stand to be in a shared library supporting the pytest tests.
-# * XML Schema conformance.
-# * File round-tripping.
-
 def test_sector_size():
     dobj = Objects.DFXMLObject(version="1.2.0")
     diobj = Objects.DiskImageObject()
@@ -39,8 +35,8 @@ def test_sector_size():
 
     # Do file I/O round trip.
     (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
-    diobj_reconst = dobj_reconst.disk_images[0]
     try:
+        diobj_reconst = dobj_reconst.disk_images[0]
         assert diobj_reconst.sector_size == 2048
         assert diobj.sector_size == diobj_reconst.sector_size
     except:

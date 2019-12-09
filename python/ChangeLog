@@ -1,6 +1,28 @@
+2019-12-09    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Add I/O round-trip to storage layers tests
+	* objects.py: Implement "poststream" de-serialization of remaining storage layers
+	* objects.py: Add parser transition for partition system containing file
+	* objects.py: Add parser transition for partition system without containing disk image
+	* objects.py: Whitespace-pad parser enums
+	* objects.py: Confirm DiskImageObject can have FileObject 
+	* objects.py tests: Confirm PartitionObject can have FileObject 
+	* objects.py: Confirm DFXMLObject can have PartitionObject
+	* objects.py tests: Restructure storage layers test to pytest style
+	* objects.py tests: Move accessors into try-except block
+	* objects.py tests: Test glomming of byte runs with hashes
+	* objects.py tests: Test byte run hash serialization
+	* objects.py: Add hash properties to byte runs
+	* objects.py tests: Test glomming of out-of-order byte runs
+	* objects.py: Correct byte run contiguity tests across independently-ordered properties
+	* objects.py tests: Test byte run glomming with fill-byte
+	* objects.py tests: Test glomming of contiguous byte runs
+	* objects.py tests: Move byte run tests into single script call
+	* objects.py: Treat hash property population with loop
+	* objects.py: Correct population of _warned_elements
+
 2019-12-02    <alexander.nelson@nist.gov>
 
-	* Python: Bump versions of updated scripts
 	* objects.py tests: Test round-trip of external-namespace elements
 	* objects.py tests: Test ways to encounter error element
 	* objects.py: Revise handling of error element in parser
