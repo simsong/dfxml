@@ -1,5 +1,6 @@
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py: Treat hash property population with loop
 	* objects.py: Correct population of _warned_elements
 
 2019-12-02    <alexander.nelson@nist.gov>

@@ -52,6 +52,9 @@ _logger = logging.getLogger(os.path.basename(__file__))
 _warned_elements = set([])
 _warned_byterun_attribs = set([])
 
+# Contains: (hash name, class) pairs, indicating the hash type and on what class it was found.
+_warned_hashes = set([])
+
 # Contains: Unexpected 'facet' values on byte_runs elements.
 _warned_byterun_facets = set([])
 
@@ -2951,6 +2954,7 @@ class FileObject(object):
     def populate_from_Element(self, e):
         """Populates this FileObject's properties from an ElementTree Element.  The Element need not be retained."""
         global _warned_elements
+        global _warned_hashes
         _typecheck(e, (ET.Element, ET.ElementTree))
 
         #_logger.debug("FileObject.populate_from_Element(%r)" % e)
@@ -3003,20 +3007,13 @@ class FileObject(object):
                     self.byte_runs = ByteRuns()
                     self.byte_runs.populate_from_Element(ce)
             elif ctn == "hashdigest":
-                if ce.attrib["type"].lower() == "md5":
-                    self.md5 = ce.text
-                elif ce.attrib["type"].lower() == "md6":
-                    self.md6 = ce.text
-                elif ce.attrib["type"].lower() == "sha1":
-                    self.sha1 = ce.text
-                elif ce.attrib["type"].lower() == "sha224":
-                    self.sha224 = ce.text
-                elif ce.attrib["type"].lower() == "sha256":
-                    self.sha256 = ce.text
-                elif ce.attrib["type"].lower() == "sha384":
-                    self.sha384 = ce.text
-                elif ce.attrib["type"].lower() == "sha512":
-                    self.sha512 = ce.text
+                type_lower = ce.attrib["type"].lower()
+                if type_lower in FileObject._hash_properties:
+                    setattr(self, type_lower, ce.text)
+                else:
+                    if (type_lower, FileObject) not in _warned_hashes:
+                        _warned_hashes.add((type_lower, FileObject))
+                        _logger.warning("Uncertain what to do with this hash encountered in a FileObject: %r." % type_lower)
             elif ctn == "original_fileobject":
                 self.original_fileobject = FileObject()
                 self.original_fileobject.populate_from_Element(ce)
