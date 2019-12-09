@@ -4365,14 +4365,17 @@ class Parser(object):
 
     _DISK_IMAGE_START           = 100
     DISK_IMAGE_PRESTREAM        = 101
+    DISK_IMAGE_POSTSTREAM       = 102
     _DISK_IMAGE_END             = 199
 
     _PARTITION_SYSTEM_START     = 200
     PARTITION_SYSTEM_PRESTREAM  = 201
+    PARTITION_SYSTEM_POSTSTREAM = 202
     _PARTITION_SYSTEM_END       = 299
 
     _PARTITION_START            = 300
     PARTITION_PRESTREAM         = 301
+    PARTITION_POSTSTREAM        = 302
     _PARTITION_END              = 399
 
     _VOLUME_START               = 400
@@ -4403,6 +4406,8 @@ class Parser(object):
       _DISK_IMAGE_END: {
         _DFXML_END,
         _DISK_IMAGE_START,
+        _FILE_START,
+        _PARTITION_SYSTEM_START,
         _VOLUME_END,
         DFXML_POSTSTREAM
       },
@@ -4411,29 +4416,33 @@ class Parser(object):
       },
       _PARTITION_SYSTEM_END: {
         _DFXML_END,
-        _DISK_IMAGE_END,
         _PARTITION_SYSTEM_START,
-        _PARTITION_END,
+        _PARTITION_START,
         _VOLUME_START,
-        DFXML_POSTSTREAM
+        _FILE_START,
+        DFXML_POSTSTREAM,
+        DISK_IMAGE_POSTSTREAM,
+        PARTITION_POSTSTREAM
       },
       _PARTITION_START: {
         PARTITION_PRESTREAM
       },
       _PARTITION_END: {
-        _PARTITION_SYSTEM_END,
-        _PARTITION_START
+        _PARTITION_START,
+        _FILE_START,
+        PARTITION_SYSTEM_POSTSTREAM
       },
       _VOLUME_START: {
         VOLUME_PRESTREAM
       },
       _VOLUME_END: {
         _DFXML_END,
-        _DISK_IMAGE_END,
-        _PARTITION_END,
         _VOLUME_START,
         _VOLUME_END,
-        DFXML_POSTSTREAM
+        DFXML_POSTSTREAM,
+        DISK_IMAGE_POSTSTREAM,
+        PARTITION_POSTSTREAM,
+        VOLUME_POSTSTREAM
       },
       _FILE_START: {
         _FILE_END
@@ -4442,6 +4451,9 @@ class Parser(object):
         _FILE_START,
         _PARTITION_SYSTEM_END,
         DFXML_POSTSTREAM,
+        DISK_IMAGE_POSTSTREAM,
+        PARTITION_SYSTEM_POSTSTREAM,
+        PARTITION_POSTSTREAM,
         VOLUME_POSTSTREAM
       },
       DFXML_PRESTREAM: {
@@ -4456,20 +4468,31 @@ class Parser(object):
       DFXML_POSTSTREAM: {
         _DFXML_END
       },
+      DISK_IMAGE_POSTSTREAM: {
+        _DISK_IMAGE_END
+      },
       DISK_IMAGE_PRESTREAM: {
-        _DISK_IMAGE_END,
         _PARTITION_SYSTEM_START,
-        _VOLUME_START
+        _VOLUME_START,
+        _FILE_START,
+        DISK_IMAGE_POSTSTREAM
+      },
+      PARTITION_SYSTEM_POSTSTREAM: {
+        _PARTITION_SYSTEM_END
       },
       PARTITION_SYSTEM_PRESTREAM: {
         _FILE_START,
-        _PARTITION_SYSTEM_END,
-        _PARTITION_START
+        _PARTITION_START,
+        PARTITION_SYSTEM_POSTSTREAM
+      },
+      PARTITION_POSTSTREAM: {
+        _PARTITION_END
       },
       PARTITION_PRESTREAM: {
         _PARTITION_SYSTEM_START,
-        _PARTITION_END,
-        _VOLUME_START
+        _VOLUME_START,
+        _FILE_START,
+        PARTITION_POSTSTREAM
       },
       VOLUME_POSTSTREAM: {
         _VOLUME_END
@@ -4566,14 +4589,23 @@ class Parser(object):
                         elem.clear()
                         elem_handled = True
                     elif ln == "partitionobject":
+                        # A transition through the PARTITION_POSTSTREAM state may have to be inferred.
+                        if not self.state == Parser.PARTITION_POSTSTREAM:
+                            for eop in self.transition(Parser.PARTITION_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._PARTITION_END): yield eop
                         elem.clear()
                         elem_handled = True
                     elif ln == "partitionsystemobject":
+                        # A transition through the PARTITION_SYSTEM_POSTSTREAM state may have to be inferred.
+                        if not self.state == Parser.PARTITION_SYSTEM_POSTSTREAM:
+                            for eop in self.transition(Parser.PARTITION_SYSTEM_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop
                         elem.clear()
                         elem_handled = True
                     elif ln == "diskimageobject":
+                        # A transition through the DISK_IMAGE_POSTSTREAM state may have to be inferred.
+                        if not self.state == Parser.DISK_IMAGE_POSTSTREAM:
+                            for eop in self.transition(Parser.DISK_IMAGE_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._DISK_IMAGE_END): yield eop
                         elem.clear()
                         elem_handled = True
@@ -4598,6 +4630,12 @@ class Parser(object):
 
                         if isinstance(self.object_stack[-1], DFXMLObject):
                             for eop in self.transition(Parser.DFXML_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], DiskImageObject):
+                            for eop in self.transition(Parser.DISK_IMAGE_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], PartitionSystemObject):
+                            for eop in self.transition(Parser.PARTITION_SYSTEM_POSTSTREAM): yield eop
+                        elif isinstance(self.object_stack[-1], PartitionObject):
+                            for eop in self.transition(Parser.PARTITION_POSTSTREAM): yield eop
                         elif isinstance(self.object_stack[-1], VolumeObject):
                             for eop in self.transition(Parser.VOLUME_POSTSTREAM): yield eop
 
@@ -4624,6 +4662,9 @@ class Parser(object):
     def in_poststream_state(self):
         return self.state in {
           Parser.DFXML_POSTSTREAM,
+          Parser.DISK_IMAGE_POSTSTREAM,
+          Parser.PARTITION_SYSTEM_POSTSTREAM,
+          Parser.PARTITION_POSTSTREAM,
           Parser.VOLUME_POSTSTREAM
         }
 
