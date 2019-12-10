@@ -791,6 +791,7 @@ class DiskImageObject(object):
     _all_properties = set([
       "byte_runs",
       "child_objects",
+      "error",
       "externals",
       "files",
       "partition_systems",
@@ -803,6 +804,7 @@ class DiskImageObject(object):
 
         self._byte_runs = None
         self._child_objects = []
+        self._error = None
         self._files = []
         self._partition_systems = []
         self._sector_size = None
@@ -843,6 +845,33 @@ class DiskImageObject(object):
             raise ValueError("Unexpected object type passed to DiskImageObject.append(): %r." % type(obj))
         self.child_objects.append(obj)
 
+    def pop_poststream_elements(self, diskimage_element):
+        """
+        This function is a utility function for the two whole-object serialization methods, print_dfxml (to string) and to_Element (to ET.Element).
+
+        This function will mutate the input argument diskimage_element, removing the 'poststream' elements.  diskimage_element is expected to be the element created by self.to_partial_Element.
+
+        Returns a list of child elements in DFXML Schema order.  List might be empty.
+        """
+        retval = []
+
+        errorel = None
+        if not (self.error is None or self.error == ""):
+            if len(diskimage_element) == 0:
+                raise ValueError("Inconsistent serialization state: Partial disk image XML element has no child elements, but at least the 'error' object property was set.")
+            if _qsplit(diskimage_element[-1].tag)[1] == "error":
+                # (ET.Element does not have pop().)
+                errorel = diskimage_element[-1]
+                del(diskimage_element[-1])
+            else:
+                # This branch of code should only be reached in unit testing, as it depends on the output of self.to_partial_Element.
+                if diskimage_element.find("error"):
+                    raise ValueError("Inconsistent serialization state: Partial disk image XML element has an immediate child named 'error', but not as the last child as expected from the schema.")
+        if not errorel is None:
+            retval.append(errorel)
+
+        return retval
+
     def populate_from_Element(self, e):
         global _warned_elements
 
@@ -869,7 +898,6 @@ class DiskImageObject(object):
 
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
-        dfxml_wrapper = _ET_tostring(pe)
 
         if len(pe) == 0 \
           and len(self.child_objects) == 0:
@@ -877,6 +905,12 @@ class DiskImageObject(object):
             return
 
         dfxml_foot = "</diskimageobject>"
+
+        # Deal with "poststream"-section elements.  At the time of this writing, that is just the "error" element.
+        # This needs to be done before child-counting, string rendering, and manipulation.
+        poststream_elements = self.pop_poststream_elements(pe)
+
+        dfxml_wrapper = _ET_tostring(pe)
 
         # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
@@ -887,24 +921,34 @@ class DiskImageObject(object):
 
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+
         _logger.debug("Writing %d partition system objects for this disk image." % len(self.partition_systems))
         for ps in self.partition_systems:
             ps.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d volume objects for this disk image." % len(self.volumes))
         for v in self.volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d file objects for this disk image." % len(self.files))
         for f in self.files:
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
+
+        for poststream_element in poststream_elements:
+            output_fh.write(_ET_tostring(poststream_element))
         output_fh.write(dfxml_foot)
+
         output_fh.write("\n")
 
     def to_Element(self):
         outel = self.to_partial_Element()
+
+        poststream_elements = self.pop_poststream_elements(outel)
+
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
           self.partition_systems,
@@ -914,6 +958,11 @@ class DiskImageObject(object):
             for obj in child_list:
                 tmpel = obj.to_Element()
                 outel.append(tmpel)
+
+        # These elements come after the fileobject list in the schema.
+        for poststream_element in poststream_elements:
+            outel.append(poststream_element)
+
         return outel
 
     def to_partial_Element(self):
@@ -936,7 +985,8 @@ class DiskImageObject(object):
             outel.append(self.byte_runs.to_Element())
 
         for prop in [
-          "sector_size"
+          "sector_size",
+          "error"
         ]:
             _append_str(prop)
 
@@ -955,6 +1005,14 @@ class DiskImageObject(object):
     @property
     def child_objects(self):
         return self._child_objects
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, val):
+        self._error = _strcast(val)
 
     @property
     def files(self):

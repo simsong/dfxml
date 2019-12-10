@@ -1,5 +1,6 @@
 2019-12-10    <alexander.nelson@nist.gov>
 
+	* objects.py: Add error property to disk image object
 	* Schema: Track schema branch add_disk_image_error
 
 2019-12-09    <alexander.nelson@nist.gov>
