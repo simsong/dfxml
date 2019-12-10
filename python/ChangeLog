@@ -1,3 +1,7 @@
+2019-12-10    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Reduce set of tests run by Makefile and pytest
+
 2019-12-09    <alexander.nelson@nist.gov>
 
 	* objects.py tests: Add I/O round-trip to storage layers tests
