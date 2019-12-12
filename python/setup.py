@@ -13,11 +13,11 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 setup(
   name='dfxml',
   version='1.0.1',
   url='https://github.com/simsong/dfxml',
 #  scripts=['idifference.py','rdifference.py'],
-  py_modules=['dfxml','fiwalk']
+  packages=find_packages()
 )

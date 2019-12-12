@@ -49,6 +49,9 @@
 
 2019-07-05    <alexander.nelson@nist.gov>
 
+	* setup.py: Use setuptools.find_packages
+	* setup.py: Use setuptools instead of distutils
+	* setup.py: Add unit test for setup.py pip deployment
 	* __init__.py: Catch further commenting of _logger module-level object
 
 2019-03-14    <alexander.nelson@nist.gov>
