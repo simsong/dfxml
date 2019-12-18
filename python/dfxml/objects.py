@@ -4408,8 +4408,10 @@ class Parser(object):
         _DISK_IMAGE_START,
         _FILE_START,
         _PARTITION_SYSTEM_START,
-        _VOLUME_END,
-        DFXML_POSTSTREAM
+        _PARTITION_START, #This is only expected to happen in a DFXMLObject.
+        _VOLUME_START,
+        DFXML_POSTSTREAM,
+        VOLUME_POSTSTREAM
       },
       _PARTITION_SYSTEM_START: {
         PARTITION_SYSTEM_PRESTREAM
@@ -4429,7 +4431,9 @@ class Parser(object):
       },
       _PARTITION_END: {
         _PARTITION_START,
+        _VOLUME_START, #This is only expected to happen in a DFXMLObject.
         _FILE_START,
+        DFXML_POSTSTREAM,
         PARTITION_SYSTEM_POSTSTREAM
       },
       _VOLUME_START: {
@@ -4437,6 +4441,7 @@ class Parser(object):
       },
       _VOLUME_END: {
         _DFXML_END,
+        _FILE_START,
         _VOLUME_START,
         _VOLUME_END,
         DFXML_POSTSTREAM,
@@ -4461,6 +4466,7 @@ class Parser(object):
         _DFXML_METADATA_START,
         _DISK_IMAGE_START,
         _PARTITION_SYSTEM_START,
+        _PARTITION_START,
         _VOLUME_START,
         _FILE_START,
         DFXML_POSTSTREAM
