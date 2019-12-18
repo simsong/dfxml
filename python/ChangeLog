@@ -1,3 +1,8 @@
+2019-12-18    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Test storage layers with presence permutations
+	* objects.py: Shore up storage layer transitions
+
 2019-12-10    <alexander.nelson@nist.gov>
 
 	* objects.py tests: Reduce set of tests run by Makefile and pytest
