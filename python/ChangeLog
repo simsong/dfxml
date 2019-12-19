@@ -1,3 +1,16 @@
+2019-12-19    <alexander.nelson@nist.gov>
+
+	* Schema: Update schema pointer to 'develop'
+
+2019-12-18    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Test storage layers with presence permutations
+	* objects.py: Shore up storage layer transitions
+
+2019-12-10    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Reduce set of tests run by Makefile and pytest
+
 2019-12-09    <alexander.nelson@nist.gov>
 
 	* objects.py tests: Add I/O round-trip to storage layers tests
@@ -48,6 +61,9 @@
 
 2019-07-05    <alexander.nelson@nist.gov>
 
+	* setup.py: Use setuptools.find_packages
+	* setup.py: Use setuptools instead of distutils
+	* setup.py: Add unit test for setup.py pip deployment
 	* __init__.py: Catch further commenting of _logger module-level object
 
 2019-03-14    <alexander.nelson@nist.gov>

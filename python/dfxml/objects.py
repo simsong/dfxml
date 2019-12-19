@@ -18,7 +18,7 @@ This file re-creates the major DFXML classes with an emphasis on type safety, se
 With this module, reading disk images or DFXML files is done with the parse or iterparse functions.  Writing DFXML files can be done with the DFXMLObject.print_dfxml function.
 """
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 
 # Revision Log
 # 2018-07-22 @simsong - removed calls to logging, since this module shouldn't create log files.
@@ -4468,8 +4468,10 @@ class Parser(object):
         _DISK_IMAGE_START,
         _FILE_START,
         _PARTITION_SYSTEM_START,
-        _VOLUME_END,
-        DFXML_POSTSTREAM
+        _PARTITION_START, #This is only expected to happen in a DFXMLObject.
+        _VOLUME_START,
+        DFXML_POSTSTREAM,
+        VOLUME_POSTSTREAM
       },
       _PARTITION_SYSTEM_START: {
         PARTITION_SYSTEM_PRESTREAM
@@ -4489,7 +4491,9 @@ class Parser(object):
       },
       _PARTITION_END: {
         _PARTITION_START,
+        _VOLUME_START, #This is only expected to happen in a DFXMLObject.
         _FILE_START,
+        DFXML_POSTSTREAM,
         PARTITION_SYSTEM_POSTSTREAM
       },
       _VOLUME_START: {
@@ -4497,6 +4501,7 @@ class Parser(object):
       },
       _VOLUME_END: {
         _DFXML_END,
+        _FILE_START,
         _VOLUME_START,
         _VOLUME_END,
         DFXML_POSTSTREAM,
@@ -4521,6 +4526,7 @@ class Parser(object):
         _DFXML_METADATA_START,
         _DISK_IMAGE_START,
         _PARTITION_SYSTEM_START,
+        _PARTITION_START,
         _VOLUME_START,
         _FILE_START,
         DFXML_POSTSTREAM
