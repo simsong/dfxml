@@ -73,22 +73,7 @@ check-py3:
 check-versioned:
 	@echo Testing Python: $$PY >&2
 	$$PY $(OBJECTS)
-	$$PY diffing_CellObject_test.py
-	$$PY diffing_FileObject_test.py
-	$$PY diffing_HiveObject_test.py
-	$$PY diffing_ByteRuns_test.py
-	$$PY diffing_TimestampObject_test.py
-	$$PY diffing_VolumeObject_test.py
-	$$PY ByteRuns_test.py
-	$$PY CellObject_test.py
 	$$PY DFXMLObject_program_test.py $(SAMPLES_DIR)/difference_test_0.xml vi 8.0
-	$$PY FileObject_allocation_test.py
-	$$PY FileObject_byte_run_facets_test.py
-	$$PY FileObject_externals_test.py
-	$$PY FileObject_from_stat_test.py
-	$$PY RegXMLObject_test.py
-	$$PY VolumeObject_externals_test.py
-	$$PY VolumeObject_hash_test.py
 	$$PY verify_differential_dfxml_01_test.py
 	$$PY verify_differential_dfxml_23_test.py
 	./walk_ignore_test.sh $$PY

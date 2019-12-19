@@ -1,3 +1,16 @@
+2019-12-19    <alexander.nelson@nist.gov>
+
+	* Schema: Update schema pointer to 'develop'
+
+2019-12-18    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Test storage layers with presence permutations
+	* objects.py: Shore up storage layer transitions
+
+2019-12-10    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Reduce set of tests run by Makefile and pytest
+
 2019-12-09    <alexander.nelson@nist.gov>
 
 	* objects.py tests: Test adding partition object as child of partition object
@@ -26,6 +39,9 @@
 
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Add test for PartitionSystemObject error property
+	* objects.py: Add error property to PartitionSystemObject, borrowing VolumeObject processing
+	* Schema: Track DFXML Schema branch add_partition_system_error
 	* objects.py tests: Test round-trip of external-namespace elements
 	* objects.py tests: Test ways to encounter error element
 	* objects.py: Revise handling of error element in parser
@@ -48,6 +64,9 @@
 
 2019-07-05    <alexander.nelson@nist.gov>
 
+	* setup.py: Use setuptools.find_packages
+	* setup.py: Use setuptools instead of distutils
+	* setup.py: Add unit test for setup.py pip deployment
 	* __init__.py: Catch further commenting of _logger module-level object
 
 2019-03-14    <alexander.nelson@nist.gov>
