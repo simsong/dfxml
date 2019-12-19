@@ -9,6 +9,9 @@
 
 2019-12-10    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test error property on disk image object
+	* objects.py: Add error property to disk image object
+	* Schema: Track schema branch add_disk_image_error
 	* objects.py tests: Reduce set of tests run by Makefile and pytest
 
 2019-12-09    <alexander.nelson@nist.gov>

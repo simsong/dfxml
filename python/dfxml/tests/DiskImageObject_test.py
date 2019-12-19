@@ -26,6 +26,9 @@ import libtest
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
+ERROR_1 = "Error 1"
+ERROR_2 = "Error 2"
+
 def test_sector_size():
     dobj = Objects.DFXMLObject(version="1.2.0")
     diobj = Objects.DiskImageObject()
@@ -39,6 +42,101 @@ def test_sector_size():
         diobj_reconst = dobj_reconst.disk_images[0]
         assert diobj_reconst.sector_size == 2048
         assert diobj.sector_size == diobj_reconst.sector_size
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
+def test_error():
+    #TODO Bump version when feature branch merged into schema.
+    dobj = Objects.DFXMLObject(version="1.2.0+")
+    diobj = Objects.DiskImageObject()
+    dobj.append(diobj)
+
+    diobj.error = ERROR_1
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        diobj_reconst = dobj_reconst.disk_images[0]
+        assert diobj_reconst.error == ERROR_1
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
+def test_error_after_partition_system():
+    #TODO Bump version when feature branch merged into schema.
+    dobj = Objects.DFXMLObject(version="1.2.0+")
+    diobj = Objects.DiskImageObject()
+    dobj.append(diobj)
+
+    diobj.error = ERROR_1
+
+    psobj = Objects.PartitionSystemObject()
+    #TODO This should be uncommented after the branch add_partition_system_error is merged.
+    #psobj.error = ERROR_2
+    diobj.append(psobj)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        diobj_reconst = dobj_reconst.disk_images[0]
+        #TODO This should be uncommented after the branch add_partition_system_error is merged.
+        #psobj_reconst = diobj_reconst.partitionsystems[0]
+        assert diobj_reconst.error == ERROR_1
+        #TODO This should be uncommented after the branch add_partition_system_error is merged.
+        #assert psobj_reconst.error == ERROR_2
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
+def test_error_after_file_system():
+    #TODO Bump version when feature branch merged into schema.
+    dobj = Objects.DFXMLObject(version="1.2.0+")
+    diobj = Objects.DiskImageObject()
+    dobj.append(diobj)
+
+    diobj.error = ERROR_1
+
+    vobj = Objects.VolumeObject()
+    vobj.error = ERROR_2
+    diobj.append(vobj)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        diobj_reconst = dobj_reconst.disk_images[0]
+        vobj_reconst = diobj_reconst.volumes[0]
+        assert diobj_reconst.error == ERROR_1
+        assert vobj_reconst.error == ERROR_2
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
+def test_error_after_file():
+    #TODO Bump version when feature branch merged into schema.
+    dobj = Objects.DFXMLObject(version="1.2.0+")
+    diobj = Objects.DiskImageObject()
+    dobj.append(diobj)
+
+    diobj.error = ERROR_1
+
+    fobj = Objects.FileObject()
+    fobj.alloc_inode = False
+    fobj.alloc_name = False
+    fobj.error = ERROR_2
+    diobj.append(fobj)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        diobj_reconst = dobj_reconst.disk_images[0]
+        fobj_reconst = diobj_reconst.files[0]
+        assert diobj_reconst.error == ERROR_1
+        assert fobj_reconst.error == ERROR_2
     except:
         _logger.debug("tmp_filename = %r." % tmp_filename)
         raise
