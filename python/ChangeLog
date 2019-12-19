@@ -36,6 +36,9 @@
 
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Add test for PartitionSystemObject error property
+	* objects.py: Add error property to PartitionSystemObject, borrowing VolumeObject processing
+	* Schema: Track DFXML Schema branch add_partition_system_error
 	* objects.py tests: Test round-trip of external-namespace elements
 	* objects.py tests: Test ways to encounter error element
 	* objects.py: Revise handling of error element in parser
