@@ -1,3 +1,7 @@
+2019-12-19    <alexander.nelson@nist.gov>
+
+	* Schema: Update schema pointer to 'develop'
+
 2019-12-18    <alexander.nelson@nist.gov>
 
 	* objects.py tests: Test storage layers with presence permutations
