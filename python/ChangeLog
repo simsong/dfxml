@@ -1,3 +1,7 @@
+2020-01-02    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Test empty object serialization
+
 2019-12-18    <alexander.nelson@nist.gov>
 
 	* objects.py tests: Test storage layers with presence permutations

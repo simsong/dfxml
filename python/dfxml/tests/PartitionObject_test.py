@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.2.1"
+__version__ = "0.1.0"
 
 import os
 import sys
@@ -28,31 +28,13 @@ _logger = logging.getLogger(os.path.basename(__file__))
 
 def test_empty_object():
     dobj = Objects.DFXMLObject(version="1.2.0")
-    diobj = Objects.DiskImageObject()
-    dobj.append(diobj)
+    pobj = Objects.PartitionObject()
+    dobj.append(pobj)
 
     # Do file I/O round trip.
     (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
     try:
-        diobj_reconst = dobj_reconst.disk_images[0]
-    except:
-        _logger.debug("tmp_filename = %r." % tmp_filename)
-        raise
-    os.remove(tmp_filename)
-
-def test_sector_size():
-    dobj = Objects.DFXMLObject(version="1.2.0")
-    diobj = Objects.DiskImageObject()
-    dobj.append(diobj)
-
-    diobj.sector_size = 2048
-
-    # Do file I/O round trip.
-    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
-    try:
-        diobj_reconst = dobj_reconst.disk_images[0]
-        assert diobj_reconst.sector_size == 2048
-        assert diobj.sector_size == diobj_reconst.sector_size
+        pobj_reconst = dobj_reconst.partitions[0]
     except:
         _logger.debug("tmp_filename = %r." % tmp_filename)
         raise
