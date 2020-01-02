@@ -1,3 +1,7 @@
+2020-01-02    <alexander.nelson@nist.gov>
+
+	* objects.py tests: Test empty object serialization
+
 2019-12-19    <alexander.nelson@nist.gov>
 
 	* Schema: Update schema pointer to 'develop'
