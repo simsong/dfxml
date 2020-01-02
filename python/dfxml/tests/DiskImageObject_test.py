@@ -13,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 import os
 import sys
