@@ -901,6 +901,7 @@ class DiskImageObject(object):
 
         if len(pe) == 0 \
           and len(self.child_objects) == 0:
+            dfxml_wrapper = _ET_tostring(pe)
             output_fh.write(dfxml_wrapper)
             return
 
