@@ -1,10 +1,7 @@
 2020-01-02    <alexander.nelson@nist.gov>
 
+	* Schema: Update schema pointer to 'add_partition_index'
 	* objects.py tests: Test empty object serialization
-
-2019-12-19    <alexander.nelson@nist.gov>
-
-	* Schema: Update schema pointer to 'develop'
 
 2019-12-18    <alexander.nelson@nist.gov>
 
