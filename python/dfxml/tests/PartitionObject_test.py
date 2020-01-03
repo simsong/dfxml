@@ -39,3 +39,50 @@ def test_empty_object():
         _logger.debug("tmp_filename = %r." % tmp_filename)
         raise
     os.remove(tmp_filename)
+
+def test_cfreds_macwd_properties():
+    """
+    These were drawn from a CFReDS sample Mac disk image.
+    """
+    dobj = Objects.DFXMLObject(version="1.2.0")
+    pobj = Objects.PartitionObject()
+    dobj.append(pobj)
+
+    pobj.ptype_str = "Apple_Boot"
+    pobj.partition_index = 8
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        pobj_reconst = dobj_reconst.partitions[0]
+        assert pobj_reconst.ptype_str == "Apple_Boot"
+        assert pobj_reconst.partition_index == "8"
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
+def test_bsd_disklabel_properties():
+    """
+    These were drawn from a BSD Disk Label sample image.
+    """
+    dobj = Objects.DFXMLObject(version="1.2.0")
+    pobj_a = Objects.PartitionObject()
+    pobj_c = Objects.PartitionObject()
+    dobj.append(pobj_a)
+    dobj.append(pobj_c)
+
+    pobj_a.partition_index = "a"
+    pobj_c.partition_index = "c"
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    try:
+        pobj_a_reconst = dobj_reconst.partitions[0]
+        pobj_c_reconst = dobj_reconst.partitions[1]
+        assert pobj_a_reconst.partition_index == "a"
+        assert pobj_c_reconst.partition_index == "c"
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
