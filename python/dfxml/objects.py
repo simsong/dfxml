@@ -1332,6 +1332,7 @@ class PartitionObject(object):
       "files",
       "ftype_str",
       "guid",
+      "partition_index",
       "partition_label",
       "partition_system_offset",
       "partition_systems",
@@ -1347,6 +1348,7 @@ class PartitionObject(object):
         self._byte_runs = None
         self._child_objects = [] # For maintaining order of objects of different types.
         self._files = []
+        self._partition_index = None
         self._partition_systems = []
         self._partitions = []
         self._volumes = []
@@ -1493,6 +1495,7 @@ class PartitionObject(object):
 
         def _append_el(prop, value):
             if prop in {
+              "partition_index",
               "ptype",
               "ptype_str"
             }:
@@ -1526,6 +1529,7 @@ class PartitionObject(object):
             outel.append(self.byte_runs.to_Element())
 
         for prop in [
+          "partition_index",
           "ptype",
           "ptype_str",
         ]:
@@ -1562,6 +1566,14 @@ class PartitionObject(object):
     def files(self):
         """List of file objects directly attached to this PartitionObject.  No setter for now."""
         return self._files
+
+    @property
+    def partition_index(self):
+        return self._partition_index
+
+    @partition_index.setter
+    def partition_index(self, val):
+        self._partition_index = _strcast(val)
 
     @property
     def partition_systems(self):
