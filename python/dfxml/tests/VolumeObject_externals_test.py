@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # This software was developed at the National Institute of Standards
 # and Technology in whole or in part by employees of the Federal
@@ -12,7 +13,7 @@
 #
 # We would appreciate acknowledgement if the software is used.
 
-__version__="0.1.0"
+__version__ = "0.2.0"
 
 import logging
 import os
@@ -22,66 +23,68 @@ import sys
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 import dfxml.objects as Objects
 
+import libtest
 
-def test_all():
+# Only register one of these namespaces in ET.
+XMLNS_TEST_CLAMSCAN = "file:///opt/local/bin/clamscan"
+XMLNS_TEST_UNREGGED = "file:///dev/random"
+ET.register_namespace("clam", XMLNS_TEST_CLAMSCAN)
+
+def test_externals():
     _logger = logging.getLogger(os.path.basename(__file__))
     logging.basicConfig(level=logging.DEBUG)
 
-    XMLNS_TEST_CLAMSCAN = "file:///opt/local/bin/clamscan"
-    XMLNS_TEST_UNREGGED = "file:///dev/random"
+    vobj = Objects.VolumeObject()
 
-    ET.register_namespace("clam", XMLNS_TEST_CLAMSCAN)
-
-    vo = Objects.VolumeObject()
-
-    #Try and fail to add a non-Element to the list.
+    # Try and fail to add a non-Element to the list.
     failed = None
-    _logger.debug("Before:  " + repr(vo.externals))
+    _logger.debug("Before:  " + repr(vobj.externals))
     try:
-        vo.externals.append(1)
+        vobj.externals.append(1)
         failed = False
     except TypeError:
         failed = True
     except:
+        # There's only one kind of error expected here.  Raise anything else.
         failed = True
         raise
-    _logger.debug("After:  " + repr(vo.externals))
+    _logger.debug("After:  " + repr(vobj.externals))
     assert failed
     failed = None
 
-    #Dummy up a non-DFXML namespace element.  This should be appendable.
+    # Dummy up a non-DFXML namespace element.  This should be appendable.
     e = ET.Element("{%s}scan_results" % XMLNS_TEST_CLAMSCAN)
     e.text = "Clean file system"
-    vo.externals.append(e)
+    vobj.externals.append(e)
 
-    #Dummy up a DFXML namespace element.  This should not be appendable (the schema specifies other namespaces).
+    # Dummy up a DFXML namespace element.  This should not be appendable (the schema specifies other namespaces).
     e = ET.Element("{%s}filename" % Objects.dfxml.XMLNS_DFXML)
     e.text = "Superfluous name"
-    _logger.debug("Before:  " + repr(vo.externals))
+    _logger.debug("Before:  " + repr(vobj.externals))
     try:
-        vo.externals.append(e)
+        vobj.externals.append(e)
         failed = False
     except ValueError:
         failed = True
     except:
         failed = True
         raise
-    _logger.debug("After:  " + repr(vo.externals))
+    _logger.debug("After:  " + repr(vobj.externals))
     assert failed
     failed = None
 
-    #Add an element with the colon prefix style
+    # Add an element with the colon prefix style.
     e = ET.Element("clam:version")
     e.text = "20140101"
-    vo.externals.append(e)
+    vobj.externals.append(e)
 
-    #Add an element that doesn't have an ET-registered namespace prefix.
+    # Add an element that doesn't have an ET-registered namespace prefix.
     e = ET.Element("{%s}test2" % XMLNS_TEST_UNREGGED)
     e.text = "yes"
-    vo.externals.append(e)
+    vobj.externals.append(e)
 
-    #Test serialization
-    s = Objects._ET_tostring(vo.to_Element()) #TODO Maybe this should be more than an internal function.
+    # Test serialization to Element (file I/O done in separate test).
+    s = Objects._ET_tostring(vobj.to_Element()) #TODO Maybe this should be more than an internal function.
     _logger.debug(s)
     if s.find("scan_results") == -1:
         raise ValueError("Serialization did not output other-namespace element 'scan_results'.")
@@ -90,12 +93,47 @@ def test_all():
     if s.find("test2") == -1:
         raise ValueError("Serialization did not output unregistered-prefix element 'test2'.")
 
-    #Test de-serialization
+    # Test de-serialization.
     vor = Objects.VolumeObject()
     x = ET.XML(s)
     vor.populate_from_Element(x)
     _logger.debug("De-serialized: %r." % vor.externals)
     assert len(vor.externals) == 3
 
-if __name__=="__main__":
-    test_all()    
+def test_prefixed_externals_round_trip():
+    dobj = Objects.DFXMLObject(version="1.2.0")
+    vobj = Objects.VolumeObject()
+    dobj.append(vobj)
+
+    # Add an element with the qualified style, using the registered-prefix namespace.
+    e = ET.Element("{%s}scan_results" % XMLNS_TEST_CLAMSCAN)
+    e.text = "Clean file system"
+    vobj.externals.append(e)
+
+    # Add an element with the colon prefix style.
+    e = ET.Element("clam:version")
+    e.text = "20140101"
+    vobj.externals.append(e)
+
+    # NOTE: This *does not work* with ElementTree.  ET creates an XML document with the namespace prefix "ns1", but then cannot read that document because "ns1" is a reserved prefix.
+    # TODO AJN 2019-11-18: I have not inspected yet whether this is an intended behavior or a bug.
+    if False:
+        # Add an element with the qualified style, using the unregistered-prefix namespace.
+        e = ET.Element("{%s}test2" % XMLNS_TEST_UNREGGED)
+        e.text = "yes"
+        vobj.externals.append(e)
+
+    # Do file I/O round trip.
+    (tmp_filename, dobj_reconst) = libtest.file_round_trip_dfxmlobject(dobj)
+    vobj_reconst = dobj_reconst.volumes[0]
+    try:
+        assert len(vobj_reconst.externals) == 2
+    except:
+        _logger.debug("tmp_filename = %r." % tmp_filename)
+        raise
+    os.remove(tmp_filename)
+
+if __name__ == "__main__":
+    test_externals()
+    test_prefixed_externals_round_trip()
+
