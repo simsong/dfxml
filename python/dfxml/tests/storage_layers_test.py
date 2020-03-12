@@ -374,4 +374,3 @@ def test_disk_image_in_file_system():
         _logger.debug("tmp_filename = %r." % tmp_filename)
         raise
     os.remove(tmp_filename)
->>>>>>> be832eeba5301a6ac313d7a9f1392cc8522dc014
