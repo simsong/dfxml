@@ -1,4 +1,4 @@
-# CC0 1.0 / LGPL Fusion Universal Summary
+## CC0 1.0 / LGPL Fusion Universal Summary
 
 This software is a work of the Naval Postgraduate School (NPS) and the
 National Institute of Standards and Technology (NIST) . As a work of
@@ -11,32 +11,32 @@ Additionally, we waive copyright and related rights in the work worldwide throug
 
 Contributions by non-US government entities herein are covered under the LGPL, which is included below.
 
-# CC0 1.0 Universal Summary
+## CC0 1.0 Universal Summary
 
 This is a human-readable summary of the
 [Legal Code (read the full text)](https://creativecommons.org/publicdomain/zero/1.0/legalcode).
 
 
-## No copyright
+### No copyright
 
 The person who associated a work with this deed has dedicated the work to the public domain by waiving all of his or her rights to the work worldwide under copyright law, including all related and neighboring rights, to the extent allowed by law.
 
 You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission.
 
-## Other information
+### Other information
 
 In no way are the patent or trademark rights of any person affected by CC0, nor are the rights that other persons may have in the work or in how the work is used, such as publicity or privacy rights.
 
 Unless expressly stated otherwise, the person who associated a work with this deed makes no warranties about the work, and disclaims liability for all uses of the work, to the fullest extent permitted by applicable law. When using or citing the work, you should not imply endorsement by the author or the affirmer.
 
 
-# LGPL Version 3, 29 June 2007
+## LGPL Version 3, 29 June 2007
 
 Contributions by non-US government entities herein are covered under the LGPL, which is included below.
 
 
-               -> GNU LESSER GENERAL PUBLIC LICENSE  <-
-                    -> Version 3, 29 June 2007 <-
+GNU LESSER GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
 
 Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
 Everyone is permitted to copy and distribute verbatim copies
@@ -46,9 +46,9 @@ This version of the GNU Lesser General Public License incorporates
 the terms and conditions of version 3 of the GNU General Public
 License, supplemented by the additional permissions listed below.
 
-0. Additional Definitions.
+### 0. Additional Definitions.
 
-  As used herein, "this License" refers to version 3 of the GNU Lesser
+As used herein, "this License" refers to version 3 of the GNU Lesser
   General Public License, and the "GNU GPL" refers to version 3 of the
   GNU General Public License.
 
@@ -75,18 +75,18 @@ object code and/or source code for the Application, including any data
 and utility programs needed for reproducing the Combined Work from the
 Application, but excluding the System Libraries of the Combined Work.
 
-1. Exception to Section 3 of the GNU GPL.
+### 1. Exception to Section 3 of the GNU GPL.
 
   You may convey a covered work under sections 3 and 4 of this License
-  without being bound by section 3 of the GNU GPL.
+without being bound by section 3 of the GNU GPL.
 
-2. Conveying Modified Versions.
+### 2. Conveying Modified Versions.
 
   If you modify a copy of the Library, and, in your modifications, a
-  facility refers to a function or data to be supplied by an Application
-  that uses the facility (other than as an argument passed when the
-  facility is invoked), then you may convey a copy of the modified
-  version:
+facility refers to a function or data to be supplied by an Application
+that uses the facility (other than as an argument passed when the
+facility is invoked), then you may convey a copy of the modified
+version:
 
    a) under this License, provided that you make a good faith effort to
    ensure that, in the event an Application does not supply the
@@ -96,7 +96,7 @@ Application, but excluding the System Libraries of the Combined Work.
    b) under the GNU GPL, with none of the additional permissions of
    this License applicable to that copy.
 
-3. Object Code Incorporating Material from Library Header Files.
+### 3. Object Code Incorporating Material from Library Header Files.
 
   The object code form of an Application may incorporate material from
   a header file that is part of the Library.  You may convey such object
@@ -112,7 +112,7 @@ Application, but excluding the System Libraries of the Combined Work.
    b) Accompany the object code with a copy of the GNU GPL and this license
    document.
 
-4. Combined Works.
+### 4. Combined Works.
 
   You may convey a Combined Work under terms of your choice that,
   taken together, effectively do not restrict modification of the
@@ -161,7 +161,7 @@ Application, but excluding the System Libraries of the Combined Work.
    Information in the manner specified by section 6 of the GNU GPL
    for conveying Corresponding Source.)
 
-5. Combined Libraries.
+### 5. Combined Libraries.
 
   You may place library facilities that are a work based on the
   Library side by side in a single library together with other library
@@ -177,7 +177,7 @@ Application, but excluding the System Libraries of the Combined Work.
    is a work based on the Library, and explaining where to find the
    accompanying uncombined form of the same work.
 
-  6. Revised Versions of the GNU Lesser General Public License.
+### 6. Revised Versions of the GNU Lesser General Public License.
 
   The Free Software Foundation may publish revised and/or new versions
   of the GNU Lesser General Public License from time to time. Such new
