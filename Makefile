@@ -17,14 +17,15 @@ SCHEMA_REPOSITORY_URL ?= https://github.com/dfxml-working-group/dfxml_schema.git
 
 all:
 
-.PHONY: \
-  schema-init
+.PHONY: schema-init
 
-schema-init: \
-  schema/dfxml.xsd
+schema-init: schema/dfxml.xsd
 
-schema/dfxml.xsd: \
-  dfxml_schema_commit.txt
+schema/dfxml.xsd: dfxml_schema_commit.txt
 	if [ -z "$(SCHEMA_REPOSITORY_URL)" ]; then echo 'ERROR:Makefile:Please provide a URL for the Makefile parameter SCHEMA_REPOSITORY_URL.' >&2 ; exit 1 ; fi
 	if [ ! -d schema ]; then git clone $(SCHEMA_REPOSITORY_URL) schema ; cd schema ; git checkout $$(head -n1 ../dfxml_schema_commit.txt) ; fi
 	test -r $@ && touch $@
+
+clean:
+	find . -name '*~' -exec rm {} \;
+
