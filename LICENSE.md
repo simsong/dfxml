@@ -88,28 +88,28 @@ that uses the facility (other than as an argument passed when the
 facility is invoked), then you may convey a copy of the modified
 version:
 
-   a) under this License, provided that you make a good faith effort to
-   ensure that, in the event an Application does not supply the
-   function or data, the facility still operates, and performs
-   whatever part of its purpose remains meaningful, or
+a) under this License, provided that you make a good faith effort to
+ensure that, in the event an Application does not supply the
+function or data, the facility still operates, and performs
+whatever part of its purpose remains meaningful, or
 
-   b) under the GNU GPL, with none of the additional permissions of
-   this License applicable to that copy.
+b) under the GNU GPL, with none of the additional permissions of
+this License applicable to that copy.
 
 ### 3. Object Code Incorporating Material from Library Header Files.
 
-  The object code form of an Application may incorporate material from
+The object code form of an Application may incorporate material from
   a header file that is part of the Library.  You may convey such object
   code under terms of your choice, provided that, if the incorporated
   material is not limited to numerical parameters, data structure
   layouts and accessors, or small macros, inline functions and templates
   (ten or fewer lines in length), you do both of the following:
 
-   a) Give prominent notice with each copy of the object code that the
+a) Give prominent notice with each copy of the object code that the
    Library is used in it and that the Library and its use are
    covered by this License.
 
-   b) Accompany the object code with a copy of the GNU GPL and this license
+b) Accompany the object code with a copy of the GNU GPL and this license
    document.
 
 ### 4. Combined Works.
@@ -120,30 +120,30 @@ version:
   engineering for debugging such modifications, if you also do each of
   the following:
 
-   a) Give prominent notice with each copy of the Combined Work that
+a) Give prominent notice with each copy of the Combined Work that
    the Library is used in it and that the Library and its use are
    covered by this License.
 
-   b) Accompany the Combined Work with a copy of the GNU GPL and this license
+b) Accompany the Combined Work with a copy of the GNU GPL and this license
    document.
 
-   c) For a Combined Work that displays copyright notices during
+c) For a Combined Work that displays copyright notices during
    execution, include the copyright notice for the Library among
    these notices, as well as a reference directing the user to the
    copies of the GNU GPL and this license document.
 
-   d) Do one of the following:
+d) Do one of the following:
 
-       0) Convey the Minimal Corresponding Source under the terms of this
-       License, and the Corresponding Application Code in a form
+  0) Convey the Minimal Corresponding Source under the terms of this
+License, and the Corresponding Application Code in a form
        suitable for, and under terms that permit, the user to
        recombine or relink the Application with a modified version of
        the Linked Version to produce a modified Combined Work, in the
        manner specified by section 6 of the GNU GPL for conveying
        Corresponding Source.
 
-       1) Use a suitable shared library mechanism for linking with the
-       Library.  A suitable mechanism is one that (a) uses at run time
+  1) Use a suitable shared library mechanism for linking with the
+Library.  A suitable mechanism is one that (a) uses at run time
        a copy of the Library already present on the user's computer
        system, and (b) will operate properly with a modified version
        of the Library that is interface-compatible with the Linked
