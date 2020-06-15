@@ -21,8 +21,8 @@ Image Redaction Project.
 This program redacts disk image files. 
 
 inputs:
-	* The disk image file
-	* A set of rules that describe what to redact, and how to redact it.
+    * The disk image file
+    * A set of rules that describe what to redact, and how to redact it.
 
 Rule File format:
 
@@ -45,9 +45,9 @@ Actions:
   SCRUB FILE - Scrubs the file in which the pattern occurs
 
 Actions:
-   FILL 0x44	- overwrite by filling with character 0x44 ('D')
-   ENCRYPT      - encrypts the data
-   FUZZ		- fuzz the binary, but not the strings
+   FILL 0x44   - overwrite by filling with character 0x44 ('D')
+   ENCRYPT     - encrypts the data
+   FUZZ        - fuzz the binary, but not the strings
 
 Examples:
 
