@@ -48,7 +48,7 @@ jobs:
       - name: schema test
         run: |
           make schema-init
-          cd python/tests/test_vnev
+          cd python/tests/test_venv
           make check
       - name: c/c++ test
         run: |
