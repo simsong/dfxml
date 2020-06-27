@@ -55,7 +55,7 @@ jobs:
 
       - name: c/c++ test
         run: |
-          printenv
+          if [ $RUNNER_OS == macOS ]; then etc/install_autotools.sh ; fi
           cd src
           ./bootstrap.sh && ./configure && make && make check          
 
