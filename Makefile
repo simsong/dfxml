@@ -29,3 +29,5 @@ schema/dfxml.xsd: dfxml_schema_commit.txt
 clean:
 	find . -name '*~' -exec rm {} \;
 
+check:
+	@echo performing checks currently in Travis
