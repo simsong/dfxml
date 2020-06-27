@@ -1,16 +1,19 @@
 # This file based on https://gist.github.com/mwouts/9842452d020c08faf9e84a3bba38a66f
+# See: https://help.github.com/en/actions/reference/software-installed-on-github-hosted-runners
 # 2020-06-22 - slg - customized
+# 2020-06-27 - slg - expanded to G++ for MacOS
 # 
-name: CI (pip, flake8, pytest)
+name: CI (pytest and c++)
 on: [push]
 
 jobs:
   build:
+    name: ${ { matrix.config.name } }
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ['ubuntu-18.04', 'ubuntu-20.04', 'macos-10.15']
         python-version: [3.7, 3.8]
-    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
