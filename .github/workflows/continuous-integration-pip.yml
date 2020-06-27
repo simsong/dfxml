@@ -45,5 +45,14 @@ jobs:
       - name: Test with pytest
         run: pytest --cov=./ --cov-report=xml python
 
+      - name: schema test
+        run: |
+          make schema-init
+          cd python/tests/test_vnev
+          make check
+      - name: c/c++ test
+        run: |
+          ./bootstrap.sh && ./configure && make && make check          
+
       #- name: Upload coverage
       #  uses: codecov/codecov-action@v1
