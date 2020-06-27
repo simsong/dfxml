@@ -52,10 +52,10 @@ jobs:
           make schema-init
           cd python/tests/test_venv
           echo disabled until https://github.com/simsong/dfxml/issues/39 is resolved.
-          #make check
 
       - name: c/c++ test
         run: |
+          printenv
           cd src
           ./bootstrap.sh && ./configure && make && make check          
 
