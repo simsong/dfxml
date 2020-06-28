@@ -29,9 +29,6 @@ AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX_11(noext, optional)
 AC_LANG_POP()
 
-# support for googletest
-PKG_CHECK_MODULES([GTEST], [gtest_main])
-
 m4_include([dfxml_configure.m4])
 
 
@@ -102,6 +99,16 @@ unset option
 # -Wcast-qual 
 # -Wmissing-format-attribute  --- Just too annoying
 AC_LANG_PUSH(C++)
+
+####
+# support for C++ framework googletest
+AC_CHECK_HEADERS([gtest/gtest.h])
+AC_CHECK_LIB([gtest_main],[main],[have_gtest=yes],[have_gtest=no])
+if test x"${have_gtest}" == x"yes" ; then
+  LDFLAGS="-lgtest $LDFLAGS"
+fi               
+####
+
 CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
     -Wredundant-decls -Wdisabled-optimization \
@@ -129,6 +136,7 @@ do
   unset SAVE_CXXFLAGS
 done
 unset option
+
 AC_LANG_POP()    
 
 

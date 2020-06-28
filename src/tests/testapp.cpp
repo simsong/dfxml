@@ -1,4 +1,6 @@
 #include "config.h"
+
+#ifdef HAVE_GTEST_GTEST_H
 #include <gtest/gtest.h>
 #include "../hash_t.h"
 
@@ -42,4 +44,11 @@ int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-
+#else
+#include <stdio.h>
+#include <stdlib.h>
+int main(int argc, char **argv) {
+    fprintf(stderr,"Compiled without gtest (Google Test)\nCannot continue.\n");
+    exit(1);
+}
+#endif
