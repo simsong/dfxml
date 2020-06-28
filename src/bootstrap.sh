@@ -4,6 +4,7 @@
 # this file is public domain
 #
 if [ ! -e config.guess -o ! -e config.sub -o ! -e install-sh -o ! -e missing ]; then
+    echo running autoheader, aclocal, autoconf and automake
     autoheader -f
     touch NEWS README AUTHORS ChangeLog
     touch stamp-h
@@ -12,5 +13,6 @@ if [ ! -e config.guess -o ! -e config.sub -o ! -e install-sh -o ! -e missing ]; 
     #libtoolize || glibtoolize
     automake --add-missing --copy
 else
+    echo simply running autoreconf.
     autoreconf -f
 fi
