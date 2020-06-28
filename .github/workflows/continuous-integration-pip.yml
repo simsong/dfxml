@@ -55,8 +55,8 @@ jobs:
 
       - name: c/c++ test
         run: |
+          apt-get install libgtest-dev
           if [ $RUNNER_OS == macOS ]; then bash etc/install_autotools.sh ; fi
-          if [ $RUNNER_OS != macOS ]; then sudo apt-get install libgtest-dev ; fi
           cd src
           ./bootstrap.sh && ./configure && make && make check          
 
