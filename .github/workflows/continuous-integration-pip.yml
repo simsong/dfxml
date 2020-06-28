@@ -51,5 +51,6 @@ jobs:
       - name: c/c++ test
         run: |
           cd src
-          ./bootstrap.sh && ./configure && make && make check 
+          bash bootstrap.sh
+          ./configure && make && make check 
 
