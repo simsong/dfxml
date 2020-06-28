@@ -100,14 +100,6 @@ unset option
 # -Wmissing-format-attribute  --- Just too annoying
 AC_LANG_PUSH(C++)
 
-####
-# support for C++ framework googletest
-AC_CHECK_HEADERS([gtest/gtest.h])
-AC_CHECK_LIB([gtest_main],[main],[have_gtest=yes],[have_gtest=no])
-if test x"${have_gtest}" == x"yes" ; then
-  LDFLAGS="-lgtest $LDFLAGS"
-fi               
-####
 
 CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
