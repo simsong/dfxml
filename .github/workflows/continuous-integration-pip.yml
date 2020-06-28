@@ -30,7 +30,7 @@ jobs:
       - name: Install C++ dependencies on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-           apt-get install libgtest-dev
+           sudo apt-get install libgtest-dev
 
       - name: Install Python dependencies
         run: |
