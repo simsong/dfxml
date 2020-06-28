@@ -1,9 +1,10 @@
+//#pragma GCC diagnostic ignored "-Wshadow"
+//#pragma GCC diagnostic ignored "-Wunused-variable"
+
 // Uses cester
 // doc: https://github.com/exoticlibraries/libcester/blob/master/docs/docs/macros.rst
 
 // cester generates some GCC warnings. Ignore them.
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wunused-variable"
 
 // get cester!
 #include "cester.h"
@@ -46,7 +47,9 @@ CESTER_TEST(test_sha256_generator, inst,
                                  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     )
 
+#ifdef HAVE_SHA512_T
 CESTER_TEST(test_sha512_generator, inst, 
             cester_assert_equal( sha512_generator::hash_buf(nulls,0).hexdigest(),
                                  "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
     )
+#endif

@@ -3,4 +3,4 @@ automake
 gcc
 g++
 expat1-dev
-libgtest-dev
+
