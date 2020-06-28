@@ -226,6 +226,16 @@ inline std::string digest_name<sha512_t>() {
 #ifdef USE_OPENSSL
 template<const EVP_MD *md(),size_t SIZE> 
 class hash_generator__ { 			/* generates the hash */
+
+    class file_system_error:public std::exception {
+        const char *msg;
+        file_system_error(const char *msg_):msg(msg_){
+        }
+        virtual const char *what() const throw() {
+            return msg;
+        }
+    };
+
  private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
     bool finalized;
@@ -238,7 +248,7 @@ class hash_generator__ { 			/* generates the hash */
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():mdctx(NULL),initialized(false),finalized(false),digest_(),hashed_bytes(0){
+    hash_generator__():mdctx(NULL),finalized(false),digest_(),hashed_bytes(0){
 #ifdef HAVE_EVP_MD_CTX_NEW
         mdctx = EVP_MD_CTX_new();
 #else
@@ -257,7 +267,6 @@ public:
     }
 public:
     void update(const uint8_t *buf,size_t bufsize){
-	if(!initialized) init();
 	if(finalized){
 	    std::cerr << "hashgen_t::update called after finalized\n";
 	    exit(1);
@@ -265,42 +274,24 @@ public:
 	EVP_DigestUpdate(mdctx,buf,bufsize);
 	hashed_bytes += bufsize;
     }
-    hash__<md,SIZE> final() {
-	if(finalized){
-	  std::cerr << "currently friendly_generator does not cache the final value\n";
-	  assert(0);
-          exit(1);                      // in case compiled with assertions disabled
-	}
-	if(!initialized){
-	  init();			/* do it now! */
-	}
-	hash__<md,SIZE> val;
-	unsigned int len = sizeof(val.digest);
-	EVP_DigestFinal(mdctx,val.digest,&len);
-	finalized = true;
-	return val;
+    hash__<SIZE> digest() {
+	if(!finalized){
+            unsigned int md_len = SIZE;
+            EVP_DigestFinal(mdctx,digest_,&md_len);
+            finalized = true;
+        }
+        return hash__<SIZE>(digest_);
     }
 
     /** Compute a sha1 from a buffer and return the hash */
-    static hash__<md,SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
+    static hash__<SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
 	/* First time through find the SHA1 of 512 NULLs */
 	hash_generator__ g;
 	g.update(buf,bufsize);
-	return g.final();
+	return g.digest();
     }
 	
 #ifdef HAVE_MMAP
-    /** Static method allocator */
-    class file_not_found:public std::exception {
-        const char *msg_;
-        file_not_found(const char *msg):msg(msg_){
-        }
-        virtual const char *what() const throw() {
-            return msg_;
-        }
-    };
-
-
     static hash__<md,SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
 	if(fd<0) throw file_system_error("open error");
@@ -333,7 +324,8 @@ typedef hash_generator__<EVP_sha512,64> sha512_generator;
 /* a simpler implementation because there is no need to allocate and then free the 
  * hash contexts.
  */
-template<class CC_CTX,int Init(CC_CTX *),int Update(CC_CTX *,const void *,CC_LONG),int Final(unsigned char *,CC_CTX *),size_t SIZE>
+template<class CC_CTX,int Init(CC_CTX *),int Update(CC_CTX *,const void *,CC_LONG),
+         int Final(unsigned char *,CC_CTX *),size_t SIZE>
 class hash_generator__ { 			/* generates the hash */
  private:
     CC_CTX c;
