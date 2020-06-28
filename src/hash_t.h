@@ -228,8 +228,8 @@ template<const EVP_MD *md(),size_t SIZE>
 class hash_generator__ { 			/* generates the hash */
  private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
-    bool initialized;	       /* has the context been initialized? */
     bool finalized;
+    uint8_t digest_[SIZE];               // created
     /* Not allowed to copy; these are prototyped but not defined, 
      * so any attempt to use them will fail, but we won't get the -Weffc++ warnings  
      */
@@ -238,36 +238,22 @@ class hash_generator__ { 			/* generates the hash */
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():mdctx(NULL),initialized(false),finalized(false),hashed_bytes(0){ }
-    ~hash_generator__(){
-	release();
-    }
-private:
-    /* 2020-06-27: release() and init() are now private; users have no business calling them. */
-    void release(){			/* free allocated memory */
-	if(initialized){
-#ifdef HAVE_EVP_MD_CTX_FREE
-	    EVP_MD_CTX_free(mdctx);
-#else
-	    EVP_MD_CTX_destroy(mdctx);
-#endif
-	    initialized = false;
-	    hashed_bytes = 0;
-	}
-    }
-    void init(){
-	if(initialized==false){
+    hash_generator__():mdctx(NULL),initialized(false),finalized(false),digest_(),hashed_bytes(0){
 #ifdef HAVE_EVP_MD_CTX_NEW
-	    mdctx = EVP_MD_CTX_new();
+        mdctx = EVP_MD_CTX_new();
 #else
-	    mdctx = EVP_MD_CTX_create();
+        mdctx = EVP_MD_CTX_create();
 #endif
-            if (!mdctx) throw std::bad_alloc();
-	    EVP_DigestInit_ex(mdctx, md(), NULL);
-	    initialized = true;
-	    finalized = false;
-	    hashed_bytes = 0;
-	}
+        if (!mdctx) throw std::bad_alloc();
+        EVP_DigestInit_ex(mdctx, md(), NULL);
+    }
+
+    ~hash_generator__(){
+#ifdef HAVE_EVP_MD_CTX_FREE
+        EVP_MD_CTX_free(mdctx);
+#else
+        EVP_MD_CTX_destroy(mdctx);
+#endif
     }
 public:
     void update(const uint8_t *buf,size_t bufsize){
@@ -361,7 +347,7 @@ class hash_generator__ { 			/* generates the hash */
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():c(),finalized(false),hashed_bytes(0){
+    hash_generator__():c(),finalized(false),digest_(),hashed_bytes(0){
         Init(&c);
     }
     ~hash_generator__(){
