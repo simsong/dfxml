@@ -1,3 +1,12 @@
+2020-06-27  Simson Garfinkel  <simsong@nimi.local>
+
+	* NEWS: 
+
+	* configure.ac: added -Wno-unknown-warning-option
+
+	* hash_t.h: remove iszero(). made private release() and init(). Added support for Common Crypto on MacOS.
+	simplified the definition of hash__
+
 2019-03-14  Basic  <alexander.nelson@nist.gov>
 
 	* Project: Add Travis Continuous Integration
