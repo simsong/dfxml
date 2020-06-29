@@ -11,7 +11,7 @@
 AC_PREREQ(2.57)
 AC_INIT(DFXML, 0.0.1, bugs@afflib.org)
 AC_CONFIG_MACRO_DIR(m4)
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
@@ -60,19 +60,19 @@ AC_CHECK_LIB([expat],[XML_ParserCreate],,[have_expat="no ";AC_MSG_WARN([expat no
 # Just causes too much annoyance: -Wmissing-format-attribute 
 
 # Check GCC
-WARNINGS_TO_TEST="-MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
+GCC_WARNINGS_TO_TEST="-MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
     -Wshadow -Wwrite-strings -Wcast-align -Waggregate-return \
     -Wbad-function-cast -Wcast-qual -Wundef -Wredundant-decls -Wdisabled-optimization \
-    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn "
+    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wno-deprecated-declarations -Wno-unknown-warning-option"
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we do not want to do on mingw
-  WARNINGS_TO_TEST="$WARNINGS_TO_TEST -Wall -Wstrict-prototypes"
+  GCC_WARNINGS_TO_TEST="$GCC_WARNINGS_TO_TEST -Wall -Wstrict-prototypes"
 fi
 
-echo "Warnings to test: $WARNINGS_TO_TEST"
+echo "Warnings to test: $GCC_WARNINGS_TO_TEST"
 
-for option in $WARNINGS_TO_TEST
+for option in $GCC_WARNINGS_TO_TEST
 do
   SAVE_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $option"
@@ -99,21 +99,23 @@ unset option
 # -Wcast-qual 
 # -Wmissing-format-attribute  --- Just too annoying
 AC_LANG_PUSH(C++)
-WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
+
+
+CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
     -Wredundant-decls -Wdisabled-optimization \
     -Wfloat-equal -Wmultichar -Wmissing-noreturn \
-    -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo \
+    -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo -Wno-deprecated-declarations -Wno-unknown-warning-option\
     -funit-at-a-time"
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we don't want to do on mingw
-  WARNINGS_TO_TEST="$WARNINGS_TO_TEST  -Weffc++"
+  CXX_WARNINGS_TO_TEST="$CXX_WARNINGS_TO_TEST  -Weffc++"
 fi
 
-echo "Warnings to test: $WARNINGS_TO_TEST"
+echo "Warnings to test: $CXX_WARNINGS_TO_TEST"
 
-for option in $WARNINGS_TO_TEST
+for option in $CXX_WARNINGS_TO_TEST
 do
   SAVE_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS $option"
@@ -126,6 +128,7 @@ do
   unset SAVE_CXXFLAGS
 done
 unset option
+
 AC_LANG_POP()    
 
 
@@ -147,6 +150,8 @@ AC_CHECK_HEADERS([\
 	pcap.h \
 	pcap/pcap.h \
 	linux/if_ether.h signal.h])
+
+                                              
 
 ############## drop optimization flags if requested ################
 AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))

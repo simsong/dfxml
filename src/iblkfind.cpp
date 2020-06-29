@@ -114,7 +114,7 @@ class extents_t {
      * @param[in]  dfxml file name
      */
     extents_t(const std::string& p_dfxml_filename) :
-      dfxml_filename(p_dfxml_filename) {
+      dfxml_filename(p_dfxml_filename),extents() {
 
         dfxml::file_object_reader::read_dfxml(
             dfxml_filename, 

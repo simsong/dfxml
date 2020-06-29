@@ -16,16 +16,21 @@
  * string val.hexdigest()   --- return a hext digest
  * val.size()		    --- the size of the hash in bytes
  * uint8_t val.digest[SIZE] --- the buffer of the raw bytes
- * uint8_t val.final()        --- synonym for md.digest
+ *
+ * note -  val.final()  has been depreciated due to collision with C++11
  *
  * This can be updated in the future for Mac so that the hash__ class
  * is then subclassed by a hash__openssl or a hash__commonCrypto class.
  *
+ * 
+ * On MacOS, common crypto header files found in
+ * /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/CommonCrypto
  *
  * Revision History:
  * 2012 - Simson L. Garfinkel - Created for bulk_extractor.
  *
- * This file is public domain
+ * 2020 - Simson L. Garfinkel - updated for MacOS CommonCrypto.
+ *                            - file relicensed under LGPL
  */
 
 #ifndef  HASH_T_H
@@ -33,17 +38,6 @@
 
 #include <cstring>
 #include <cstdlib>
-
-/**
- * For reasons that defy explanation (at the moment), this is required.
- */
-
-
-#ifdef __APPLE__
-#include <AvailabilityMacros.h>
-#undef DEPRECATED_IN_MAC_OS_X_VERSION_10_7_AND_LATER 
-#define  DEPRECATED_IN_MAC_OS_X_VERSION_10_7_AND_LATER
-#endif
 
 #include <stdint.h>
 #include <assert.h>
@@ -53,11 +47,19 @@
 #include <iostream>
 #include <unistd.h>
 
-#if defined(HAVE_OPENSSL_HMAC_H) && defined(HAVE_OPENSSL_EVP_H)
+#if defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
+#include <CommonCrypto/CommonDigest.h>
+#define USE_COMMON_CRYPTO
+#define HAVE_SHA512_T
+#elif defined(HAVE_OPENSSL_HMAC_H) && defined(HAVE_OPENSSL_EVP_H) 
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
+#define USE_OPENSSL
+#ifdef HAVE_EVP_SHA512
+#define HAVE_SHA512_T
+#endif
 #else
-#error OpenSSL required for hash_t.h
+#error CommonCrypto or OpenSSL required for hash_t.h
 #endif
 
 #ifdef HAVE_SYS_MMAN_H
@@ -68,7 +70,29 @@
 #include <sys/mmap.h>
 #endif
 
-template<const EVP_MD *md(),size_t SIZE> 
+/* This is a templated hasher. Originally it was designed for use with
+ * openssl's EVP_MD system. Now it works with both OpenSSL's system and Common_Crypto
+ */
+
+#ifdef O_BINARY
+#define HASHT_O_BINARY O_BINARY
+#else
+#define HASHT_O_BINARY 0
+#endif
+
+#define HASH_T_VERSION 2
+
+
+/* hash__ is a template that gets specialized to
+ * md5_t, sha1_t, sha256_t and sha512_t (if available)
+ * 
+ * It makes a copy of what it is initialized with.
+ * In version 2.0 it is immutable.
+ *
+ * This works with both CommonCrypto and with OpenSSL.
+ * We actually ignore the Type and the allocator
+ */
+template<size_t SIZE> 
 class hash__
 {
 public:
@@ -76,13 +100,9 @@ public:
     static size_t size() {
         return(SIZE);
     }
-    hash__(){
-    }
-    hash__(const uint8_t *provided){
+    /* This returns a place where we can put results */
+    hash__(const uint8_t *provided):digest(){
 	memcpy(this->digest,provided,size());
-    }
-    const uint8_t *final() const {
-	return this->digest;
     }
     /* python like interface for hexdigest */
     static unsigned int hex2int(char ch){
@@ -147,11 +167,11 @@ public:
 	/* Check the first byte manually as a performance hack */
 	if(this->digest[0] < s2.digest[0]) return true;
 	if(this->digest[0] > s2.digest[0]) return false;
-	return memcmp(this->digest,s2.digest, SIZE) < 0;
+	return memcmp(this->digest, s2.digest, SIZE) < 0;
     }
     bool operator==(const hash__ &s2) const {
 	if(this->digest[0] != s2.digest[0]) return false;
-	return memcmp(this->digest,s2.digest, SIZE) == 0;
+	return memcmp(this->digest, s2.digest, SIZE) == 0;
     }
     friend std::ostream& operator<<(std::ostream& os,const hash__ &s2) {
         os << s2.hexdigest();
@@ -159,13 +179,18 @@ public:
     }
 };
 
-typedef hash__<EVP_md5,16> md5_t;
-typedef hash__<EVP_sha1,20> sha1_t;
-typedef hash__<EVP_sha256,32> sha256_t;
-#ifdef HAVE_EVP_SHA512
-typedef hash__<EVP_sha512,64> sha512_t;
+
+typedef hash__<16> md5_t;
+typedef hash__<20> sha1_t;
+typedef hash__<32> sha256_t;
+#ifdef HAVE_SHA512_T
+typedef hash__<64> sha512_t;
 #endif
 
+/* Now that we have our types defined, 
+ * we define a function that returns the name of the digest.
+ * These work for either type
+ */
 template<typename T>
 inline std::string digest_name();
 template<>
@@ -180,63 +205,68 @@ template<>
 inline std::string digest_name<sha256_t>() {
     return "SHA256";
 }
-#ifdef HAVE_EVP_SHA512
+#ifdef HAVE_SHA512
 template<>
 inline std::string digest_name<sha512_t>() {
     return "SHA512";
 }
 #endif
 
+
+/*
+ * This is the templated hash generator.
+ * It needs to be specialized for the implementation. 
+ * It would be cool to do this with subclasses from a common base class, but
+ * instead we use the preprocessor.
+ *
+ * With OpenSSL, it's a cover for the EVP_MD system.
+ * With CommonCrypto, we just call the functions directly.
+ */
+
+#ifdef USE_OPENSSL
 template<const EVP_MD *md(),size_t SIZE> 
 class hash_generator__ { 			/* generates the hash */
+
+    class file_system_error:public std::exception {
+        const char *msg;
+        file_system_error(const char *msg_):msg(msg_){
+        }
+        virtual const char *what() const throw() {
+            return msg;
+        }
+    };
+
  private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
-    bool initialized;	       /* has the context been initialized? */
     bool finalized;
-    /* Static function to determine if something is zero */
-    static bool iszero(const uint8_t *buf,size_t bufsize){
-	for(unsigned int i=0;i<bufsize;i++){
-	    if(buf[i]!=0) return false;
-	}
-	return true;
-    }
-    /* Not allowed to copy; these are prototyped but not defined, so any attempt to use them will fail, but we won't get the -Weffc++ warnings  */
+    uint8_t digest_[SIZE];               // created
+    /* Not allowed to copy; these are prototyped but not defined, 
+     * so any attempt to use them will fail, but we won't get the -Weffc++ warnings  
+     */
     hash_generator__ & operator=(const hash_generator__ &);
     hash_generator__(const hash_generator__ &);
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():mdctx(NULL),initialized(false),finalized(false),hashed_bytes(0){ }
-    ~hash_generator__(){
-	release();
-    }
-    void release(){			/* free allocated memory */
-	if(initialized){
-#ifdef HAVE_EVP_MD_CTX_FREE
-	    EVP_MD_CTX_free(mdctx);
-#else
-	    EVP_MD_CTX_destroy(mdctx);
-#endif
-	    initialized = false;
-	    hashed_bytes = 0;
-	}
-    }
-    void init(){
-	if(initialized==false){
+    hash_generator__():mdctx(NULL),finalized(false),digest_(),hashed_bytes(0){
 #ifdef HAVE_EVP_MD_CTX_NEW
-	    mdctx = EVP_MD_CTX_new();
+        mdctx = EVP_MD_CTX_new();
 #else
-	    mdctx = EVP_MD_CTX_create();
+        mdctx = EVP_MD_CTX_create();
 #endif
-            if (!mdctx) throw std::bad_alloc();
-	    EVP_DigestInit_ex(mdctx, md(), NULL);
-	    initialized = true;
-	    finalized = false;
-	    hashed_bytes = 0;
-	}
+        if (!mdctx) throw std::bad_alloc();
+        EVP_DigestInit_ex(mdctx, md(), NULL);
     }
+
+    ~hash_generator__(){
+#ifdef HAVE_EVP_MD_CTX_FREE
+        EVP_MD_CTX_free(mdctx);
+#else
+        EVP_MD_CTX_destroy(mdctx);
+#endif
+    }
+public:
     void update(const uint8_t *buf,size_t bufsize){
-	if(!initialized) init();
 	if(finalized){
 	    std::cerr << "hashgen_t::update called after finalized\n";
 	    exit(1);
@@ -244,48 +274,36 @@ public:
 	EVP_DigestUpdate(mdctx,buf,bufsize);
 	hashed_bytes += bufsize;
     }
-    hash__<md,SIZE> final() {
-	if(finalized){
-	  std::cerr << "currently friendly_generator does not cache the final value\n";
-	  assert(0);
-          exit(1);                      // in case compiled with assertions disabled
-	}
-	if(!initialized){
-	  init();			/* do it now! */
-	}
-	hash__<md,SIZE> val;
-	unsigned int len = sizeof(val.digest);
-	EVP_DigestFinal(mdctx,val.digest,&len);
-	finalized = true;
-	return val;
+    hash__<SIZE> digest() {
+	if(!finalized){
+            unsigned int md_len = SIZE;
+            EVP_DigestFinal(mdctx,digest_,&md_len);
+            finalized = true;
+        }
+        return hash__<SIZE>(digest_);
     }
 
     /** Compute a sha1 from a buffer and return the hash */
-    static hash__<md,SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
+    static hash__<SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
 	/* First time through find the SHA1 of 512 NULLs */
 	hash_generator__ g;
 	g.update(buf,bufsize);
-	return g.final();
+	return g.digest();
     }
 	
 #ifdef HAVE_MMAP
-    /** Static method allocator */
     static hash__<md,SIZE> hash_file(const char *fname){
-	int fd = open(fname,O_RDONLY
-#ifdef O_BINARY
-		      |O_BINARY
-#endif
-		      );
-	if(fd<0) throw fname;
+	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
+	if(fd<0) throw file_system_error("open error");
 	struct stat st;
 	if(fstat(fd,&st)<0){
 	    close(fd);
-	    throw fname;
+	    throw file_system_error("fstat error");
 	}
 	const uint8_t *buf = (const uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
 	if(buf==0){
 	    close(fd);
-	    throw fname;
+	    throw file_system_error("mmap error");
 	}
 	hash__<md,SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
@@ -294,14 +312,88 @@ public:
     }
 #endif
 };
-
 typedef hash_generator__<EVP_md5,16> md5_generator;
 typedef hash_generator__<EVP_sha1,20> sha1_generator;
 typedef hash_generator__<EVP_sha256,32> sha256_generator;
-
-#ifdef HAVE_EVP_SHA512
+#ifdef HAVE_SHA512_T
 typedef hash_generator__<EVP_sha512,64> sha512_generator;
-#define HAVE_SHA512_T
 #endif
+#endif
+
+#ifdef USE_COMMON_CRYPTO
+/* a simpler implementation because there is no need to allocate and then free the 
+ * hash contexts.
+ */
+template<class CC_CTX,int Init(CC_CTX *),int Update(CC_CTX *,const void *,CC_LONG),
+         int Final(unsigned char *,CC_CTX *),size_t SIZE>
+class hash_generator__ { 			/* generates the hash */
+ private:
+    CC_CTX c;
+    bool finalized;
+    uint8_t digest_[SIZE];               // created
+    /* Not allowed to copy; these are prototyped but not defined, 
+     * so any attempt to use them will fail, but we won't get the -Weffc++ warnings  
+     */
+    hash_generator__ & operator=(const hash_generator__ &);
+    hash_generator__(const hash_generator__ &);
+public:
+    int64_t hashed_bytes;
+    /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
+    hash_generator__():c(),finalized(false),digest_(),hashed_bytes(0){
+        Init(&c);
+    }
+    ~hash_generator__(){
+    }
+    void update(const uint8_t *buf,size_t bufsize){
+	if(finalized){
+	    std::cerr << "hashgen_t::update called after finalized\n";
+	    exit(1);
+	}
+	Update(&c, buf, bufsize);
+	hashed_bytes += bufsize;
+    }
+    hash__<SIZE> digest() {
+	if(!finalized){
+            Final(digest_, &c);
+            finalized = true;
+        }
+	return hash__<SIZE>(digest_);
+    }
+
+    /** Compute a hash from a buffer and return the hash */
+    static hash__<SIZE>  hash_buf(const uint8_t *buf, size_t bufsize){
+	hash_generator__ g;
+	g.update(buf, bufsize);
+	return g.digest();
+    }
+	
+#ifdef HAVE_MMAP
+    /** Static method allocator */
+    static hash__<SIZE> hash_file(const char *fname){
+	int fd = open(fname, O_RDONLY | HASHT_O_BINARY );
+	if (fd<0) throw file_system_error("open error");
+	struct stat st;
+	if (fstat(fd,&st)<0){
+	    close(fd);
+	    throw file_system_error("fstat error");
+	}
+	const uint8_t *buf = (const uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
+	if(buf==0){
+	    close(fd);
+	    throw file_system_error("mmap error");
+	}
+	hash__<SIZE> s = hash_buf(buf,st.st_size);
+	munmap((void *)buf,st.st_size);
+	close(fd);
+	return s;
+    }
+#endif
+};
+typedef hash_generator__<CC_MD5_CTX,CC_MD5_Init,CC_MD5_Update,CC_MD5_Final,16> md5_generator;
+typedef hash_generator__<CC_SHA1_CTX,CC_SHA1_Init,CC_SHA1_Update,CC_SHA1_Final,20> sha1_generator;
+typedef hash_generator__<CC_SHA256_CTX,CC_SHA256_Init,CC_SHA256_Update,CC_SHA256_Final,32> sha256_generator;
+typedef hash_generator__<CC_SHA512_CTX,CC_SHA512_Init,CC_SHA512_Update,CC_SHA512_Final,64> sha512_generator;
+#endif
+
 
 #endif

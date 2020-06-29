@@ -52,6 +52,12 @@ case $host in
 esac
 
 ################################################################
+##
+## Crypto Support
+##
+## MacOS CommonCrypto
+AC_CHECK_HEADERS([CommonCrypto/CommonDigest.h])
+
 ## OpenSSL Support is now required (for hash_t)
 ## Note that this now works with both OpenSSL 1.0 and OpenSSL 1.1
 ## On OpenSSL man page we can read:
@@ -62,7 +68,11 @@ AC_CHECK_HEADERS([openssl/aes.h openssl/bio.h openssl/evp.h openssl/hmac.h opens
 # OpenSSL has been installed under at least two different names...
 AC_CHECK_LIB([crypto],[EVP_get_digestbyname])	
 AC_CHECK_LIB([ssl],[SSL_library_init])
-AC_CHECK_FUNCS([EVP_get_digestbyname],,
-	AC_MSG_ERROR([SSL/OpenSSL support required]))
-AC_CHECK_FUNCS([EVP_MD_CTX_new EVP_MD_CTX_free])
+
+## Make sure we have some kind of crypto
+AC_CHECK_FUNCS([CC_MD2_Init],
+        AC_MSG_NOTICE([Apple CommonCrypto Detected]),
+        AC_CHECK_FUNCS([EVP_get_digestbyname],,AC_MSG_ERROR([CommonCrypto or SSL/OpenSSL support required]))
+        AC_CHECK_FUNCS([EVP_MD_CTX_new EVP_MD_CTX_free])
+)        
 
