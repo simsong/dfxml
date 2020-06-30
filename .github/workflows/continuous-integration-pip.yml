@@ -31,6 +31,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
            sudo apt install libtool autoconf automake
+           automake --help
 
       - name: Install Python dependencies
         run: |
