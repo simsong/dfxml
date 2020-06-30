@@ -30,7 +30,8 @@ jobs:
       - name: Install C++ dependencies on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-           sudo apt-get install libgtest-dev
+           sudo apt install libtool autoconf automake
+           automake --help
 
       - name: Install Python dependencies
         run: |

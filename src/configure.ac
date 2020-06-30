@@ -9,9 +9,9 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(DFXML, 0.0.1, bugs@afflib.org)
+AC_INIT(DFXML, 1.0.0, bugs@afflib.org)
 AC_CONFIG_MACRO_DIR(m4)
-AC_CONFIG_FILES([Makefile tests/Makefile])
+AC_CONFIG_FILES([Makefile tests/Makefile ])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
