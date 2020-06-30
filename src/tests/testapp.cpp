@@ -1,17 +1,40 @@
+<<<<<<< HEAD
+=======
 //#pragma GCC diagnostic ignored "-Wshadow"
 //#pragma GCC diagnostic ignored "-Wunused-variable"
+>>>>>>> 41e64c0aeb762b3c2f6c793538ada3b7b3806964
 
 // Uses cester
 // doc: https://github.com/exoticlibraries/libcester/blob/master/docs/docs/macros.rst
 
 // cester generates some GCC warnings. Ignore them.
 
+<<<<<<< HEAD
+// define stuff I need in the global environment. Only read it once.
+#ifndef GUARD_BLOCK
+#include "config.h"
+
+
+#ifdef DFXML_GNUC_HAS_IGNORED_SHADOW_PRAGMA
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
+#ifdef DFXML_GNUC_HAS_IGNORED_UNUSED_VARIABLE_PRAGMA
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
+#ifdef DFXML_GNUC_HAS_IGNORED_UNUSED_VARIABLE_LABEL
+#pragma GCC diagnostic ignored "-Wunused-label"
+#endif
+
+=======
 // get cester!
 #include "cester.h"
 
 // define stuff I need in the global environment. Only read it once.
 #ifndef GUARD_BLOCK
 #include "config.h"
+>>>>>>> 41e64c0aeb762b3c2f6c793538ada3b7b3806964
 #include "../hash_t.h"
 #define GUARD_BLOCK
 const uint8_t nulls[512] = {0};
@@ -26,8 +49,25 @@ int count_wrongs(void) {
     }
     return wrongs;
 }
+<<<<<<< HEAD
+
+// cester wants unix to be defined on Apple
+#ifdef __APPLE__
+#define unix
 #endif
 
+
+#endif
+
+// get cester!
+#include "cester.h"
+
+
+
+=======
+#endif
+
+>>>>>>> 41e64c0aeb762b3c2f6c793538ada3b7b3806964
 CESTER_TEST(test_sha1_t, inst,
             cester_assert_equal( count_wrongs(), 0 );
     )

@@ -48,6 +48,8 @@
 #include <unistd.h>
 
 #if defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
+// We are going to ignore -Wdeprecated-declarations, because we need MD5
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <CommonCrypto/CommonDigest.h>
 #define USE_COMMON_CRYPTO
 #define HAVE_SHA512_T
@@ -82,7 +84,20 @@
 
 #define HASH_T_VERSION 2
 
-
+/* 
+ * we should use std::fs::filesystem_error(), but it doesn't seem to be ready for prime time yet.
+ */
+class fserror:public std::exception {
+public:;
+    const char *msg;
+    const int  error_code;
+    fserror(const char *msg_,int error_code_):msg(msg_),error_code(error_code_){
+    }
+    virtual const char *what() const throw() {
+        return msg;
+    }
+};
+    
 /* hash__ is a template that gets specialized to
  * md5_t, sha1_t, sha256_t and sha512_t (if available)
  * 
@@ -226,16 +241,6 @@ inline std::string digest_name<sha512_t>() {
 #ifdef USE_OPENSSL
 template<const EVP_MD *md(),size_t SIZE> 
 class hash_generator__ { 			/* generates the hash */
-
-    class file_system_error:public std::exception {
-        const char *msg;
-        file_system_error(const char *msg_):msg(msg_){
-        }
-        virtual const char *what() const throw() {
-            return msg;
-        }
-    };
-
  private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
     bool finalized;
@@ -294,16 +299,16 @@ public:
 #ifdef HAVE_MMAP
     static hash__<md,SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
-	if(fd<0) throw file_system_error("open error");
+	if(fd<0) throw fserror("open",errno);
 	struct stat st;
 	if(fstat(fd,&st)<0){
 	    close(fd);
-	    throw file_system_error("fstat error");
+	    throw fserror("fstat",errno);
 	}
 	const uint8_t *buf = (const uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
 	if(buf==0){
 	    close(fd);
-	    throw file_system_error("mmap error");
+	    throw fserror("mmap",errno);
 	}
 	hash__<md,SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
@@ -371,16 +376,16 @@ public:
     /** Static method allocator */
     static hash__<SIZE> hash_file(const char *fname){
 	int fd = open(fname, O_RDONLY | HASHT_O_BINARY );
-	if (fd<0) throw file_system_error("open error");
+	if (fd<0) throw fserror("open",errno);
 	struct stat st;
 	if (fstat(fd,&st)<0){
 	    close(fd);
-	    throw file_system_error("fstat error");
+	    throw fserror("fstat",errno);
 	}
 	const uint8_t *buf = (const uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
 	if(buf==0){
 	    close(fd);
-	    throw file_system_error("mmap error");
+	    throw fserror("mmap",errno);
 	}
 	hash__<SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
