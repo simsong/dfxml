@@ -93,3 +93,5 @@ matrix:
 notifications:
   email:
     - alexander.nelson@nist.gov
+    - simsong@acm.org
+    
