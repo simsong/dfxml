@@ -131,7 +131,7 @@ fi
 if test "$automake" = "yes"; then
   #add --include-deps if you want to bootstrap with any other compiler than gcc
   #automake${amvers} --add-missing --copy --include-deps
-  automake${amvers} --foreign --add-missing --copy
+  automake${amvers} --foreign --add-missing --copy --verbose
 fi
 
 # Remove cruft that we no longer want
