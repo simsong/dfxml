@@ -1,5 +1,5 @@
-#ifndef _DFXML_READER_H_
-#define _DFXML_READER_H_
+#ifndef DFXML_READER_H
+#define DFXML_READER_H
 
 /**
  ** NOTE:

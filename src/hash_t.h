@@ -48,6 +48,8 @@
 #include <unistd.h>
 
 #if defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
+// We are going to ignore -Wdeprecated-declarations, because we need MD5
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <CommonCrypto/CommonDigest.h>
 #define USE_COMMON_CRYPTO
 #define HAVE_SHA512_T
@@ -82,7 +84,20 @@
 
 #define HASH_T_VERSION 2
 
-
+/* 
+ * we should use std::fs::filesystem_error(), but it doesn't seem to be ready for prime time yet.
+ */
+class fserror:public std::exception {
+public:;
+    const char *msg;
+    const int  error_code;
+    fserror(const char *msg_,int error_code_):msg(msg_),error_code(error_code_){
+    }
+    virtual const char *what() const throw() {
+        return msg;
+    }
+};
+    
 /* hash__ is a template that gets specialized to
  * md5_t, sha1_t, sha256_t and sha512_t (if available)
  * 
@@ -228,8 +243,8 @@ template<const EVP_MD *md(),size_t SIZE>
 class hash_generator__ { 			/* generates the hash */
  private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
-    bool initialized;	       /* has the context been initialized? */
     bool finalized;
+    uint8_t digest_[SIZE];               // created
     /* Not allowed to copy; these are prototyped but not defined, 
      * so any attempt to use them will fail, but we won't get the -Weffc++ warnings  
      */
@@ -238,40 +253,25 @@ class hash_generator__ { 			/* generates the hash */
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():mdctx(NULL),initialized(false),finalized(false),hashed_bytes(0){ }
-    ~hash_generator__(){
-	release();
-    }
-private:
-    /* 2020-06-27: release() and init() are now private; users have no business calling them. */
-    void release(){			/* free allocated memory */
-	if(initialized){
-#ifdef HAVE_EVP_MD_CTX_FREE
-	    EVP_MD_CTX_free(mdctx);
-#else
-	    EVP_MD_CTX_destroy(mdctx);
-#endif
-	    initialized = false;
-	    hashed_bytes = 0;
-	}
-    }
-    void init(){
-	if(initialized==false){
+    hash_generator__():mdctx(NULL),finalized(false),digest_(),hashed_bytes(0){
 #ifdef HAVE_EVP_MD_CTX_NEW
-	    mdctx = EVP_MD_CTX_new();
+        mdctx = EVP_MD_CTX_new();
 #else
-	    mdctx = EVP_MD_CTX_create();
+        mdctx = EVP_MD_CTX_create();
 #endif
-            if (!mdctx) throw std::bad_alloc();
-	    EVP_DigestInit_ex(mdctx, md(), NULL);
-	    initialized = true;
-	    finalized = false;
-	    hashed_bytes = 0;
-	}
+        if (!mdctx) throw std::bad_alloc();
+        EVP_DigestInit_ex(mdctx, md(), NULL);
+    }
+
+    ~hash_generator__(){
+#ifdef HAVE_EVP_MD_CTX_FREE
+        EVP_MD_CTX_free(mdctx);
+#else
+        EVP_MD_CTX_destroy(mdctx);
+#endif
     }
 public:
     void update(const uint8_t *buf,size_t bufsize){
-	if(!initialized) init();
 	if(finalized){
 	    std::cerr << "hashgen_t::update called after finalized\n";
 	    exit(1);
@@ -279,54 +279,36 @@ public:
 	EVP_DigestUpdate(mdctx,buf,bufsize);
 	hashed_bytes += bufsize;
     }
-    hash__<md,SIZE> final() {
-	if(finalized){
-	  std::cerr << "currently friendly_generator does not cache the final value\n";
-	  assert(0);
-          exit(1);                      // in case compiled with assertions disabled
-	}
-	if(!initialized){
-	  init();			/* do it now! */
-	}
-	hash__<md,SIZE> val;
-	unsigned int len = sizeof(val.digest);
-	EVP_DigestFinal(mdctx,val.digest,&len);
-	finalized = true;
-	return val;
+    hash__<SIZE> digest() {
+	if(!finalized){
+            unsigned int md_len = SIZE;
+            EVP_DigestFinal(mdctx,digest_,&md_len);
+            finalized = true;
+        }
+        return hash__<SIZE>(digest_);
     }
 
     /** Compute a sha1 from a buffer and return the hash */
-    static hash__<md,SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
+    static hash__<SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
 	/* First time through find the SHA1 of 512 NULLs */
 	hash_generator__ g;
 	g.update(buf,bufsize);
-	return g.final();
+	return g.digest();
     }
 	
 #ifdef HAVE_MMAP
-    /** Static method allocator */
-    class file_not_found:public std::exception {
-        const char *msg_;
-        file_not_found(const char *msg):msg(msg_){
-        }
-        virtual const char *what() const throw() {
-            return msg_;
-        }
-    };
-
-
     static hash__<md,SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
-	if(fd<0) throw file_system_error("open error");
+	if(fd<0) throw fserror("open",errno);
 	struct stat st;
 	if(fstat(fd,&st)<0){
 	    close(fd);
-	    throw file_system_error("fstat error");
+	    throw fserror("fstat",errno);
 	}
 	const uint8_t *buf = (const uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
 	if(buf==0){
 	    close(fd);
-	    throw file_system_error("mmap error");
+	    throw fserror("mmap",errno);
 	}
 	hash__<md,SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
@@ -347,7 +329,8 @@ typedef hash_generator__<EVP_sha512,64> sha512_generator;
 /* a simpler implementation because there is no need to allocate and then free the 
  * hash contexts.
  */
-template<class CC_CTX,int Init(CC_CTX *),int Update(CC_CTX *,const void *,CC_LONG),int Final(unsigned char *,CC_CTX *),size_t SIZE>
+template<class CC_CTX,int Init(CC_CTX *),int Update(CC_CTX *,const void *,CC_LONG),
+         int Final(unsigned char *,CC_CTX *),size_t SIZE>
 class hash_generator__ { 			/* generates the hash */
  private:
     CC_CTX c;
@@ -361,7 +344,7 @@ class hash_generator__ { 			/* generates the hash */
 public:
     int64_t hashed_bytes;
     /* This function takes advantage of the fact that different hash functions produce residues with different sizes */
-    hash_generator__():c(),finalized(false),hashed_bytes(0){
+    hash_generator__():c(),finalized(false),digest_(),hashed_bytes(0){
         Init(&c);
     }
     ~hash_generator__(){
@@ -393,16 +376,16 @@ public:
     /** Static method allocator */
     static hash__<SIZE> hash_file(const char *fname){
 	int fd = open(fname, O_RDONLY | HASHT_O_BINARY );
-	if (fd<0) throw file_system_error("open error");
+	if (fd<0) throw fserror("open",errno);
 	struct stat st;
 	if (fstat(fd,&st)<0){
 	    close(fd);
-	    throw file_system_error("fstat error");
+	    throw fserror("fstat",errno);
 	}
 	const uint8_t *buf = (const uint8_t *)mmap(0,st.st_size,PROT_READ,MAP_FILE|MAP_SHARED,fd,0);
 	if(buf==0){
 	    close(fd);
-	    throw file_system_error("mmap error");
+	    throw fserror("mmap",errno);
 	}
 	hash__<SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);

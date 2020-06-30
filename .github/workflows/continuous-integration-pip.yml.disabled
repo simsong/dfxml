@@ -16,33 +16,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+
+      - name: Install C++ dependencies on MacOS
+        if: startsWith(matrix.os, 'macOS')
+        run: |
+           bash etc/install_autotools.sh
+
+      - name: Install C++ dependencies on Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+           sudo apt install libtool autoconf automake
+           automake --help
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-cov
           if [ -r requirements.txt ]; then pip install -r requirements.txt ; fi
           if [ -r requirements-dev.txt ]; then pip install -r requirements-dev.txt ; fi
-
-      #    # Install program analysis tools
-      #    pip install black flake8 autopep8 || true
-      #    pip install autopep8 || true
-      #- name: Lint with flake8
-      #  run: |
-      #     stop the build if there are Python syntax errors or undefined names
-      #     flake8 python --count --select=E9,F63,F7,F82 --show-source --statistics
-
-      #     all Python files should follow PEP8 (except some notebooks, see setup.cfg)
-      #     flake8 python
-
-      #     exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
-      #    flake8 python --count --exit-zero --max-complexity=10 --statistics
-
-      #- name: Install from source (required for the pre-commit tests)
-      #  run: pip install .
 
       - name: Test with pytest
         run: pytest --cov=./ --cov-report=xml python
@@ -55,9 +51,7 @@ jobs:
 
       - name: c/c++ test
         run: |
-          if [ $RUNNER_OS == macOS ]; then bash etc/install_autotools.sh ; fi
           cd src
-          ./bootstrap.sh && ./configure && make && make check          
+          bash bootstrap.sh
+          ./configure && make && make check 
 
-      #- name: Upload coverage
-      #  uses: codecov/codecov-action@v1

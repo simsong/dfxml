@@ -9,9 +9,9 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(DFXML, 0.0.1, bugs@afflib.org)
+AC_INIT(DFXML, 1.0.0, bugs@afflib.org)
 AC_CONFIG_MACRO_DIR(m4)
-AC_CONFIG_FILES([Makefile tests/Makefile])
+AC_CONFIG_FILES([Makefile tests/Makefile ])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
@@ -28,9 +28,6 @@ AC_PROG_INSTALL
 AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX_11(noext, optional)
 AC_LANG_POP()
-
-# support for googletest
-PKG_CHECK_MODULES([GTEST], [gtest_main])
 
 m4_include([dfxml_configure.m4])
 
@@ -102,6 +99,8 @@ unset option
 # -Wcast-qual 
 # -Wmissing-format-attribute  --- Just too annoying
 AC_LANG_PUSH(C++)
+
+
 CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
     -Wredundant-decls -Wdisabled-optimization \
@@ -129,6 +128,7 @@ do
   unset SAVE_CXXFLAGS
 done
 unset option
+
 AC_LANG_POP()    
 
 

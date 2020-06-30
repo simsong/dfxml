@@ -1,6 +1,8 @@
 # (C) 2020 Simson L. Garfinkel
 # https://www.gnu.org/licenses/lgpl-3.0.en.html
 
+SUBDIRS = tests
+
 bin_PROGRAMS = dfxml_demo iblkfind
 dfxml_demo_SOURCES = dfxml_demo.cpp dfxml_reader.cpp dfxml_reader.h 
 iblkfind_SOURCES = iblkfind.cpp dfxml_reader.cpp dfxml_reader.h 

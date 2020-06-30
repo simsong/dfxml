@@ -29,9 +29,9 @@ export PATH=$PATH:/usr/local/bin
 # http://ftpmirror.gnu.org/automake
 
 cd $build
-curl -OL http://ftpmirror.gnu.org/automake/automake-1.15.tar.gz
-tar xzf automake-1.15.tar.gz
-cd automake-1.15
+curl -OL http://ftpmirror.gnu.org/automake/automake-1.16.tar.gz
+tar xzf automake-1.16.tar.gz
+cd automake-1.16
 ./configure --prefix=/usr/local
 make
 sudo make install
