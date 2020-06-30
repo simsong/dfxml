@@ -13,10 +13,10 @@ mkdir -p $build
 
 ##
 # Autoconf
-# http://ftpmirror.gnu.org/autoconf
+# https://ftpmirror.gnu.org/autoconf
 
 cd $build
-curl -OL http://ftpmirror.gnu.org/autoconf/autoconf-2.69.tar.gz
+curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.69.tar.gz
 tar xzf autoconf-2.69.tar.gz
 cd autoconf-2.69
 ./configure --prefix=/usr/local
@@ -26,10 +26,10 @@ export PATH=$PATH:/usr/local/bin
 
 ##
 # Automake
-# http://ftpmirror.gnu.org/automake
+# https://ftpmirror.gnu.org/automake
 
 cd $build
-curl -OL http://ftpmirror.gnu.org/automake/automake-1.16.tar.gz
+curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz
 tar xzf automake-1.16.tar.gz
 cd automake-1.16
 ./configure --prefix=/usr/local
@@ -38,10 +38,10 @@ sudo make install
 
 ##
 # Libtool
-# http://ftpmirror.gnu.org/libtool
+# https://ftpmirror.gnu.org/libtool
 
 cd $build
-curl -OL http://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz
+curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz
 tar xzf libtool-2.4.6.tar.gz
 cd libtool-2.4.6
 ./configure --prefix=/usr/local
