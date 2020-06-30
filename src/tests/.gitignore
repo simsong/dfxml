@@ -4,3 +4,4 @@ testapp
 testapp.log
 testapp.trs
 *.log
+Makefile.in
