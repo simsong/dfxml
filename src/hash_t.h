@@ -98,7 +98,6 @@ public:;
     }
 };
     
-
 /* hash__ is a template that gets specialized to
  * md5_t, sha1_t, sha256_t and sha512_t (if available)
  * 
