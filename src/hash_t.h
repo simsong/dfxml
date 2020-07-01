@@ -84,6 +84,8 @@
 
 #define HASH_T_VERSION 2
 
+namespace dfxml {
+
 /* 
  * we should use std::fs::filesystem_error(), but it doesn't seem to be ready for prime time yet.
  */
@@ -108,7 +110,7 @@ public:;
  * We actually ignore the Type and the allocator
  */
 template<size_t SIZE> 
-class hash__
+class hash
 {
 public:
     uint8_t digest[SIZE];
@@ -116,7 +118,7 @@ public:
         return(SIZE);
     }
     /* This returns a place where we can put results */
-    hash__(const uint8_t *provided):digest(){
+    hash(const uint8_t *provided):digest(){
 	memcpy(this->digest,provided,size());
     }
     /* python like interface for hexdigest */
@@ -129,8 +131,8 @@ public:
     static unsigned int hex2int(char ch0,char ch1){
         return (hex2int(ch0)<<4) | hex2int(ch1);
     }
-    static hash__ fromhex(const std::string &hexbuf) {
-	hash__ res;
+    static hash fromhex(const std::string &hexbuf) {
+	hash res;
         assert(hexbuf.size()==SIZE*2);
 	for(unsigned int i=0;i+1<hexbuf.size() && (i/2)<size();i+=2){
 	    res.digest[i/2] = hex2int(hexbuf[i],hexbuf[i+1]);
@@ -170,36 +172,36 @@ public:
 	}
 	return bits;
     }
-    static const hash__ *new_from_hex(const char *hex) {
-	hash__ *val = new hash__();
+    static const hash *new_from_hex(const char *hex) {
+	hash *val = new hash();
 	if(hex2bin(val->digest,sizeof(val->digest),hex)!=SIZE*8){
 	    std::cerr << "invalid input " << hex << "(" << SIZE*8 << ")\n";
 	    exit(1);
 	}
 	return val;
     }
-    bool operator<(const hash__ &s2) const {
+    bool operator<(const hash &s2) const {
 	/* Check the first byte manually as a performance hack */
 	if(this->digest[0] < s2.digest[0]) return true;
 	if(this->digest[0] > s2.digest[0]) return false;
 	return memcmp(this->digest, s2.digest, SIZE) < 0;
     }
-    bool operator==(const hash__ &s2) const {
+    bool operator==(const hash &s2) const {
 	if(this->digest[0] != s2.digest[0]) return false;
 	return memcmp(this->digest, s2.digest, SIZE) == 0;
     }
-    friend std::ostream& operator<<(std::ostream& os,const hash__ &s2) {
+    friend std::ostream& operator<<(std::ostream& os,const hash &s2) {
         os << s2.hexdigest();
         return os;
     }
 };
 
 
-typedef hash__<16> md5_t;
-typedef hash__<20> sha1_t;
-typedef hash__<32> sha256_t;
+typedef hash<16> md5_t;
+typedef hash<20> sha1_t;
+typedef hash<32> sha256_t;
 #ifdef HAVE_SHA512_T
-typedef hash__<64> sha512_t;
+typedef hash<64> sha512_t;
 #endif
 
 /* Now that we have our types defined, 
@@ -279,17 +281,17 @@ public:
 	EVP_DigestUpdate(mdctx,buf,bufsize);
 	hashed_bytes += bufsize;
     }
-    hash__<SIZE> digest() {
+    hash<SIZE> digest() {
 	if(!finalized){
             unsigned int md_len = SIZE;
             EVP_DigestFinal(mdctx,digest_,&md_len);
             finalized = true;
         }
-        return hash__<SIZE>(digest_);
+        return hash<SIZE>(digest_);
     }
 
     /** Compute a sha1 from a buffer and return the hash */
-    static hash__<SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
+    static hash<SIZE>  hash_buf(const uint8_t *buf,size_t bufsize){
 	/* First time through find the SHA1 of 512 NULLs */
 	hash_generator__ g;
 	g.update(buf,bufsize);
@@ -297,7 +299,7 @@ public:
     }
 	
 #ifdef HAVE_MMAP
-    static hash__<md,SIZE> hash_file(const char *fname){
+    static hash<md,SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
 	if(fd<0) throw fserror("open",errno);
 	struct stat st;
@@ -310,7 +312,7 @@ public:
 	    close(fd);
 	    throw fserror("mmap",errno);
 	}
-	hash__<md,SIZE> s = hash_buf(buf,st.st_size);
+	hash<md,SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
 	close(fd);
 	return s;
@@ -357,16 +359,16 @@ public:
 	Update(&c, buf, bufsize);
 	hashed_bytes += bufsize;
     }
-    hash__<SIZE> digest() {
+    hash<SIZE> digest() {
 	if(!finalized){
             Final(digest_, &c);
             finalized = true;
         }
-	return hash__<SIZE>(digest_);
+	return hash<SIZE>(digest_);
     }
 
     /** Compute a hash from a buffer and return the hash */
-    static hash__<SIZE>  hash_buf(const uint8_t *buf, size_t bufsize){
+    static hash<SIZE>  hash_buf(const uint8_t *buf, size_t bufsize){
 	hash_generator__ g;
 	g.update(buf, bufsize);
 	return g.digest();
@@ -374,7 +376,7 @@ public:
 	
 #ifdef HAVE_MMAP
     /** Static method allocator */
-    static hash__<SIZE> hash_file(const char *fname){
+    static hash<SIZE> hash_file(const char *fname){
 	int fd = open(fname, O_RDONLY | HASHT_O_BINARY );
 	if (fd<0) throw fserror("open",errno);
 	struct stat st;
@@ -387,7 +389,7 @@ public:
 	    close(fd);
 	    throw fserror("mmap",errno);
 	}
-	hash__<SIZE> s = hash_buf(buf,st.st_size);
+	hash<SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
 	close(fd);
 	return s;
@@ -400,5 +402,6 @@ typedef hash_generator__<CC_SHA256_CTX,CC_SHA256_Init,CC_SHA256_Update,CC_SHA256
 typedef hash_generator__<CC_SHA512_CTX,CC_SHA512_Init,CC_SHA512_Update,CC_SHA512_Final,64> sha512_generator;
 #endif
 
+}
 
 #endif
