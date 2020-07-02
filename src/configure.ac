@@ -30,6 +30,7 @@ AX_CXX_COMPILE_STDCXX_11(noext, optional)
 AC_LANG_POP()
 
 m4_include([dfxml_configure.m4])
+m4_include([tests/cester_configure.m4])
 
 
 ################################################################
