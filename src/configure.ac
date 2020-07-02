@@ -63,7 +63,8 @@ AC_CHECK_LIB([expat],[XML_ParserCreate],,[have_expat="no ";AC_MSG_WARN([expat no
 GCC_WARNINGS_TO_TEST="-MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
     -Wshadow -Wwrite-strings -Wcast-align -Waggregate-return \
     -Wbad-function-cast -Wcast-qual -Wundef -Wredundant-decls -Wdisabled-optimization \
-    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wno-deprecated-declarations -Wno-unknown-warning-option"
+    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wno-deprecated-declarations \
+    -Wno-unknown-warning-option"
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we do not want to do on mingw
@@ -100,12 +101,13 @@ unset option
 # -Wmissing-format-attribute  --- Just too annoying
 AC_LANG_PUSH(C++)
 
-
 CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
     -Wredundant-decls -Wdisabled-optimization \
     -Wfloat-equal -Wmultichar -Wmissing-noreturn \
-    -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo -Wno-deprecated-declarations -Wno-unknown-warning-option\
+    -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo \
+    -Wno-deprecated-declarations \
+    -Wno-unknown-warning-option \
     -funit-at-a-time"
 
 if test x"${mingw}" != "xyes" ; then
@@ -152,7 +154,6 @@ AC_CHECK_HEADERS([\
 	linux/if_ether.h signal.h])
 
                                               
-
 ############## drop optimization flags if requested ################
 AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
 if test x"${AFF_NOOPT}" != "x" ; then
