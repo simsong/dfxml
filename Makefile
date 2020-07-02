@@ -30,4 +30,5 @@ clean:
 	find . -name '*~' -exec rm {} \;
 
 check:
+	(cd src;make check)
 	@echo performing checks currently in Travis
