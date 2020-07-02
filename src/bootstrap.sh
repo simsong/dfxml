@@ -130,8 +130,7 @@ if test "$header" = "yes"; then
 fi
 if test "$automake" = "yes"; then
   #add --include-deps if you want to bootstrap with any other compiler than gcc
-  #automake${amvers} --add-missing --copy --include-deps
-  automake${amvers} --foreign --add-missing --copy --verbose
+  automake${amvers} --add-missing --copy --include-deps
 fi
 
 # Remove cruft that we no longer want
