@@ -423,11 +423,9 @@ void dfxml_writer::add_cpuid()
     unsigned long eax = cpuID.EAX();
     unsigned long ebx = cpuID.EBX();
     unsigned long ecx = cpuID.ECX();
-    unsigned long edx = cpuID.EDX();
     
     push("cpuid");
     xmlout("identification", vendor);
-
     xmlout("family", (int64_t) BFIX(eax, 8, 11));
     xmlout("model", (int64_t) BFIX(eax, 4, 7));
     xmlout("stepping", (int64_t) BFIX(eax, 0, 3));
