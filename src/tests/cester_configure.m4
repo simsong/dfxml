@@ -1,7 +1,8 @@
-# Does GCC have the diagnostic pragma?
+#                                               -*- Autoconf -*- 
+# Does GCC have the diagnostic pragma ignored -Wredundant-decls?
 AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wredundant-decls"],
     	       [],
-	       AC_DEFINE([DFXML_GNUC_HAS_DIAGNOSTIC_PRAGMA],[1],[GCC supports #pragma GCC diagnostic]),
+	       AC_DEFINE([DFXML_GNUC_HAS_IGNORED_REDUNDANT_DECLS_PRAGMA],[1],[GCC supports #pragma GCC diagnostic ignored -Wredundant-decls]),
 	       )
 
 # Does GCC have the diagnostic pragma ignored -Wshadow?

@@ -19,6 +19,10 @@
 #pragma GCC diagnostic ignored "-Wunused-label"
 #endif
 
+#ifdef DFXML_GNUC_HAS_IGNORED_REDUNDANT_DECLS_PRAGMA
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
+
 // cester wants unix to be defined on Apple
 #ifdef __APPLE__
 #define unix
