@@ -8,10 +8,6 @@
 #ifndef DFXML_WRITER_H
 #define DFXML_WRITER_H
 
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -26,10 +22,6 @@
 #include <sstream>
 #include <stack>
 #include <string>
-
-#ifdef HAVE_PTHREAD
-#include <pthread.h>
-#endif
 
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
@@ -62,7 +54,6 @@
 #endif
 
 #ifdef __cplusplus
-#include "cppmutex.h"
 class dfxml_writer {
 private:
     /*** neither copying nor assignment is implemented ***
@@ -77,11 +68,7 @@ public:
     typedef std::set<std::string> tagid_set_t;
 private:
 
-#ifdef HAVE_PTHREAD
-    pthread_mutex_t M;                  // mutext protecting out
-#else
-    int M;                              // placeholder
-#endif
+    std::mutex   M;
     std::fstream outf;
     std::ostream *out;                  // where it is being written; defaults to stdout
     stringset tags;                     // XML tags

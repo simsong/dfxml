@@ -25,7 +25,7 @@
 #endif
 
 // define stuff I need in the global environment. Only read it once.
-#include "../hash_t.h"
+#include "hash_t.h"
 #define GUARD_BLOCK
 const uint8_t nulls[512] = {0};
 
@@ -42,7 +42,7 @@ int count_wrongs(void) {
 #endif
 
 // get cester!
-#include "cester.h"
+#include "tests/cester.h"
 
 CESTER_TEST(test_sha1_t, inst,
             cester_assert_equal( count_wrongs(), 0 );

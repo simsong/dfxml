@@ -1,2 +1,7 @@
 Makefile.defs
 depcomp
+*.log
+*.trs
+Makefile.in
+Makefile
+testapp
