@@ -35,16 +35,6 @@
 #include <boost/version.hpp>
 #endif
 
-#ifdef HAVE_PTHREAD
-#define MUTEX_INIT(M)   pthread_mutex_init(M,NULL);
-#define MUTEX_LOCK(M)   pthread_mutex_lock(M)
-#define MUTEX_UNLOCK(M) pthread_mutex_unlock(M)
-#else
-#define MUTEX_INIT(M)   {}
-#define MUTEX_LOCK(M)   {}
-#define MUTEX_UNLOCK(M) {}
-#endif
-
 #ifdef HAVE_TRE_TRE_H
 #include <tre/tre.h>
 #endif
@@ -196,9 +186,6 @@ std::string dfxml_writer::xmlmap(const dfxml_writer::strstrmap_t &m,const std::s
 dfxml_writer::dfxml_writer():M(),outf(),out(&cout),tags(),tag_stack(),tempfilename(),tempfile_template("/tmp/xml_XXXXXXXX"),
            t0(),t_last_timestamp(),make_dtd(false),outfilename(),oneline()
 {
-#ifdef HAVE_PTHREAD
-    pthread_mutex_init(&M,NULL);
-#endif
     gettimeofday(&t0,0);
     gettimeofday(&t_last_timestamp,0);
     *out << xml_header;
@@ -210,7 +197,6 @@ dfxml_writer::dfxml_writer(const std::string &outfilename_,bool makeDTD):
     out(),tags(),tag_stack(),tempfilename(),tempfile_template(outfilename_+"_tmp_XXXXXXXX"),
     t0(),t_last_timestamp(),make_dtd(false),outfilename(outfilename_),oneline()
 {
-    MUTEX_INIT(&M);
     gettimeofday(&t0,0);
     gettimeofday(&t_last_timestamp,0);
     if(!outf.is_open()){

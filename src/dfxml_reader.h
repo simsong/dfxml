@@ -26,9 +26,9 @@
 #include <stack>
 #include <map>
 #include <sstream>
-#if __cplusplus >= 201103L
+//#if __cplusplus >= 201103L
 #include <functional>
-#endif
+//#endif
 
 #include <stdint.h>
 
@@ -133,11 +133,11 @@ namespace dfxml {
 #endif
     };
 
-#if __cplusplus >= 201103L
+//#if __cplusplus >= 201103L
     typedef std::function<void (file_object&)> fileobject_callback_t;
-#else
-    typedef void (*fileobject_callback_t)(file_object &);
-#endif
+//#else
+//    typedef void (*fileobject_callback_t)(file_object &);
+//#endif
 
     class dfxml_reader {
     public:
