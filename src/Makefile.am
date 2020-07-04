@@ -17,7 +17,7 @@ EXTRA_DIST = \
 check_PROGRAMS = testapp
 TESTS = $(check_PROGRAMS)
 
-testapp_SOURCES = testapp.cpp tests/cester.h
+testapp_SOURCES = testapp.cpp tests/cester.h dfxml_writer.h dfxml_writer.cpp
 
 # https://stackoverflow.com/questions/15013672/use-autotools-with-readme-md
 # We provide README.md instead of README. This prevents autotools from complaining.

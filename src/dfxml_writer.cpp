@@ -60,6 +60,7 @@
 using namespace std;
 
 #include "dfxml_writer.h"
+#include "cpuid.h"
 
 static const char *xml_header = "<?xml version='1.0' encoding='UTF-8'?>\n";
 
@@ -123,6 +124,27 @@ static string encoding_null("%00");
 static string encoding_r("%0D");
 static string encoding_n("%0A");
 static string encoding_t("%09");
+
+std::string dfxml_writer::make_command_line(int argc,char * const *argv)
+{
+    std::string command_line;
+    for(int i=0;i<argc;i++){
+        // append space separator between arguments
+        if(i>0) command_line.push_back(' ');
+        if (strchr(argv[i],' ') != NULL) {
+            // the argument has a space, so quote the argument
+            command_line.append("\"");
+            command_line.append(argv[i]);
+            command_line.append("\"");
+        } else {
+            // the argument has no space, so append as is
+            command_line.append(argv[i]);
+        }
+    }
+    return command_line;
+}
+
+
 
 std::string dfxml_writer::xmlescape(const string &xml)
 {
@@ -208,6 +230,20 @@ dfxml_writer::dfxml_writer(const std::string &outfilename_,bool makeDTD):
 }
 
 
+void dfxml_writer::add_DFXML_creator(const std::string &program,const std::string &version,
+                                     const std::string &commit,int argc, char * const *argv){
+    const std::string command_line = make_command_line(argc,argv);
+
+    push("creator","version='1.0'");
+    xmlout("program",program);
+    xmlout("version",version);
+    if(commit.size()>0) xmlout("commit",commit);
+    add_DFXML_build_environment();
+    add_DFXML_execution_environment(command_line);
+    pop();                  // creator
+}
+
+
 void dfxml_writer::set_tempfile_template(const std::string &temp)
 {
     tempfile_template = temp;
@@ -218,7 +254,7 @@ void dfxml_writer::set_tempfile_template(const std::string &temp)
 
 void dfxml_writer::close()
 {
-    MUTEX_LOCK(&M);
+    const std::lock_guard<std::mutex> lock(M);
     outf.close();
     if(make_dtd){
         /* If we are making the DTD, then we should close the file,
@@ -251,7 +287,6 @@ void dfxml_writer::close()
         unlink(cstr(tempfilename));
         outf.close();
     }
-    MUTEX_UNLOCK(&M);
 }
 
 void dfxml_writer::write_dtd()
@@ -371,42 +406,28 @@ void dfxml_writer::set_oneline(bool v)
     oneline = v;
 }
 
-void dfxml_writer::cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,
-                unsigned long *ecx, unsigned long *edx) {
-#if defined(HAVE_ASM_CPUID) && defined(__i386__) 
-#if defined(__PIC__)
-    __asm__ __volatile__("pushl %%ebx      \n\t" /* save %ebx */
-                         "cpuid            \n\t"
-                         "movl %%ebx, %1   \n\t" /* save what cpuid just put in %ebx */
-                         "popl %%ebx       \n\t" /* restore the old %ebx */
-                         : "=a"(*eax), "=r"(*ebx), "=c"(*ecx), "=d"(*edx)
-                         : "a"(op)
-                         : "cc");
-#else
-    __asm__ __volatile__("cpuid"
-                         : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
-                         : "a"(op)
-                         : "cc");
-#endif
-#endif
-}
-
 void dfxml_writer::add_cpuid()
 {
-#if defined(__i386__)
+#ifdef HAVE_ASM_CPUID
 #ifndef __WORDSIZE
 #define __WORDSIZE 32
 #endif
 #define BFIX(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))
-    char buf[256];
-    unsigned long eax=0, ebx=0, ecx=0, edx=0; // =0 avoids a compiler warning
-    cpuid(0, &eax, &ebx, &ecx, &edx);
-    
-    snprintf(buf,sizeof(buf),"%.4s%.4s%.4s", (char *)&ebx, (char *)&edx, (char *)&ecx);
-    push("cpuid");
-    xmlout("identification",buf);
 
-    cpuid(1, &eax, &ebx, &ecx, &edx);
+    CPUID  cpuID(0);                     // get CPU vendor
+    string vendor;
+    vendor += string((const char *)&cpuID.EBX(), 4);
+    vendor += string((const char *)&cpuID.EDX(), 4);
+    vendor += string((const char *)&cpuID.ECX(), 4);
+
+    unsigned long eax = cpuID.EAX();
+    unsigned long ebx = cpuID.EBX();
+    unsigned long ecx = cpuID.ECX();
+    unsigned long edx = cpuID.EDX();
+    
+    push("cpuid");
+    xmlout("identification", vendor);
+
     xmlout("family", (int64_t) BFIX(eax, 8, 11));
     xmlout("model", (int64_t) BFIX(eax, 4, 7));
     xmlout("stepping", (int64_t) BFIX(eax, 0, 3));
@@ -417,7 +438,8 @@ void dfxml_writer::add_cpuid()
     xmlout("nproc", (int64_t) BFIX(ebx, 16, 23));
     xmlout("apicid", (int64_t) BFIX(ebx, 24, 31));
     
-    cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
+    CPUID cpuID2(0x80000006);
+    ecx = cpuID2.ECX();
     xmlout("L1_cache_size", (int64_t) BFIX(ecx, 16, 31) * 1024);
     pop();
 #undef BFIX
@@ -426,9 +448,8 @@ void dfxml_writer::add_cpuid()
 
 void dfxml_writer::add_DFXML_execution_environment(const std::string &command_line)
 {
-
     push("execution_environment");
-#if defined(HAVE_ASM_CPUID) && defined(__i386__)
+#if defined(HAVE_ASM_CPUID)
     add_cpuid();
 #endif
 
@@ -572,16 +593,15 @@ void dfxml_writer::add_timestamp(const std::string &name)
  ****************************************************************/
 void dfxml_writer::comment(const string &comment_)
 {
-    MUTEX_LOCK(&M);
+    const std::lock_guard<std::mutex> lock(M);
     *out << "<!-- " << comment_ << " -->\n";
     out->flush();
-    MUTEX_UNLOCK(&M);
 }
 
 
 void dfxml_writer::xmlprintf(const std::string &tag,const std::string &attribute, const char *fmt,...)
 {
-    MUTEX_LOCK(&M);    
+    const std::lock_guard<std::mutex> lock(M);
     spaces();
     tagout(tag,attribute);
     va_list ap;
@@ -601,12 +621,11 @@ void dfxml_writer::xmlprintf(const std::string &tag,const std::string &attribute
     tagout("/"+tag,"");
     *out << '\n';
     out->flush();
-    MUTEX_UNLOCK(&M);
 }
 
 void dfxml_writer::xmlout(const string &tag,const string &value,const string &attribute,bool escape_value)
 {
-    MUTEX_LOCK(&M);
+    const std::lock_guard<std::mutex> lock(M);
     spaces();
     if(value.size()==0){
         if(tag.size()) tagout(tag,attribute+"/");
@@ -617,7 +636,6 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
     }
     *out << "\n";
     out->flush();
-    MUTEX_UNLOCK(&M);
 }
 
 #ifdef HAVE_LIBEWF_H

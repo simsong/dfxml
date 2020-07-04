@@ -39,10 +39,37 @@ int count_wrongs(void) {
     }
     return wrongs;
 }
-#endif
+
+/****************************************************************
+ *** test DFXML writer
+ ****************************************************************/
+
+#include "dfxml_writer.h"
+bool test_dfxml_writer( void ){
+    const int argc = 1;
+    char **argv = 0;
+
+    argv    = (char **)calloc(1,sizeof(char *));
+    argv[0] = strdup("testapp");
+
+    dfxml_writer *dw = new dfxml_writer("/tmp/output.xml", true);
+    dw->add_DFXML_execution_environment("test program");
+    dw->add_DFXML_creator("test", VERSION, "not git commit", argc, argv);
+    dw->add_rusage();
+    dw->comment("That's all folks.");
+    dw->close();
+    delete dw;
+    return true;
+}
+
+
+
+#endif  // GUARD_BLOCK
 
 // get cester!
 #include "tests/cester.h"
+
+CESTER_TEST(test_dfxml_writer, inst, cester_assert_true( test_dfxml_writer() );)
 
 CESTER_TEST(test_sha1_t, inst,
             cester_assert_equal( count_wrongs(), 0 );
@@ -69,3 +96,4 @@ CESTER_TEST(test_sha512_generator, inst,
                                  "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
     )
 #endif
+
