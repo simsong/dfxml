@@ -91,12 +91,12 @@ namespace dfxml {
  */
 class fserror:public std::exception {
 public:;
-    const char *msg;
+    const std::string msg;
     const int  error_code;
-    fserror(const char *msg_,int error_code_):msg(msg_),error_code(error_code_){
+    fserror(const std::string &msg_,int error_code_):msg(msg_),error_code(error_code_){
     }
     virtual const char *what() const throw() {
-        return msg;
+        return msg.c_str();
     }
 };
     

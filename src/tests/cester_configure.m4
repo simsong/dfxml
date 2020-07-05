@@ -23,5 +23,11 @@ AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wunused-label"],
 	       AC_DEFINE([DFXML_GNUC_HAS_IGNORED_UNUSED_LABEL_PRAGMA],[1],[GCC supports #pragma GCC diagnostic ignored -Wunused-label]),
 	       )
 
+# Does GCC have the diagnostic pragma ignored -Wunused-but-set-variable?
+AC_TRY_COMPILE([#pragma GCC diagnostic ignored "-Wunused-but-set-variable"],
+    	       [],
+	       AC_DEFINE([DFXML_GNUC_HAS_IGNORED_UNUSED_BUT_SET_VARIABLE_PRAGMA],[1],[GCC supports #pragma GCC diagnostic ignored -Wunused-but-set-variable]),
+	       )
+
 
 

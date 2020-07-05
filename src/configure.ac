@@ -9,8 +9,10 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(DFXML, 1.0.0, bugs@afflib.org)
+AC_INIT(DFXML, 1.0.0, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
+m4_include([m4/ax_cxx_compile_stdcxx.m4])
+
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -23,10 +25,11 @@ AC_PROG_CXX
 AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
-# use C++11 mode if available; HAVE_CXX11 is defined in config.h if so.  Don't
-# use the GNU C++11 extensions for portability's sake (noext).
+# Must use C++14 mode. (mandatory)
+# Don't use the GNU C++14 extensions for portability (noext).
+
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX_11(noext, optional)
+AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 
 AC_LANG_POP()
 
 m4_include([dfxml_configure.m4])
@@ -100,6 +103,7 @@ unset option
 # -Wundef  --- causes problems with zlib
 # -Wcast-qual 
 # -Wmissing-format-attribute  --- Just too annoying
+# 2020-06-04 removed ‘-Wno-unknown-warning-option’
 AC_LANG_PUSH(C++)
 
 CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
@@ -108,7 +112,6 @@ CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wfloat-equal -Wmultichar -Wmissing-noreturn \
     -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo \
     -Wno-deprecated-declarations \
-    -Wno-unknown-warning-option \
     -funit-at-a-time"
 
 if test x"${mingw}" != "xyes" ; then
@@ -153,6 +156,24 @@ AC_CHECK_HEADERS([\
 	pcap.h \
 	pcap/pcap.h \
 	linux/if_ether.h signal.h])
+
+################################################################
+## os-specific fixups
+# AC_CANONICAL_HOST is needed to access the 'host_os' variable    
+AC_CANONICAL_HOST
+case "${host_os}" in
+    linux*)
+        ;;
+    cygwin*|mingw*)
+        ;;
+    darwin*)
+      CXXFLAGS="-Wno-unknown-warning-option $(CXXFLAGS)";
+        ;;
+    *)
+        ;;
+esac
+
+
 
                                               
 ############## drop optimization flags if requested ################

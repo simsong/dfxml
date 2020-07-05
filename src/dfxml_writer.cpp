@@ -654,11 +654,6 @@ void dfxml_writer::xmlout(const string &tag,const string &value,const string &at
 #include <hashdb.hpp>
 #endif
 
-#ifdef HAVE_AFFLIB_AFFLIB_H
-//#pragma GCC diagnostic ignored "-Wreserved-user-defined-literal"               // required for C11
-#include <afflib/afflib.h>
-#endif
-
 
 /* These support Digital Forensics XML and require certain variables to be defined */
 void dfxml_writer::add_DFXML_build_environment()
@@ -702,9 +697,6 @@ void dfxml_writer::add_DFXML_build_environment()
 #endif
 #ifdef HAVE_LIBTSK3
     xmlout("library", "", std::string("name=\"tsk\" version=\"") + tsk_version_get_str() + "\"",false);
-#endif
-#ifdef HAVE_LIBAFFLIB
-    xmlout("library", "", std::string("name=\"afflib\" version=\"") + af_version() +"\"",false);
 #endif
 #ifdef HAVE_LIBEWF
     xmlout("library", "", std::string("name=\"libewf\" version=\"") + libewf_get_version() + "\"",false);

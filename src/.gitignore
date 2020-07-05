@@ -5,3 +5,5 @@ depcomp
 Makefile.in
 Makefile
 testapp
+config.guess
+config.sub

@@ -15,14 +15,6 @@
 #include <sys/time.h>
 #include <inttypes.h>
 
-/* c++ */
-#include <fstream>
-#include <map>
-#include <set>
-#include <sstream>
-#include <stack>
-#include <string>
-
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #endif
@@ -39,6 +31,19 @@
 #include <sys/utsname.h>
 #endif
 
+#ifdef HAVE_LIBTSK3
+#include <tsk3/libtsk.h>
+#endif
+
+/* c++ */
+#include <fstream>
+#include <map>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <mutex>
+
 #ifndef __BEGIN_DECLS
 #if defined(__cplusplus)
 #define __BEGIN_DECLS   extern "C" {
@@ -47,10 +52,6 @@
 #define __BEGIN_DECLS
 #define __END_DECLS
 #endif
-#endif
-
-#ifdef HAVE_LIBTSK3
-#include <tsk3/libtsk.h>
 #endif
 
 #ifdef __cplusplus
