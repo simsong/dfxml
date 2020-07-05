@@ -74,8 +74,6 @@ bool test_dfxml_writer( void ){
     return true;
 }
 
-
-
 #endif  // GUARD_BLOCK
 
 // get cester!

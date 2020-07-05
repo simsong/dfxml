@@ -26,9 +26,7 @@
 #include <stack>
 #include <map>
 #include <sstream>
-//#if __cplusplus >= 201103L
 #include <functional>
-//#endif
 
 #include <stdint.h>
 
@@ -38,10 +36,7 @@
 #error dfxml_reader.h requires expat.h
 #endif
 
-
-#ifdef HAVE_MD5_H
-#include "md5.h"
-#endif
+#include "hash_t.h"
 
 namespace dfxml {
 
@@ -55,7 +50,7 @@ namespace dfxml {
         hashmap_t hashdigest; // any object can have hashes
         tagmap_t _tags; // any object can tags
     };
-    std::ostream & operator <<(std::ostream &os,const dfxml::saxobject::hashmap_t &h);
+    std::ostream & operator <<(std::ostream &os,const saxobject::hashmap_t &h);
 
 
     class no_hash:public std::exception {
@@ -79,7 +74,6 @@ namespace dfxml {
         int64_t file_offset;
         int64_t len;
         int64_t sector_size;
-#ifdef HAVE_MD5_H
         md5_t md5() const {
             hashmap_t::const_iterator it = hashdigest.find("md5");
             if(it==hashdigest.end()) std::cout << "end found\n";
@@ -87,11 +81,8 @@ namespace dfxml {
             if(it!=hashdigest.end()) return md5_t::fromhex(it->second);
             throw new no_hash();
         }
-#endif
     };
     std::ostream & operator <<(std::ostream &os,const byte_run &b);
-
-
 
     class imageobject_sax:public saxobject {
     public:
@@ -124,20 +115,14 @@ namespace dfxml {
         byte_runs_t byte_runs;
 
         std::string filename(){return _tags["filename"];}
-#ifdef HAVE_MD5_H
-        md5_t md5() const {
+        dfxml::md5_t md5() const {
             std::map<std::string,std::string>::const_iterator it = hashdigest.find("md5");
-            if(it!=hashdigest.end()) return md5_t::fromhex(it->second);
+            if(it!=hashdigest.end()) return dfxml::md5_t::fromhex(it->second);
             throw new no_hash();
         }
-#endif
     };
 
-//#if __cplusplus >= 201103L
     typedef std::function<void (file_object&)> fileobject_callback_t;
-//#else
-//    typedef void (*fileobject_callback_t)(file_object &);
-//#endif
 
     class dfxml_reader {
     public:
