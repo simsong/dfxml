@@ -167,7 +167,7 @@ case "${host_os}" in
     cygwin*|mingw*)
         ;;
     darwin*)
-      CXXFLAGS="-Wno-unknown-warning-option $(CXXFLAGS)";
+      CXXFLAGS="-Wno-unknown-warning-option $CXXFLAGS"
         ;;
     *)
         ;;

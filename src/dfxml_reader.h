@@ -136,10 +136,9 @@ namespace dfxml {
 
     class file_object_reader:public dfxml_reader{
     private:
-        /*** neither copying nor assignment is implemented ***
-         *** We do this by making them private constructors that throw exceptions. ***/
-        file_object_reader(const file_object_reader &);
-        file_object_reader &operator=(const file_object_reader&);
+        /*** neither copying nor assignment is implemented ***/
+        file_object_reader(const file_object_reader &) = delete;
+        file_object_reader &operator=(const file_object_reader&) = delete;
     public:;
 
         static void startElement(void *userData, const char *name_, const char **attrs);

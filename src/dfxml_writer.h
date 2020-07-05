@@ -68,11 +68,9 @@ public:
                            char * const *argv);
     
 private:
-    /*** neither copying nor assignment is implemented ***
-     *** We do this by making them private constructors that throw exceptions. ***/
-    dfxml_writer(const dfxml_writer &);
-    dfxml_writer &operator=(const dfxml_writer &);
-    /****************************************************************/
+    /*** neither copying nor assignment is implemented ***/
+    dfxml_writer(const dfxml_writer &) = delete;
+    dfxml_writer &operator=(const dfxml_writer &) = delete;
 
 public:
     typedef std::map<std::string,std::string> strstrmap_t;
