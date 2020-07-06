@@ -105,7 +105,7 @@ jmp_buf buf;
     #define EXOTIC_API
 #endif
 
-#ifdef unix
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <unistd.h>
 #include <sys/wait.h>
 #endif
@@ -564,14 +564,11 @@ SuperTestInstance superTestInstance = {
 
 static __CESTER_INLINE__ char *cester_extract_name(char const* const file_path) {
     unsigned i = 0, j = 0;
-    unsigned found_seperator = 0;
     char *file_name_only = (char*) malloc (sizeof (char) * 30);
     while (file_path[i] != '\0') {
         if (file_path[i] == '\\' || file_path[i] == '/') {
-            found_seperator = 1;
             j = 0;
         } else {
-            found_seperator = 0;
             file_name_only[j] = file_path[i];
             j++;
         }
@@ -763,7 +760,6 @@ static __CESTER_INLINE__ void cester_concat_int(char **out, int extra) {
 }
 
 static __CESTER_INLINE__ void cester_ptr_to_str(char **out, void* extra) {
-    unsigned i = 0;
     (*out) = (char*) malloc(sizeof(char) * 30 );
     cester_sprintf1((*out), (30), "%p", extra);
 }
@@ -800,8 +796,6 @@ static __CESTER_INLINE__ unsigned cester_is_validate_output_option(char *format_
 #define CESTER_DELEGATE_FPRINT_DOUBLE_2(x,y) fprintf(superTestInstance.output_stream, "%s%.2f%s", CESTER_SELECTCOLOR(x), y, CESTER_SELECTCOLOR(CESTER_RESET_TERMINAL))
 #endif
 #endif
-
-static __CESTER_INLINE__ unsigned cester_string_equals(char* arg, char* arg1);
 
 static __CESTER_INLINE__ void cester_print_version() {
     CESTER_DELEGATE_FPRINT_STR((CESTER_FOREGROUND_WHITE), "CESTER v");
@@ -1206,7 +1200,7 @@ static __CESTER_INLINE__ void write_testcase_junitxml(TestCase *a_test_case, cha
 
 static __CESTER_INLINE__ int cester_print_result(TestCase cester_test_cases[], TestInstance* test_instance) {
     unsigned index_sub;
-    unsigned i, index4, index5, index6, index7, index8;
+    unsigned i, index4, index5, index6, index7;
     #ifndef CESTER_NO_TIME
         clock_t tok;
         double time_spent;
@@ -3153,22 +3147,33 @@ static __CESTER_INLINE__ void cester_run_test(TestInstance *test_instance, TestC
     if (superTestInstance.isolate_tests == 1 && last_status == CESTER_RESULT_UNKNOWN) {
 #ifdef __CESTER_STDC_VERSION__
 #ifdef _WIN32
-        SECURITY_ATTRIBUTES sa;
-        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-        sa.bInheritHandle = TRUE;
-        sa.lpSecurityDescriptor = NULL;
-
         HANDLE stdout_pipe_read;
         HANDLE stdout_pipe_write;
-        CreatePipe(&stdout_pipe_read, &stdout_pipe_write, &sa, 0);
-
+#ifdef __cplusplus
+        PROCESS_INFORMATION pi;
+        STARTUPINFO si;
+        si = {
+            .cb = sizeof(STARTUPINFO),
+            .dwFlags = STARTF_USESTDHANDLES,
+            .hStdOutput = stdout_pipe_write
+        };
+        pi = {0};
+#else
         STARTUPINFO si = {
             .cb = sizeof(STARTUPINFO),
             .dwFlags = STARTF_USESTDHANDLES,
             .hStdOutput = stdout_pipe_write
         };
-
         PROCESS_INFORMATION pi = {0};
+#endif
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+        sa.bInheritHandle = TRUE;
+        sa.lpSecurityDescriptor = NULL;
+
+        CreatePipe(&stdout_pipe_read, &stdout_pipe_write, &sa, 0);
+
+        
 
         CHAR command[1500];
         snprintf(command, 1500, "%s --cester-test=%s  --cester-singleoutput --cester-noisolation %s %s %s %s %s %s %s",
@@ -3197,9 +3202,10 @@ static __CESTER_INLINE__ void cester_run_test(TestInstance *test_instance, TestC
         CloseHandle(stdout_pipe_write);
 
         DWORD len;
-        DWORD maxlen = 700;
+        DWORD maxlen;
         CHAR buffer[700];
 
+        maxlen = 700;
         do {
             ReadFile(stdout_pipe_read, buffer, maxlen, &len, NULL);
             buffer[len] = '\0';
@@ -3222,10 +3228,10 @@ static __CESTER_INLINE__ void cester_run_test(TestInstance *test_instance, TestC
         end_sub_process:
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
-#elif defined unix
+#elif defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
         pid_t pid;
         int pipefd[2];
-        char *selected_test_unix = (char*) "";
+        char *selected_test_unix;
 
         pipe(pipefd);
         pid = fork();
@@ -3237,6 +3243,7 @@ static __CESTER_INLINE__ void cester_run_test(TestInstance *test_instance, TestC
             last_status = cester_run_test_no_isolation(test_instance, a_test_case, index);
 
         } else if (pid == 0) {
+            selected_test_unix = (char*) "";
             cester_concat_str(&selected_test_unix, "--cester-test=");
             cester_concat_str(&selected_test_unix, a_test_case->name);
             close(pipefd[0]);
@@ -3289,12 +3296,10 @@ static __CESTER_INLINE__ void cester_run_test(TestInstance *test_instance, TestC
     check_isolation:
         last_status = superTestInstance.current_execution_status;
 #ifdef __CESTER_STDC_VERSION__
-#ifndef __cplusplus
 #ifndef CESTER_NO_SUBPROCESS
         if (superTestInstance.isolate_tests == 1) {
             goto end_sub_process;
         }
-#endif
 #endif
 #endif
         goto resolve_test_result;
@@ -3302,9 +3307,6 @@ static __CESTER_INLINE__ void cester_run_test(TestInstance *test_instance, TestC
 
 static __CESTER_INLINE__ unsigned cester_run_test_no_isolation(TestInstance *test_instance, TestCase *a_test_case, unsigned index) {
     unsigned i, index1, index2, mem_index;
-    #ifndef CESTER_NO_TIME
-        clock_t tok;
-    #endif
     superTestInstance.current_execution_status = CESTER_RESULT_SUCCESS;
     if (superTestInstance.registered_test_cases->size == 0) {
         for (i=0;cester_test_cases[i].test_type != CESTER_TESTS_TERMINATOR;++i) {
@@ -3370,7 +3372,7 @@ static __CESTER_INLINE__ unsigned cester_run_test_no_isolation(TestInstance *tes
 }
 
 #ifndef CESTER_NO_SIGNAL  
-void (*signal(int , void (*)(int)))(int);
+/*void (*signal(int , void (*)(int)))(int);*/
 void cester_claim_signals();
 void cester_recover_on_signal(int sig_num);
 #endif
@@ -3378,7 +3380,7 @@ void cester_recover_on_signal(int sig_num);
 /* use start param to save the state index instead of starting 
 loop again or super var */ 
 static __CESTER_INLINE__ void cester_run_all_test_iterator(int start) {
-    unsigned i, j, index, index1, index2, index3, test_index;
+    unsigned i, j, index2, index3, test_index;
     unsigned found_test;
     char* selected_test_case_name;
     
@@ -3791,16 +3793,6 @@ static __CESTER_INLINE__ void* cester_malloc(unsigned size, const char *file, un
 
 static __CESTER_INLINE__ void cester_free(void *pointer, const char *file, unsigned line, const char *func) {
     unsigned index;
-    const char* actual_function_name;
-#ifndef __CESTER_STDC_VERSION__
-    if (superTestInstance.current_test_case != NULL) {
-        actual_function_name = superTestInstance.current_test_case->name;
-    } else {
-        actual_function_name = func;
-    }
-#else 
-    actual_function_name = func;
-#endif
     if (pointer == NULL) {
         if (superTestInstance.mem_test_active == 1 && superTestInstance.current_test_case != NULL) {
             cester_concat_str(&(superTestInstance.current_test_case)->execution_output, "InvalidOperation ");
