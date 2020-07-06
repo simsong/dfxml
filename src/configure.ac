@@ -33,7 +33,6 @@ AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
 AC_LANG_POP()
 
 m4_include([dfxml_configure.m4])
-m4_include([tests/cester_configure.m4])
 
 
 ################################################################
@@ -174,8 +173,6 @@ case "${host_os}" in
 esac
 
 
-
-                                              
 ############## drop optimization flags if requested ################
 AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
 if test x"${AFF_NOOPT}" != "x" ; then

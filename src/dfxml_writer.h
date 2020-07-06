@@ -15,6 +15,14 @@
 #include <sys/time.h>
 #include <inttypes.h>
 
+/* c++ */
+#include <fstream>
+#include <map>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #endif
