@@ -5,17 +5,16 @@ bin_PROGRAMS = dfxml_demo iblkfind
 dfxml_demo_SOURCES = dfxml_demo.cpp dfxml_reader.cpp dfxml_reader.h 
 iblkfind_SOURCES = iblkfind.cpp dfxml_reader.cpp dfxml_reader.h 
 EXTRA_DIST = \
-	cpu_info.c \
 	cpu_stat.cpp \
 	dfxml_generator.cpp \
 	dfxml_generator.h \
 	dfxml_reader.cpp \
 	dfxml_reader.h
 
-check_PROGRAMS = testapp
+check_PROGRAMS = testapp_catch2
 TESTS = $(check_PROGRAMS)
 
-testapp_SOURCES = testapp.cpp tests/cester.h dfxml_writer.h dfxml_writer.cpp
+testapp_catch2_SOURCES = testapp_catch2.cpp tests/catch.hpp dfxml_writer.h dfxml_writer.cpp
 
 # https://stackoverflow.com/questions/15013672/use-autotools-with-readme-md
 # We provide README.md instead of README. This prevents autotools from complaining.

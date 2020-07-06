@@ -7,3 +7,4 @@ Makefile
 testapp
 config.guess
 config.sub
+testapp_catch2
