@@ -1,14 +1,3 @@
-
-// Uses cester
-// doc: https://github.com/exoticlibraries/libcester/blob/master/docs/docs/macros.rst
-
-// get cester!
-#include "tests/cester.h"
-
-// cester generates some GCC warnings. Ignore them.
-
-// define stuff I need in the global environment. Only read it once.
-
 #include "config.h"
 
 #ifdef DFXML_GNUC_HAS_IGNORED_SHADOW_PRAGMA
@@ -30,6 +19,17 @@
 #ifdef DFXML_GNUC_HAS_IGNORED_REDUNDANT_DECLS_PRAGMA
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #endif
+
+
+// Uses cester
+// doc: https://github.com/exoticlibraries/libcester/blob/master/docs/docs/macros.rst
+
+// get cester!
+#include "tests/cester.h"
+
+// cester generates some GCC warnings. Ignore them.
+
+// define stuff I need in the global environment. Only read it once.
 
 // define stuff I need in the global environment. Only read it once.
 #include "hash_t.h"
