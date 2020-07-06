@@ -53,5 +53,6 @@ jobs:
         run: |
           cd src
           bash bootstrap.sh
-          ./configure && make && make check && cat testapp.log
+          ./configure && make && make check
+          for fn in *.log ; do echo ""; echo $fn ; cat $fn ; done
 
