@@ -76,8 +76,8 @@ public:
     typedef std::map<std::string,std::string> strstrmap_t;
     typedef std::set<std::string> stringset;
     typedef std::set<std::string> tagid_set_t;
-private:
 
+private:
     std::mutex   M;
     std::fstream outf;
     std::ostream *out;                  // where it is being written; defaults to stdout
