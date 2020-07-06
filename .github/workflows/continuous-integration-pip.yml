@@ -54,5 +54,5 @@ jobs:
           cd src
           bash bootstrap.sh
           ./configure && make && make check
-          for fn in *.log ; do echo ""; echo $fn ; cat $fn ; done
+          for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done
 
