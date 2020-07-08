@@ -91,12 +91,12 @@ namespace dfxml {
  */
 class fserror:public std::exception {
 public:;
-    const char *msg;
+    const std::string msg;
     const int  error_code;
-    fserror(const char *msg_,int error_code_):msg(msg_),error_code(error_code_){
+    fserror(const std::string &msg_,int error_code_):msg(msg_),error_code(error_code_){
     }
     virtual const char *what() const throw() {
-        return msg;
+        return msg.c_str();
     }
 };
     
@@ -132,12 +132,12 @@ public:
         return (hex2int(ch0)<<4) | hex2int(ch1);
     }
     static hash fromhex(const std::string &hexbuf) {
-	hash res;
+        uint8_t digest[SIZE];
         assert(hexbuf.size()==SIZE*2);
 	for(unsigned int i=0;i+1<hexbuf.size() && (i/2)<size();i+=2){
-	    res.digest[i/2] = hex2int(hexbuf[i],hexbuf[i+1]);
+	    digest[i/2] = hex2int(hexbuf[i],hexbuf[i+1]);
 	}
-	return res;
+	return hash(digest);
     }
     const char *hexdigest(char *hexbuf,size_t bufsize) const {
 	const char *hexbuf_start = hexbuf;

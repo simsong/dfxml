@@ -8,7 +8,6 @@
 #
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
-AC_MSG_NOTICE([Note: checks for afflib/afflib.h and libewf.h should be in the caller, so they can be disabled])
 AC_CHECK_HEADERS([err.h expat.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h winsock2.h ])
 AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf ])
 
@@ -35,7 +34,7 @@ AC_TRY_COMPILE([#define cpuid(id) __asm__( "cpuid" : "=a"(eax), "=b"(ebx), "=c"(
 			have_cpuid=yes,
 			have_cpuid=no)
 if test "$have_cpuid" = yes; then
- AC_DEFINE(HAVE_ASM_CPUID, 1, [define to 1 if __asm__ CPUID is available])
+  AC_DEFINE(HAVE_ASM_CPUID, 1, [define to 1 if __asm__ CPUID is available])
 fi
 
 
