@@ -8,3 +8,4 @@ testapp
 config.guess
 config.sub
 testapp_catch2
+*.tar.gz
