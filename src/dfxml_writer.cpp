@@ -419,15 +419,15 @@ void dfxml_writer::add_cpuid()
     
     push("cpuid");
     xmlout("identification", vendor);
-    xmlout("family", (int64_t) BFIX(eax, 8, 11));
-    xmlout("model", (int64_t) BFIX(eax, 4, 7));
+    xmlout("family",   (int64_t) BFIX(eax, 8, 11));
+    xmlout("model",    (int64_t) BFIX(eax, 4, 7));
     xmlout("stepping", (int64_t) BFIX(eax, 0, 3));
-    xmlout("efamily", (int64_t) BFIX(eax, 20, 27));
-    xmlout("emodel", (int64_t) BFIX(eax, 16, 19));
-    xmlout("brand", (int64_t) BFIX(ebx, 0, 7));
+    xmlout("efamily",  (int64_t) BFIX(eax, 20, 27));
+    xmlout("emodel",   (int64_t) BFIX(eax, 16, 19));
+    xmlout("brand",    (int64_t) BFIX(ebx, 0, 7));
     xmlout("clflush_size", (int64_t) BFIX(ebx, 8, 15) * 8);
-    xmlout("nproc", (int64_t) BFIX(ebx, 16, 23));
-    xmlout("apicid", (int64_t) BFIX(ebx, 24, 31));
+    xmlout("nproc",    (int64_t) BFIX(ebx, 16, 23));
+    xmlout("apicid",   (int64_t) BFIX(ebx, 24, 31));
     
     CPUID cpuID2(0x80000006);
     ecx = cpuID2.ECX();
