@@ -1,3 +1,8 @@
+2020-07-08  Simson Garfinkel  <simsong@nimi.local>
+
+	* dfxml_writer.h: removed support for LIB_TRE, since we aren't using TRE anymore in bulk_extractor. We should have a plug-in system for libraies, but we don't. 
+	modified to use C++11 headers.
+
 2020-06-27  Simson Garfinkel  <simsong@nimi.local>
 
 	* NEWS: 

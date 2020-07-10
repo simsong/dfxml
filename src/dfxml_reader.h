@@ -18,17 +18,14 @@
  * This file is public domain.
  */
 
-
-
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <stack>
 #include <map>
 #include <sstream>
 #include <functional>
-
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef HAVE_EXPAT_H
 #include <expat.h>

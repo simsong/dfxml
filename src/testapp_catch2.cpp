@@ -46,8 +46,10 @@ TEST_CASE("test dfxml_writer", "[vector]" ) {
 
 TEST_CASE("test hash_generator", "[vector]") {
     REQUIRE( count_wrongs() ==  0 );
-    REQUIRE( dfxml::md5_generator::hash_buf(nulls,0).hexdigest() == "d41d8cd98f00b204e9800998ecf8427e" );
-    REQUIRE( dfxml::sha1_generator::hash_buf(nulls,0).hexdigest() == "da39a3ee5e6b4b0d3255bfef95601890afd80709" );
+    REQUIRE( dfxml::md5_generator::hash_buf(nulls,0).hexdigest()
+             == "d41d8cd98f00b204e9800998ecf8427e" );
+    REQUIRE( dfxml::sha1_generator::hash_buf(nulls,0).hexdigest()
+             == "da39a3ee5e6b4b0d3255bfef95601890afd80709" );
     REQUIRE( dfxml::sha256_generator::hash_buf(nulls,0).hexdigest() ==
              "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" );
 

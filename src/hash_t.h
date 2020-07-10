@@ -36,16 +36,16 @@
 #ifndef  HASH_T_H
 #define  HASH_T_H
 
-#include <cstring>
-#include <cstdlib>
-
-#include <stdint.h>
-#include <assert.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <cstring>
+#include <cstdlib>
+#include <cstdint>
+#include <cassert>
 #include <iostream>
-#include <unistd.h>
 
 #if defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
 // We are going to ignore -Wdeprecated-declarations, because we need MD5

@@ -4,20 +4,18 @@
 bin_PROGRAMS = dfxml_demo iblkfind
 dfxml_demo_SOURCES = dfxml_demo.cpp dfxml_reader.cpp dfxml_reader.h 
 iblkfind_SOURCES = iblkfind.cpp dfxml_reader.cpp dfxml_reader.h 
-EXTRA_DIST = \
-	beregex.cpp \
-	beregex.h \
-	cpu_info.c \
-	cpu_stat.cpp \
-	dfxml_generator.cpp \
-	dfxml_generator.h \
-	dfxml_reader.cpp \
-	dfxml_reader.h
+EXTRA_DIST = README.md
 
-check_PROGRAMS = testapp_catch2
-TESTS = $(check_PROGRAMS)
+check_PROGRAMS = testapp_catch2 cpu_stat
+TESTS = $(check_PROGRAMS) 
 
-testapp_catch2_SOURCES = testapp_catch2.cpp tests/catch.hpp dfxml_writer.h dfxml_writer.cpp
+
+testapp_catch2_SOURCES = testapp_catch2.cpp tests/catch.hpp \
+	dfxml_writer.h dfxml_writer.cpp \
+	dfxml_reader.h dfxml_reader.cpp \
+	hash_t.h 
+
+cpu_stat_SOURCES = cpu_stat.cpp
 
 # https://stackoverflow.com/questions/15013672/use-autotools-with-readme-md
 # We provide README.md instead of README. This prevents autotools from complaining.
