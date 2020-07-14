@@ -408,17 +408,12 @@ void dfxml_writer::add_cpuid()
 #define BFIX(val, base, end) ((val << (__WORDSIZE-end-1)) >> (__WORDSIZE-end+base-1))
 
     CPUID  cpuID(0);                     // get CPU vendor
-    std::string vendor;
-    vendor += std::string((const char *)&cpuID.EBX(), 4);
-    vendor += std::string((const char *)&cpuID.EDX(), 4);
-    vendor += std::string((const char *)&cpuID.ECX(), 4);
-
     unsigned long eax = cpuID.EAX();
     unsigned long ebx = cpuID.EBX();
     unsigned long ecx = cpuID.ECX();
     
     push("cpuid");
-    xmlout("identification", vendor);
+    xmlout("identification", CPUID::vendor());
     xmlout("family",   (int64_t) BFIX(eax, 8, 11));
     xmlout("model",    (int64_t) BFIX(eax, 4, 7));
     xmlout("stepping", (int64_t) BFIX(eax, 0, 3));

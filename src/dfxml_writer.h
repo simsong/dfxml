@@ -95,8 +95,6 @@ private:
 
 public:
     static std::string make_command_line(int argc,char * const *argv);
-    //static void cpuid(uint32_t op, unsigned long *eax,
-    //                  unsigned long *ebx,unsigned long *ecx, unsigned long *edx);
     virtual ~dfxml_writer(){};
     void   set_tempfile_template(const std::string &temp);
 

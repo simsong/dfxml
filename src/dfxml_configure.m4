@@ -9,7 +9,7 @@
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
 AC_CHECK_HEADERS([err.h expat.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h winsock2.h ])
-AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf ])
+AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf __cpuid])
 
 AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS([exiv2/image.hpp])
