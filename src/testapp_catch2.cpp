@@ -40,11 +40,11 @@ bool test_dfxml_writer( void ){
     return true;
 }
 
-TEST_CASE("test dfxml_writer", "[vector]" ) {
+TEST_CASE("dfxml_writer", "[vector]" ) {
     REQUIRE( test_dfxml_writer() == true );
 }
 
-TEST_CASE("test hash_generator", "[vector]") {
+TEST_CASE("hash_generator", "[vector]") {
     REQUIRE( count_wrongs() ==  0 );
     REQUIRE( dfxml::md5_generator::hash_buf(nulls,0).hexdigest()
              == "d41d8cd98f00b204e9800998ecf8427e" );

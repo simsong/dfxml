@@ -10,7 +10,7 @@
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
- * sha1_t val = hasher.final()
+ * sha1_t val = hasher.digest()
  *
  * Using the values:
  * string val.hexdigest()   --- return a hext digest
