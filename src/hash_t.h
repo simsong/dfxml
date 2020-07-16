@@ -299,7 +299,7 @@ public:
     }
 	
 #ifdef HAVE_MMAP
-    static hash<md,SIZE> hash_file(const char *fname){
+    static hash<SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
 	if(fd<0) throw fserror("open",errno);
 	struct stat st;
@@ -312,7 +312,7 @@ public:
 	    close(fd);
 	    throw fserror("mmap",errno);
 	}
-	hash<md,SIZE> s = hash_buf(buf,st.st_size);
+	hash<SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
 	close(fd);
 	return s;
