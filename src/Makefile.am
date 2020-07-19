@@ -1,6 +1,9 @@
 # (C) 2020 Simson L. Garfinkel
 # https://www.gnu.org/licenses/lgpl-3.0.en.html
 
+DFXML_SRC_DIR =
+include Makefile.defs
+
 bin_PROGRAMS = dfxml_demo iblkfind
 dfxml_demo_SOURCES = dfxml_demo.cpp dfxml_reader.cpp dfxml_reader.h  cpuid.h cpuid.cpp
 iblkfind_SOURCES = iblkfind.cpp dfxml_reader.cpp dfxml_reader.h 
