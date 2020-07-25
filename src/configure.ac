@@ -174,12 +174,12 @@ esac
 
 
 ############## drop optimization flags if requested ################
-AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
+AC_ARG_WITH(no_optimize, AC_HELP_STRING([--with-no_optimize], [Drop -O C flags]))
+if test x"${NO_OPTIMIZE}" != "x" ; then
+   with_no_optimize="yes";
 fi
 
-if test "${with_noopt}" = "yes" ; then
+if test "${with_no_optimize}" = "yes" ; then
   CFLAGS=`echo "$CFLAGS" | sed s/-O[[0-9]]//`             # note the double quoting! 
   CXXFLAGS=`echo "$CXXFLAGS" | sed s/-O[[0-9]]//`
 fi
