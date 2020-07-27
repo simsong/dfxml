@@ -9,7 +9,7 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(DFXML, 1.0.0, bugs@digitalcorpora.org)
+AC_INIT(DFXML, 1.0.1, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
 
@@ -26,7 +26,6 @@ AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
 # Must use C++14 mode. (mandatory)
-# Don't use the GNU C++14 extensions for portability (noext).
 
 AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 

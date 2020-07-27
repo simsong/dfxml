@@ -30,7 +30,7 @@ jobs:
       - name: Install C++ dependencies on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-           sudo apt install libtool autoconf automake
+           sudo apt install -y libtool autoconf automake build-essentials libssl-dev
            automake --help
 
       - name: Install Python dependencies
