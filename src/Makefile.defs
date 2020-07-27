@@ -7,7 +7,7 @@ DFXML_WRITER = \
       $(DFXML_SRC_DIR)dfxml_writer.cpp \
       $(DFXML_SRC_DIR)dfxml_writer.h \
       $(DFXML_SRC_DIR)hash_t.h \
-      $(DFXML_SRC_DIR)cpuid.h $(DFXML_SRC_DIR)cpuid.cpp
+      $(DFXML_SRC_DIR)cpuid.h 
 
 DFXML_READER = \
       $(DFXML_SRC_DIR)dfxml_reader.cpp \

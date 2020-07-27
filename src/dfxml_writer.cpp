@@ -55,6 +55,7 @@
 #include <streambuf>
 
 
+#include "dfxml_writer.h"
 #include "cpuid.h"
 
 static const char *xml_header = "<?xml version='1.0' encoding='UTF-8'?>\n";

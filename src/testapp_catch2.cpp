@@ -60,6 +60,7 @@ TEST_CASE("hash_generator", "[vector]") {
 #endif
 }
 
+
 TEST_CASE("cpuid", "[cpuid]") {
     REQUIRE( CPUID::vendor() != "" );
 }
