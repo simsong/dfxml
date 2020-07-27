@@ -136,25 +136,11 @@ unset option
 
 AC_LANG_POP()    
 
-
 ################################################################
 # Specify our other headers
-
+#
 AC_HEADER_STDC
-AC_CHECK_HEADERS([\
-	string.h \
-	strings.h sys/cdefs.h sys/resource.h sys/types.h \
-	sys/socket.h \
-	unistd.hsys/bitypes.h \
-	arpa/inet.h \
-	fcntl.h \
-	semaphore.h \
-	inttypes.h \
-	netinet/in.h netinet/tcp.h netinet/in_systm.h netinet/ip.h \
-	netinet/if_ether.h \
-	pcap.h \
-	pcap/pcap.h \
-	linux/if_ether.h signal.h])
+
 
 ################################################################
 ## os-specific fixups

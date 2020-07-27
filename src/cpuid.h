@@ -18,11 +18,15 @@ public:
     explicit CPUID(unsigned i) {
 #ifdef _WIN32
         __cpuid((int *)regs, (int)i);
-#else
+#elif HAVE_ASM_CPUID
         asm volatile
             ("cpuid" : "=a" (regs[0]), "=b" (regs[1]), "=c" (regs[2]), "=d" (regs[3])
              : "a" (i), "c" (0));
         // ECX is set to zero for CPUID function 4
+#else
+        for(auto it:regs){
+            it = 0xff;
+        }
 #endif
     }
 
