@@ -10,7 +10,7 @@
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
- * sha1_t val = hasher.final()
+ * sha1_t val = hasher.digest()
  *
  * Using the values:
  * string val.hexdigest()   --- return a hext digest
@@ -36,16 +36,16 @@
 #ifndef  HASH_T_H
 #define  HASH_T_H
 
-#include <cstring>
-#include <cstdlib>
-
-#include <stdint.h>
-#include <assert.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <cstring>
+#include <cstdlib>
+#include <cstdint>
+#include <cassert>
 #include <iostream>
-#include <unistd.h>
 
 #if defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
 // We are going to ignore -Wdeprecated-declarations, because we need MD5
@@ -299,7 +299,7 @@ public:
     }
 	
 #ifdef HAVE_MMAP
-    static hash<md,SIZE> hash_file(const char *fname){
+    static hash<SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
 	if(fd<0) throw fserror("open",errno);
 	struct stat st;
@@ -312,7 +312,7 @@ public:
 	    close(fd);
 	    throw fserror("mmap",errno);
 	}
-	hash<md,SIZE> s = hash_buf(buf,st.st_size);
+	hash<SIZE> s = hash_buf(buf,st.st_size);
 	munmap((void *)buf,st.st_size);
 	close(fd);
 	return s;

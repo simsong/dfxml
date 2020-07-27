@@ -9,7 +9,7 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(DFXML, 1.0.0, bugs@digitalcorpora.org)
+AC_INIT(DFXML, 1.0.1, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
 
@@ -26,7 +26,6 @@ AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
 # Must use C++14 mode. (mandatory)
-# Don't use the GNU C++14 extensions for portability (noext).
 
 AC_LANG_PUSH(C++)
 AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 
@@ -136,25 +135,11 @@ unset option
 
 AC_LANG_POP()    
 
-
 ################################################################
 # Specify our other headers
-
+#
 AC_HEADER_STDC
-AC_CHECK_HEADERS([\
-	string.h \
-	strings.h sys/cdefs.h sys/resource.h sys/types.h \
-	sys/socket.h \
-	unistd.hsys/bitypes.h \
-	arpa/inet.h \
-	fcntl.h \
-	semaphore.h \
-	inttypes.h \
-	netinet/in.h netinet/tcp.h netinet/in_systm.h netinet/ip.h \
-	netinet/if_ether.h \
-	pcap.h \
-	pcap/pcap.h \
-	linux/if_ether.h signal.h])
+
 
 ################################################################
 ## os-specific fixups
@@ -174,12 +159,12 @@ esac
 
 
 ############## drop optimization flags if requested ################
-AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
+AC_ARG_WITH(no_optimize, AC_HELP_STRING([--with-no_optimize], [Drop -O C flags]))
+if test x"${NO_OPTIMIZE}" != "x" ; then
+   with_no_optimize="yes";
 fi
 
-if test "${with_noopt}" = "yes" ; then
+if test "${with_no_optimize}" = "yes" ; then
   CFLAGS=`echo "$CFLAGS" | sed s/-O[[0-9]]//`             # note the double quoting! 
   CXXFLAGS=`echo "$CXXFLAGS" | sed s/-O[[0-9]]//`
 fi

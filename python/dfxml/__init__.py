@@ -810,7 +810,7 @@ class fileobject:
         if imagefile is None     : imagefile=self.imagefile
         if imagefile is None     : raise ValueError("imagefile is unknown")
         if self.encrypted()      : raise ValueError("Cannot generate content for encrypted files")
-        if self.compressed() or imagefile.name.endswith(".aff") or imagefile.name.endswith(".E01"):
+        if self.compressed() or imagefile.name.endswith(".E01"):
             if icat_fallback:
                 # 
                 # For now, compressed files rely on icat rather than Python interface

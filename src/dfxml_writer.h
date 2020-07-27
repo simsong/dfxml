@@ -8,21 +8,6 @@
 #ifndef DFXML_WRITER_H
 #define DFXML_WRITER_H
 
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <inttypes.h>
-
-/* c++ */
-#include <fstream>
-#include <map>
-#include <set>
-#include <sstream>
-#include <stack>
-#include <string>
-
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #endif
@@ -44,13 +29,18 @@
 #endif
 
 /* c++ */
+#include <cinttypes>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <stack>
 #include <string>
-#include <mutex>
+
 
 #ifndef __BEGIN_DECLS
 #if defined(__cplusplus)
@@ -82,32 +72,34 @@ private:
 
 public:
     typedef std::map<std::string,std::string> strstrmap_t;
-    typedef std::set<std::string> stringset;
+    typedef std::set<std::string> stringset_t;
     typedef std::set<std::string> tagid_set_t;
 
 private:
-    std::mutex   M;
-    std::fstream outf;
-    std::ostream *out;                  // where it is being written; defaults to stdout
-    stringset tags;                     // XML tags
+    std::mutex     M;
+    std::fstream   outf;
+    std::ostream   *out;                  // where it is being written; defaults to stdout
+    stringset_t    tags;                 // XML tags
     std::stack<std::string>tag_stack;
-    std::string  tempfilename;
-    std::string  tempfile_template;
+    std::string    tempfilename;
+    std::string    tempfile_template;
     struct timeval t0;
     struct timeval t_last_timestamp;	// for creating delta timestamps
-    bool  make_dtd;
-    std::string outfilename;
+    bool           make_dtd;
+    std::string    outfilename;
+    bool           oneline;             // output entire DFXML on a single line
+
     void  write_doctype(std::fstream &out);
     void  write_dtd();
     void  verify_tag(std::string tag);
     void  spaces();                     // print spaces corresponding to tag stack
-    bool oneline;
+
 
 public:
     static std::string make_command_line(int argc,char * const *argv);
     static void cpuid(uint32_t op, unsigned long *eax, unsigned long *ebx,unsigned long *ecx, unsigned long *edx);
     virtual ~dfxml_writer(){};
-    void set_tempfile_template(const std::string &temp);
+    void   set_tempfile_template(const std::string &temp);
 
     static std::string xmlescape(const std::string &xml);
     static std::string xmlstrip(const std::string &xml);
@@ -116,7 +108,6 @@ public:
     static std::string xmlmap(const strstrmap_t &m,const std::string &outer,const std::string &attrs);
 
     void close();                       // writes the output to the file
-
     void flush(){ outf.flush(); }
     void tagout( const std::string &tag,const std::string &attribute);
     void push( const std::string &tag,const std::string &attribute);
