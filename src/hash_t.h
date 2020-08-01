@@ -22,7 +22,7 @@
  * This can be updated in the future for Mac so that the hash__ class
  * is then subclassed by a hash__openssl or a hash__commonCrypto class.
  *
- * 
+ *
  * On MacOS, common crypto header files found in
  * /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/CommonCrypto
  *
@@ -53,7 +53,7 @@
 #include <CommonCrypto/CommonDigest.h>
 #define USE_COMMON_CRYPTO
 #define HAVE_SHA512_T
-#elif defined(HAVE_OPENSSL_HMAC_H) && defined(HAVE_OPENSSL_EVP_H) 
+#elif defined(HAVE_OPENSSL_HMAC_H) && defined(HAVE_OPENSSL_EVP_H)
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 #define USE_OPENSSL
@@ -86,7 +86,7 @@
 
 namespace dfxml {
 
-/* 
+/*
  * we should use std::fs::filesystem_error(), but it doesn't seem to be ready for prime time yet.
  */
 class fserror:public std::exception {
@@ -99,17 +99,17 @@ public:;
         return msg.c_str();
     }
 };
-    
+
 /* hash__ is a template that gets specialized to
  * md5_t, sha1_t, sha256_t and sha512_t (if available)
- * 
+ *
  * It makes a copy of what it is initialized with.
  * In version 2.0 it is immutable.
  *
  * This works with both CommonCrypto and with OpenSSL.
  * We actually ignore the Type and the allocator
  */
-template<size_t SIZE> 
+template<size_t SIZE>
 class hash
 {
 public:
@@ -204,7 +204,7 @@ typedef hash<32> sha256_t;
 typedef hash<64> sha512_t;
 #endif
 
-/* Now that we have our types defined, 
+/* Now that we have our types defined,
  * we define a function that returns the name of the digest.
  * These work for either type
  */
@@ -232,7 +232,7 @@ inline std::string digest_name<sha512_t>() {
 
 /*
  * This is the templated hash generator.
- * It needs to be specialized for the implementation. 
+ * It needs to be specialized for the implementation.
  * It would be cool to do this with subclasses from a common base class, but
  * instead we use the preprocessor.
  *
@@ -241,14 +241,14 @@ inline std::string digest_name<sha512_t>() {
  */
 
 #ifdef USE_OPENSSL
-template<const EVP_MD *md(),size_t SIZE> 
+template<const EVP_MD *md(),size_t SIZE>
 class hash_generator__ { 			/* generates the hash */
  private:
     EVP_MD_CTX* mdctx;	     /* the context for computing the value */
     bool finalized;
     uint8_t digest_[SIZE];               // created
-    /* Not allowed to copy; these are prototyped but not defined, 
-     * so any attempt to use them will fail, but we won't get the -Weffc++ warnings  
+    /* Not allowed to copy; these are prototyped but not defined,
+     * so any attempt to use them will fail, but we won't get the -Weffc++ warnings
      */
     hash_generator__ & operator=(const hash_generator__ &);
     hash_generator__(const hash_generator__ &);
@@ -297,7 +297,7 @@ public:
 	g.update(buf,bufsize);
 	return g.digest();
     }
-	
+
 #ifdef HAVE_MMAP
     static hash<SIZE> hash_file(const char *fname){
 	int fd = open(fname,O_RDONLY | HASHT_O_BINARY );
@@ -319,8 +319,8 @@ public:
     }
 #endif
 };
-typedef hash_generator__<EVP_md5,16> md5_generator;
-typedef hash_generator__<EVP_sha1,20> sha1_generator;
+typedef hash_generator__<EVP_md5,16>    md5_generator;
+typedef hash_generator__<EVP_sha1,20>   sha1_generator;
 typedef hash_generator__<EVP_sha256,32> sha256_generator;
 #ifdef HAVE_SHA512_T
 typedef hash_generator__<EVP_sha512,64> sha512_generator;
@@ -328,7 +328,7 @@ typedef hash_generator__<EVP_sha512,64> sha512_generator;
 #endif
 
 #ifdef USE_COMMON_CRYPTO
-/* a simpler implementation because there is no need to allocate and then free the 
+/* a simpler implementation because there is no need to allocate and then free the
  * hash contexts.
  */
 template<class CC_CTX,int Init(CC_CTX *),int Update(CC_CTX *,const void *,CC_LONG),
@@ -338,8 +338,8 @@ class hash_generator__ { 			/* generates the hash */
     CC_CTX c;
     bool finalized;
     uint8_t digest_[SIZE];               // created
-    /* Not allowed to copy; these are prototyped but not defined, 
-     * so any attempt to use them will fail, but we won't get the -Weffc++ warnings  
+    /* Not allowed to copy; these are prototyped but not defined,
+     * so any attempt to use them will fail, but we won't get the -Weffc++ warnings
      */
     hash_generator__ & operator=(const hash_generator__ &);
     hash_generator__(const hash_generator__ &);
@@ -373,7 +373,7 @@ public:
 	g.update(buf, bufsize);
 	return g.digest();
     }
-	
+
 #ifdef HAVE_MMAP
     /** Static method allocator */
     static hash<SIZE> hash_file(const char *fname){
