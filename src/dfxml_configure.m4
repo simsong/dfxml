@@ -8,14 +8,13 @@
 #
 
 AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
-AC_MSG_NOTICE([Note: checks for afflib/afflib.h and libewf.h should be in the caller, so they can be disabled])
+AC_MSG_NOTICE([Note: checks for libewf.h should be in the caller, so they can be disabled])
 AC_CHECK_HEADERS([err.h expat.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h winsock2.h ])
 AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf ])
 
 AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS([exiv2/image.hpp])
-AC_LANG_POP()    
-
+AC_LANG_POP()
 
 # Determine UTC date offset
 CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`TZ=UTC date +%z`"
@@ -61,7 +60,7 @@ AC_CHECK_HEADERS([CommonCrypto/CommonDigest.h])
 AC_CHECK_HEADERS([openssl/aes.h openssl/bio.h openssl/evp.h openssl/hmac.h openssl/md5.h openssl/pem.h openssl/rand.h openssl/rsa.h openssl/sha.h openssl/pem.h openssl/x509.h])
 
 # OpenSSL has been installed under at least two different names...
-AC_CHECK_LIB([crypto],[EVP_get_digestbyname])	
+AC_CHECK_LIB([crypto],[EVP_get_digestbyname])
 AC_CHECK_LIB([ssl],[SSL_library_init])
 
 ## Make sure we have some kind of crypto
@@ -69,5 +68,4 @@ AC_CHECK_FUNCS([CC_MD2_Init],
         AC_MSG_NOTICE([Apple CommonCrypto Detected]),
         AC_CHECK_FUNCS([EVP_get_digestbyname],,AC_MSG_ERROR([CommonCrypto or SSL/OpenSSL support required]))
         AC_CHECK_FUNCS([EVP_MD_CTX_new EVP_MD_CTX_free])
-)        
-
+)
