@@ -9,7 +9,6 @@
 
 AC_MSG_NOTICE([Including dfxml/src/dfxml_configure.m4])
 AC_CHECK_HEADERS([\
-        CommonCrypto/CommonDigest.h \
         expat.h \
         fcntl.h \
         hashdb.hpp \
@@ -40,9 +39,6 @@ AC_CHECK_HEADERS([\
         ])
 AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf __cpuid])
 
-# Note: we no longer check for boost/version.hpp or exiv2.
-# It is the responsibility of the caller to find them.
-# We need to have a pluggable system for adding libraries that doesn't rely on adding them here.
 
 # Determine UTC date offset
 CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`TZ=UTC date +%z`"
