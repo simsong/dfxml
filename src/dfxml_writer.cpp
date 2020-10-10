@@ -332,7 +332,7 @@ void dfxml_writer::tagout(const std::string &tag,const std::string &attribute)
 #if (!defined(HAVE_VASPRINTF)) || defined(_WIN32)
 #ifndef _WIN32
 #define ms_printf __print
-#define __MINGW_ATTRIB_NONNULL(x) 
+#define __MINGW_ATTRIB_NONNULL(x)
 #endif
 extern "C" {
     /**
@@ -341,9 +341,9 @@ extern "C" {
      * So we just allocate a huge buffer and then strdup() and hope!
      */
     int vasprintf(char **ret,const char *fmt,va_list ap)
-        __attribute__((__format__(ms_printf, 2, 0))) 
+        __attribute__((__format__(ms_printf, 2, 0)))
         __MINGW_ATTRIB_NONNULL(2) ;
-    int vasprintf(char **ret,const char *fmt,va_list ap) 
+    int vasprintf(char **ret,const char *fmt,va_list ap)
     {
         /* Figure out how long the result will be */
         char buf[65536];
@@ -412,7 +412,7 @@ void dfxml_writer::add_cpuid()
     unsigned long eax = cpuID.EAX();
     unsigned long ebx = cpuID.EBX();
     unsigned long ecx = cpuID.ECX();
-    
+
     push("cpuid");
     xmlout("identification", CPUID::vendor());
     xmlout("family",   (int64_t) BFIX(eax, 8, 11));
@@ -424,7 +424,7 @@ void dfxml_writer::add_cpuid()
     xmlout("clflush_size", (int64_t) BFIX(ebx, 8, 15) * 8);
     xmlout("nproc",    (int64_t) BFIX(ebx, 16, 23));
     xmlout("apicid",   (int64_t) BFIX(ebx, 24, 31));
-    
+
     CPUID cpuID2(0x80000006);
     ecx = cpuID2.ECX();
     xmlout("L1_cache_size", (int64_t) BFIX(ecx, 16, 31) * 1024);
@@ -461,8 +461,8 @@ void dfxml_writer::add_DFXML_execution_environment(const std::string &command_li
         }
     }
 #endif
-#endif  
-    
+#endif
+
     xmlout("command_line", command_line); // quote it!
 #ifdef HAVE_GETUID
     xmlprintf("uid","","%d",getuid());
@@ -470,7 +470,7 @@ void dfxml_writer::add_DFXML_execution_environment(const std::string &command_li
     xmlout("username",getpwuid(getuid())->pw_name);
 #endif
 #endif
-    
+
 #define TM_FORMAT "%Y-%m-%dT%H:%M:%SZ"
     char buf[256];
     time_t t = time(0);
@@ -501,7 +501,7 @@ void dfxml_writer::add_rusage()
     xmlout("PeakPagefileUsage",(int64_t)pmc.PeakPagefileUsage);
     xmlout("PrivateUsage",(int64_t)pmc.PrivateUsage);
     pop();
-#endif    
+#endif
 #ifdef HAVE_GETRUSAGE
     struct rusage ru;
     memset(&ru,0,sizeof(ru));
@@ -519,7 +519,7 @@ void dfxml_writer::add_rusage()
         struct timeval t1;
         gettimeofday(&t1,0);
         struct timeval t;
-        
+
         t.tv_sec = t1.tv_sec - t0.tv_sec;
         if(t1.tv_usec > t0.tv_usec){
             t.tv_usec = t1.tv_usec - t0.tv_usec;
@@ -629,22 +629,14 @@ void dfxml_writer::xmlout(const std::string &tag,const std::string &value,const 
 #include <libewf.h>
 #endif
 
-#if defined(HAVE_EXIV2) && defined(HAVE_EXIV2_IMAGE_HPP)
-#ifdef DFXML_GNUC_HAS_DIAGNOSTIC_PRAGMA
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Weffc++"
-#endif
-#include <exiv2/image.hpp>
-#include <exiv2/exif.hpp>
-#include <exiv2/error.hpp>
-#endif
-
 #ifdef HAVE_HASHDB
 #include <hashdb.hpp>
 #endif
 
 
-/* These support Digital Forensics XML and require certain variables to be defined */
+/* These support Digital Forensics XML and require certain variables to be defined
+ * TODO: Create a sytem to allow caller to register library callbacks or provide a list of libraries to add.
+ */
 void dfxml_writer::add_DFXML_build_environment()
 {
     /* __DATE__ formats as: Apr 30 2011 */
@@ -663,13 +655,13 @@ void dfxml_writer::add_DFXML_build_environment()
 #endif
 #ifdef CXXFLAGS
     xmlout("CXXFLAGS",CXXFLAGS,"",true);
-#endif    
+#endif
 #ifdef LDFLAGS
     xmlout("LDFLAGS",LDFLAGS,"",true);
-#endif    
+#endif
 #ifdef LIBS
     xmlout("LIBS",LIBS,"",true);
-#endif    
+#endif
 #if defined(__DATE__) && defined(__TIME__) && defined(HAVE_STRPTIME)
     if(strptime(__DATE__,"%b %d %Y",&tm)){
         char buf[64];
@@ -708,4 +700,3 @@ void dfxml_writer::add_DFXML_build_environment()
 #endif
     pop();
 }
-

@@ -12,7 +12,7 @@ AC_CHECK_HEADERS([\
         CommonCrypto/CommonDigest.h \
         expat.h \
         fcntl.h \
-        hashdb.hpp \                
+        hashdb.hpp \
         intrin.h \
         limits.h \
         netinet/in.h \
@@ -40,15 +40,9 @@ AC_CHECK_HEADERS([\
         ])
 AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf __cpuid])
 
-AC_LANG_PUSH(C++)
-AC_CHECK_HEADERS([\
-        boost/version.hpp \
-        exiv2/image.hpp \
-        exiv2/exif.hpp \
-        exiv2/error.hpp \
-        ])                        
-AC_LANG_POP()    
-
+# Note: we no longer check for boost/version.hpp or exiv2.
+# It is the responsibility of the caller to find them.
+# We need to have a pluggable system for adding libraries that doesn't rely on adding them here.
 
 # Determine UTC date offset
 CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`TZ=UTC date +%z`"
@@ -94,7 +88,7 @@ AC_CHECK_HEADERS([CommonCrypto/CommonDigest.h])
 AC_CHECK_HEADERS([openssl/aes.h openssl/bio.h openssl/evp.h openssl/hmac.h openssl/md5.h openssl/pem.h openssl/rand.h openssl/rsa.h openssl/sha.h openssl/pem.h openssl/x509.h])
 
 # OpenSSL has been installed under at least two different names...
-AC_CHECK_LIB([crypto],[EVP_get_digestbyname])	
+AC_CHECK_LIB([crypto],[EVP_get_digestbyname])
 AC_CHECK_LIB([ssl],[SSL_library_init])
 
 ## Make sure we have some kind of crypto
@@ -102,5 +96,4 @@ AC_CHECK_FUNCS([CC_MD2_Init],
         AC_MSG_NOTICE([Apple CommonCrypto Detected]),
         AC_CHECK_FUNCS([EVP_get_digestbyname],,AC_MSG_ERROR([CommonCrypto or SSL/OpenSSL support required]))
         AC_CHECK_FUNCS([EVP_MD_CTX_new EVP_MD_CTX_free])
-)        
-
+)
