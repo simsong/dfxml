@@ -62,8 +62,7 @@ public:
     // adds the creator, build_environment, and execution environment
     void add_DFXML_creator(const std::string &program,const std::string &version,
                            const std::string &git_commit,
-                           int argc,
-                           char * const *argv);
+                           int argc,char * const *argv);
 
 private:
     /*** neither copying nor assignment is implemented ***/
