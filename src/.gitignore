@@ -11,3 +11,5 @@ testapp_catch2
 cpu_stat
 *.tar.gz
 *.tar.gz
+*.gcda
+*.gcno
