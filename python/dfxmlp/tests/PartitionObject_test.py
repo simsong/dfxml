@@ -20,7 +20,7 @@ import sys
 import logging
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
-import dfxml.python.dfxml.objects as Objects
+import dfxmlp.objects as Objects
 
 import libtest
 

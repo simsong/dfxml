@@ -7,8 +7,8 @@ import sys
 import os
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
-from dfxml.python.dfxml.objects import *
-from dfxml.python.dfxml.objects import _intcast, _qsplit, _logger
+from dfxmlp.objects import *
+from dfxmlp.objects import _intcast, _qsplit, _logger
 
 def test_all():
     assert _intcast(-1) == -1

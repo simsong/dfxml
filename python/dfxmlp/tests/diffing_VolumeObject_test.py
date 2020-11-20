@@ -19,8 +19,9 @@ import logging
 import os
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
-import dfxml
-import dfxml.python.dfxml.objects as Objects
+import dfxmlp
+import dfxmlp.objects as Objects
+
 
 def test_all():
     logging.basicConfig(level=logging.DEBUG)

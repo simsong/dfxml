@@ -18,8 +18,8 @@ import os
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 
-import dfxml.python.dfxml as dfxml
-import dfxml.python.dfxml.objects as Objects
+import dfxmlp as dfxml
+import dfxmlp.objects as Objects
 
 if __name__=="__main__":
 

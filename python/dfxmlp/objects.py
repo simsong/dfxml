@@ -42,9 +42,9 @@ import platform
 
 # The following allows us to import the dfxml module as dfxml
 # There may be a cleaner way to do this.
+sys.path.append( os.path.dirname(__file__) + "..")
 sys.path.append( os.path.dirname(__file__) + "/..")
-import dfxml.python.dfxml as dfxml
-
+import dfxmlp as dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
 

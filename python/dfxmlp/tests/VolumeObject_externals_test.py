@@ -21,7 +21,7 @@ import xml.etree.ElementTree as ET
 import sys
 
 sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
-import dfxml.python.dfxml.objects as Objects
+import dfxmlp.objects as Objects
 
 import libtest
 
@@ -136,4 +136,3 @@ def test_prefixed_externals_round_trip():
 if __name__ == "__main__":
     test_externals()
     test_prefixed_externals_round_trip()
-
