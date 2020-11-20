@@ -12,8 +12,8 @@ import dfxml.fiwalk as fiwalk
 import time
 
 def calc_jumps(fis,title):
-    print title
-    print "Count: %d" % (len(fis))
+    print(title)
+    print("Count: %d" % (len(fis)))
     from histogram import histogram
     h = histogram()
     pos = 0
@@ -31,9 +31,9 @@ def calc_jumps(fis,title):
             except AttributeError:
                 pass
         pref_frag_count = len(fi.byte_runs())
-            
-    print "Backwards Jumps: %d" % backwards
-    print "Histogram of backwards:"
+
+    print("Backwards Jumps: %d" % backwards)
+    print("Histogram of backwards:")
     h.print_top(10)
 
 if __name__=="__main__":
@@ -75,7 +75,7 @@ if __name__=="__main__":
 
     fis = filter(resident_file,fis)
 
-    print "Native order: "
+    print("Native order: ")
     calc_jumps(fis,"Native Order")
     def sort_function(a,b):
         a0 = a.byte_runs()[0].start_sector()
@@ -85,6 +85,3 @@ if __name__=="__main__":
         return 1
     fis.sort(sort_function)
     calc_jumps(fis,"Sorted Order")
-    
-
-
