@@ -24,13 +24,13 @@ This program's main purpose is matching files correctly.  It only performs enoug
 
 __version__ = "0.12.1"
 
-import dfxml.objects as Objects
+import dfxmlp.objects as Objects
 import logging
 import xml.etree.ElementTree as ET
 import os
 import sys
 import collections
-import dfxml
+import dfxmlp as dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
