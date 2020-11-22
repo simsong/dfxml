@@ -24,13 +24,13 @@ This program's main purpose is matching files correctly.  It only performs enoug
 
 __version__ = "0.12.1"
 
-import dfxmlp.objects as Objects
+import dfxml.objects as Objects
 import logging
 import xml.etree.ElementTree as ET
 import os
 import sys
 import collections
-import dfxmlp as dfxml
+import dfxml
 
 _logger = logging.getLogger(os.path.basename(__file__))
 
@@ -165,7 +165,7 @@ def make_differential_dfxml(pre, post, **kwargs):
                 #Use the lower-case volume spelling
                 ftype_str = _lower_ftype_str(new_obj)
 
-                #Re-capping the general differential analysis algorithm: 
+                #Re-capping the general differential analysis algorithm:
                 #0. If the volume is in the new list, something's gone wrong.
                 if (offset, ftype_str) in new_volumes:
                     _logger.debug("new_obj.partition_offset = %r." % offset)

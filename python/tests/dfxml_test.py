@@ -1,6 +1,6 @@
 import py.test
-import sys
-from dfxmlp import *
+
+from dfxml import *
 
 def check_equal(a,b,want=None):
     da = dftime(a)
