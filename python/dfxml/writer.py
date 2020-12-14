@@ -44,8 +44,7 @@ def json_to_xml(e,val):
 
 
 def git_commit():
-    import subprocess
-    s = subprocess.run(['git','rev-parse','HEAD'],stdout=PIPE,encoding='utf-8')
+    s = subprocess.run(['git','rev-parse','HEAD'],stdout=subprocess.PIPE,encoding='utf-8')
     return s.stdout.strip()
 
 class DFXMLTimer:
