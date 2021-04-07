@@ -1,0 +1,13 @@
+Makefile.defs
+depcomp
+*.log
+*.trs
+Makefile.in
+Makefile
+testapp
+config.guess
+config.sub
+testapp_catch2
+cpu_stat
+*.tar.gz
+*.tar.gz

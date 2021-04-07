@@ -49,16 +49,7 @@ matrix:
       script:
         - make check
     - language: python
-      python: 2.7
-      before_script:
-        - make schema-init
-        - cd python
-      script:
-        - pytest
-        - cd tests/test_venv
-        - make check
-    - language: python
-      python: 3.5
+      python: 3.7
       before_script:
         - make schema-init
         - cd python
@@ -69,7 +60,7 @@ matrix:
         - cd tests/test_venv
         - make check
     - language: python
-      python: 3.7
+      python: 3.8
       before_script:
         - make schema-init
         - cd python
@@ -91,5 +82,11 @@ matrix:
         - ./bootstrap.sh && ./configure && make && make check
 
 notifications:
-  email:
-    - alexander.nelson@nist.gov
+  email: 
+    recepients:
+        - alexander.nelson@nist.gov
+        - simsong@acm.org
+    on_success: never
+    on_failure: always
+    
+    

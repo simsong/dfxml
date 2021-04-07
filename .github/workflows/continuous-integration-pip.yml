@@ -1,0 +1,59 @@
+# This file based on https://gist.github.com/mwouts/9842452d020c08faf9e84a3bba38a66f
+# See: https://help.github.com/en/actions/reference/software-installed-on-github-hosted-runners
+# 2020-06-22 - slg - customized
+# 2020-06-27 - slg - expanded to G++ for MacOS
+# 
+name: CI (pytest and c++)
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ['ubuntu-18.04', 'ubuntu-20.04', 'macos-10.15']
+        python-version: [3.7, 3.8]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+          if [ -r requirements.txt ]; then pip install -r requirements.txt ; fi
+          if [ -r requirements-dev.txt ]; then pip install -r requirements-dev.txt ; fi
+
+      - name: Test with pytest
+        run: pytest --cov=./ --cov-report=xml python
+
+      - name: schema test
+        run: |
+          make schema-init
+          cd python/tests/test_venv
+          echo disabled until https://github.com/simsong/dfxml/issues/39 is resolved.
+
+      - name: Install C++ dependencies and run tests on MacOS
+        if: startsWith(matrix.os, 'macOS')
+        run: |
+          bash etc/install_autotools.sh
+          cd src
+          bash bootstrap.sh && ./configure && make
+          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+          make distcheck               
+
+      - name: Install C++ dependencies and run tests on Ubuntu-20.04
+        if: startsWith(matrix.os, 'ubuntu-20.04')
+        run: |
+          sudo apt install -y libtool autoconf automake libssl-dev pkg-config
+          cd src
+          bash bootstrap.sh && ./configure && make
+          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+          make distcheck               
+
+

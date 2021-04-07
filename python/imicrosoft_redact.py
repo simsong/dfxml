@@ -114,20 +114,12 @@ if __name__=="__main__":
     print("number of filenames in redaction XML:",len(redact_filenames))
 
     if options.all:
-        for fn in glob("*.aff"):
-            raw = fn.replace(".aff",".raw")
-            if not os.path.exists(raw):
-                print("%s --> %s" % (fn,raw))
-                if call(['afconvert','-e','raw',fn])!=0:
-                    raise RuntimeError("afconvert of %s failed" % (fn))
         fns = glob("*.raw")
     else:
         fns = args
 
     for fn in fns:
-        if fn.endswith(".aff"):
-            raise ValueError("Cannot redact AFF files")
-        print("Redacting %s" % fn)
+        print "Redacting %s" % fn
         xml_out = open(fn.replace(".raw","-redacted.xml"),"w")
         xml_out.write("<?xml version='1.0' encoding='ISO-8859-1'?>\n")
         xml_out.write("<redaction_report>\n")
