@@ -21,7 +21,7 @@ __version__="0.1"
 
 ###
 ### Code for working with Apache Spark
-### 
+###
 
 def json_to_xml(e,val):
     """Turns JSON in val into XML in e"""
@@ -44,12 +44,8 @@ def json_to_xml(e,val):
 
 
 def git_commit():
-    import subprocess
-    try:
-        s = subprocess.run(['git','rev-parse','HEAD'],stdout=PIPE,encoding='utf-8')
-        return s.stdout.strip()
-    except Exception as e:
-        return ''
+    s = subprocess.run(['git','rev-parse','HEAD'],stdout=subprocess.PIPE,encoding='utf-8')
+    return s.stdout.strip()
 
 class DFXMLTimer:
     def __init__(self,dfxml,name):
@@ -82,7 +78,7 @@ class DFXMLLoggingHandler(logging.Handler):
 
 class DFXMLWriter:
     def __init__(self,heartbeat=None,filename=None,prettyprint=False):
-        """Create a DFXML file. 
+        """Create a DFXML file.
         @param heartbeat is not currently implemented.
         @param filename is where the file should be written.
         @param logfunc is a function that takes a string (NOT a python logger). If passed in, then timestamps and comments are sent there as well.
@@ -128,7 +124,10 @@ class DFXMLWriter:
     def add_DFXML_creator(self,e):
         import __main__
         ee = ET.SubElement(e, 'creator', {'version':'1.0'})
-        ET.SubElement(ee, 'program').text    = str(__main__.__file__)
+        try:
+            ET.SubElement(ee, 'program').text    = str(__main__.__file__)
+        except AttributeError as e:
+            ET.SubElement(ee, 'program').text = "(none)"
         try:
             ET.SubElement(ee, 'version').text = str(__main__.__version__)
         except AttributeError as e:
@@ -136,7 +135,7 @@ class DFXMLWriter:
         ET.SubElement(ee, 'executable').text = sys.executable
         ET.SubElement(ee, 'git-commit').text = git_commit()
         self.add_DFXML_execution_environment(ee)
-        
+
     def add_DFXML_execution_environment(self,e):
         ee = ET.SubElement(e, 'execution_environment')
         uname = os.uname()
@@ -179,7 +178,7 @@ class DFXMLWriter:
                                               'delta':str(now - self.tlast),
                                               'total':str(now - self.t0)})
         self.tlast = now
-        
+
     def add_loadavg(self,node):
         try:
             avgs = os.getloadavg()
@@ -212,7 +211,7 @@ class DFXMLWriter:
         for key in vm.__dir__():
             if key[0]!='_' and key not in ['index','count']:
                 ET.SubElement(ru, key).text = str( getattr(vm, key))
-        
+
     def add_iostat(self,node):
         # This is gross. Instead of including the text, we should include this in a structured form
         try:
@@ -225,8 +224,8 @@ class DFXMLWriter:
         processlist = ET.SubElement(node,'processlist')
         for p in psutil.process_iter():
             try:
-                proc = ET.SubElement(processlist,'process', 
-                                     {'pid':str(p.pid), 'ppid':str(p.ppid()), 'uid':str(p.uids().real), 
+                proc = ET.SubElement(processlist,'process',
+                                     {'pid':str(p.pid), 'ppid':str(p.ppid()), 'uid':str(p.uids().real),
                                       'euid':str(p.uids().effective), 'create_time': str(p.create_time())})
                 try:
                     proc.set('name',p.name())
@@ -238,10 +237,10 @@ class DFXMLWriter:
                     proc.set('cpu_percent', str(p.cpu_percent()))
                     mem = p.memory_info_ex()
                     try:
-                        ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
+                        ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms),
                                                            'pfaults':str(mem.pfaults), 'pageins':str(mem.pageins)})
                     except AttributeError:
-                        ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms), 
+                        ET.SubElement(proc,'memory_info', {'rss': str(mem.rss), 'vms':str(mem.vms),
                                                            'data':str(mem.data), 'dirty':str(mem.dirty),
                                                            'lib':str(mem.lib), 'shared':str(mem.shared),
                                                            'text':str(mem.text) })
@@ -269,14 +268,14 @@ class DFXMLWriter:
 
     def writeToFilename(self,fname,prettyprint=False):
         self.write(open(fname,"w"),prettyprint=prettyprint)
-            
+
 
     def prettyprint(self):
         import xml.dom.minidom
         return xml.dom.minidom.parseString( self.asString()).toprettyxml(indent='  ')
 
     def add_spark(self,node):
-        """Connect to SPARK on local host and dump information. 
+        """Connect to SPARK on local host and dump information.
         Uses requests. Note: disables HTTPS certificate warnings."""
         import os
         import json
@@ -292,7 +291,7 @@ class DFXMLWriter:
             urllib3.disable_warnings()
         except ImportError:
             ET.SubElement(spark,'error').text = "SPARK_ENV_LOADED present but requests module not available"
-            return 
+            return
 
         host = 'localhost'
         p1 = 4040
@@ -353,8 +352,8 @@ class DFXMLWriter:
 if __name__=="__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     arg_parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
-                                description="""Demo program. Run DFXML for this program and print the results. 
-                                If you run it on a system with SPARK, you get the spark DFXML too!""") 
+                                description="""Demo program. Run DFXML for this program and print the results.
+                                If you run it on a system with SPARK, you get the spark DFXML too!""")
     arg_parser.add_argument("--write",help="Specify filename to write XML output to")
     arg_parser.add_argument("--debug",help="Print the output. Default unless --write is specified",action='store_true')
     args = arg_parser.parse_args()

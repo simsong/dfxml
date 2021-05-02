@@ -19,7 +19,7 @@ if __name__=="__main__":
         print(e)
         raise RuntimeError
 
-        
+
     print("Available RDS sets: %s " % avail)
 
     md5_val = "EB714443AA2FC1A3D16E39EB8007A0B2"
@@ -27,8 +27,8 @@ if __name__=="__main__":
     # Build a search term
     search = {"db":avail[0],      # pick the first search term
               "md5":md5_val
-              } 
-              
+              }
+
     print("Here are the files with a md5 of "+md5_val)
     ret = p.search(search)
     fields = ret['fields']
@@ -36,7 +36,7 @@ if __name__=="__main__":
         for(a,b) in zip(fields,row):
             print(a,"=",b)
         print("")
-        
+
     print("Now we will do a query for multiple MD5 values. You can do this by specifying\n"+
           "a value as an array.")
     searchm = {"db":avail[0],
@@ -44,11 +44,9 @@ if __name__=="__main__":
                       "9B3702B0E788C6D62996392FE3C9786A"]}
     print("sending:",searchm)
     ret = p.search(searchm)
-    print "got:",ret
+    print("got:",ret)
     fields = ret['fields']
     for row in ret['result']:
         for(a,b) in zip(fields,row):
             print(a,"=",b)
         print("")
-        
-
