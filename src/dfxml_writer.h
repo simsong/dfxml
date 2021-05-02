@@ -62,9 +62,8 @@ public:
     // adds the creator, build_environment, and execution environment
     void add_DFXML_creator(const std::string &program,const std::string &version,
                            const std::string &git_commit,
-                           int argc, 
-                           char * const *argv);
-    
+                           int argc,char * const *argv);
+
 private:
     /*** neither copying nor assignment is implemented ***/
     dfxml_writer(const dfxml_writer &) = delete;
@@ -132,7 +131,7 @@ public:
      *** THESE ARE ALL THREADSAFE ***
      ********************************/
     void comment(const std::string &comment);
-    void xmlprintf(const std::string &tag,const std::string &attribute,const char *fmt,...) 
+    void xmlprintf(const std::string &tag,const std::string &attribute,const char *fmt,...)
         __attribute__((format(printf, 4, 5))); // "4" because this is "1";
     void xmlout( const std::string &tag,const std::string &value, const std::string &attribute, const bool escape_value);
 

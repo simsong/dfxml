@@ -39,14 +39,6 @@ AC_CHECK_HEADERS([\
         ])
 AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf __cpuid])
 
-AC_LANG_PUSH(C++)
-AC_CHECK_HEADERS([\
-        boost/version.hpp \
-        exiv2/image.hpp \
-        exiv2/exif.hpp \
-        exiv2/error.hpp \
-        ])
-AC_LANG_POP()
 
 # Determine UTC date offset
 CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`TZ=UTC date +%z`"
