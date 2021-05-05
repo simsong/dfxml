@@ -21,7 +21,7 @@ mkdir -p $build
 echo ========
 echo autoconf
 cd $build
-curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
+curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz &&\
 tar xzf autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure --prefix=/usr/local && make && sudo make install
 export PATH=$PATH:/usr/local/bin
 
@@ -32,12 +32,8 @@ export PATH=$PATH:/usr/local/bin
 echo =======
 echo automake
 cd $build
-curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz
-tar xzf automake-1.16.tar.gz
-cd automake-1.16
-./configure --prefix=/usr/local
-make
-sudo make install
+curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz &&\
+tar xzf automake-1.16.tar.gz && cd automake-1.16 && ./configure --prefix=/usr/local && make && sudo make install
 
 ##
 # Libtool
@@ -46,13 +42,10 @@ sudo make install
 echo =======
 echo libtool
 cd $build
-curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz
-tar xzf libtool-2.4.6.tar.gz
-cd libtool-2.4.6
-./configure --prefix=/usr/local
-make
-sudo make install
+curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz &&\
+tar xzf libtool-2.4.6.tar.gz && cd libtool-2.4.6 &&  ./configure --prefix=/usr/local && make && sudo make install
 
+echo =======================
 echo "Installation complete."
 echo PATH=$PATH
 echo which autoconf: `which autoconf`
