@@ -2,7 +2,7 @@
 # See: https://help.github.com/en/actions/reference/software-installed-on-github-hosted-runners
 # 2020-06-22 - slg - customized
 # 2020-06-27 - slg - expanded to G++ for MacOS
-# 
+#
 name: CI (pytest and c++)
 on: [push]
 
@@ -16,6 +16,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Install autotools
+        run: |
+          wget https://gnu.freemirror.org/gnu/autoconf/autoconf-2.71.tar.gz
+          tar xfz autoconf-2.71.tar.gz; cd autoconf-2.71.tar.gz; ./configure && make && sudo make install
+
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
@@ -45,7 +51,7 @@ jobs:
           cd src
           bash bootstrap.sh && ./configure && make
           make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
-          make distcheck               
+          make distcheck
 
       - name: Install C++ dependencies and run tests on Ubuntu-20.04
         if: startsWith(matrix.os, 'ubuntu-20.04')
@@ -54,6 +60,4 @@ jobs:
           cd src
           bash bootstrap.sh && ./configure && make
           make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
-          make distcheck               
-
-
+          make distcheck
