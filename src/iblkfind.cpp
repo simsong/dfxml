@@ -160,11 +160,6 @@ int main(int argc, char** argv) {
   // load the extents from the dfxml
   extents_t extents(argv[1]);
 
-  // Print them back out again
-  //for (const auto& extent : extents.extents)  {
-  //  std::cout << extent << std::endl;
-  //}
-
   // A test list of offsets to look up
   std::vector<uint64_t> offsets = { 
         2098176, 2621440, 3146752, 3163136, 3195904,

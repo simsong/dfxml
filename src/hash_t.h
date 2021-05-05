@@ -10,7 +10,7 @@
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
  *       hasher.update(buf,bufsize)
- * sha1_t val = hasher.final()
+ * sha1_t val = hasher.digest()
  *
  * Using the values:
  * string val.hexdigest()   --- return a hext digest
@@ -36,16 +36,16 @@
 #ifndef  HASH_T_H
 #define  HASH_T_H
 
-#include <cstring>
-#include <cstdlib>
-
-#include <stdint.h>
-#include <assert.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <cstring>
+#include <cstdlib>
+#include <cstdint>
+#include <cassert>
 #include <iostream>
-#include <unistd.h>
 
 #if defined(HAVE_COMMONCRYPTO_COMMONDIGEST_H)
 // We are going to ignore -Wdeprecated-declarations, because we need MD5
@@ -91,12 +91,12 @@ namespace dfxml {
  */
 class fserror:public std::exception {
 public:;
-    const char *msg;
+    const std::string msg;
     const int  error_code;
-    fserror(const char *msg_,int error_code_):msg(msg_),error_code(error_code_){
+    fserror(const std::string &msg_,int error_code_):msg(msg_),error_code(error_code_){
     }
     virtual const char *what() const throw() {
-        return msg;
+        return msg.c_str();
     }
 };
 
@@ -132,12 +132,12 @@ public:
         return (hex2int(ch0)<<4) | hex2int(ch1);
     }
     static hash fromhex(const std::string &hexbuf) {
-	hash res;
+        uint8_t digest[SIZE];
         assert(hexbuf.size()==SIZE*2);
 	for(unsigned int i=0;i+1<hexbuf.size() && (i/2)<size();i+=2){
-	    res.digest[i/2] = hex2int(hexbuf[i],hexbuf[i+1]);
+	    digest[i/2] = hex2int(hexbuf[i],hexbuf[i+1]);
 	}
-	return res;
+	return hash(digest);
     }
     const char *hexdigest(char *hexbuf,size_t bufsize) const {
 	const char *hexbuf_start = hexbuf;
@@ -319,8 +319,8 @@ public:
     }
 #endif
 };
-typedef hash_generator__<EVP_md5,16> md5_generator;
-typedef hash_generator__<EVP_sha1,20> sha1_generator;
+typedef hash_generator__<EVP_md5,16>    md5_generator;
+typedef hash_generator__<EVP_sha1,20>   sha1_generator;
 typedef hash_generator__<EVP_sha256,32> sha256_generator;
 #ifdef HAVE_SHA512_T
 typedef hash_generator__<EVP_sha512,64> sha512_generator;

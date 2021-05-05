@@ -22,17 +22,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install C++ dependencies on MacOS
-        if: startsWith(matrix.os, 'macOS')
-        run: |
-           bash etc/install_autotools.sh
-
-      - name: Install C++ dependencies on Ubuntu
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-           sudo apt install libtool autoconf automake
-           automake --help
-
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
@@ -49,9 +38,22 @@ jobs:
           cd python/tests/test_venv
           echo disabled until https://github.com/simsong/dfxml/issues/39 is resolved.
 
-      - name: c/c++ test
+      - name: Install C++ dependencies and run tests on MacOS
+        if: startsWith(matrix.os, 'macOS')
         run: |
+          bash etc/install_autotools.sh
           cd src
-          bash bootstrap.sh
-          ./configure && make && make check 
+          bash bootstrap.sh && ./configure && make
+          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+          make distcheck               
+
+      - name: Install C++ dependencies and run tests on Ubuntu-20.04
+        if: startsWith(matrix.os, 'ubuntu-20.04')
+        run: |
+          sudo apt install -y libtool autoconf automake libssl-dev pkg-config
+          cd src
+          bash bootstrap.sh && ./configure && make
+          make check  || (for fn in test*.log ; do echo ""; echo $fn ; cat $fn ; done; exit 1)
+          make distcheck               
+
 

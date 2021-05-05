@@ -9,9 +9,11 @@
 #
 
 AC_PREREQ(2.57)
-AC_INIT(DFXML, 1.0.0, bugs@afflib.org)
+AC_INIT(DFXML, 1.0.1, bugs@digitalcorpora.org)
 AC_CONFIG_MACRO_DIR(m4)
-AC_CONFIG_FILES([Makefile tests/Makefile ])
+m4_include([m4/ax_cxx_compile_stdcxx.m4])
+
+AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
@@ -23,14 +25,13 @@ AC_PROG_CXX
 AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
-# use C++11 mode if available; HAVE_CXX11 is defined in config.h if so.  Don't
-# use the GNU C++11 extensions for portability's sake (noext).
+# Must use C++14 mode. (mandatory)
+
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX_11(noext, optional)
+AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory]) 
 AC_LANG_POP()
 
 m4_include([dfxml_configure.m4])
-m4_include([tests/cester_configure.m4])
 
 
 ################################################################
@@ -100,6 +101,7 @@ unset option
 # -Wundef  --- causes problems with zlib
 # -Wcast-qual 
 # -Wmissing-format-attribute  --- Just too annoying
+# 2020-06-04 removed ‘-Wno-unknown-warning-option’
 AC_LANG_PUSH(C++)
 
 CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
@@ -108,7 +110,6 @@ CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wfloat-equal -Wmultichar -Wmissing-noreturn \
     -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo \
     -Wno-deprecated-declarations \
-    -Wno-unknown-warning-option \
     -funit-at-a-time"
 
 if test x"${mingw}" != "xyes" ; then
@@ -134,34 +135,36 @@ unset option
 
 AC_LANG_POP()    
 
-
 ################################################################
 # Specify our other headers
-
+#
 AC_HEADER_STDC
-AC_CHECK_HEADERS([\
-	string.h \
-	strings.h sys/cdefs.h sys/resource.h sys/types.h \
-	sys/socket.h \
-	unistd.hsys/bitypes.h \
-	arpa/inet.h \
-	fcntl.h \
-	semaphore.h \
-	inttypes.h \
-	netinet/in.h netinet/tcp.h netinet/in_systm.h netinet/ip.h \
-	netinet/if_ether.h \
-	pcap.h \
-	pcap/pcap.h \
-	linux/if_ether.h signal.h])
 
-                                              
+
+################################################################
+## os-specific fixups
+# AC_CANONICAL_HOST is needed to access the 'host_os' variable    
+AC_CANONICAL_HOST
+case "${host_os}" in
+    linux*)
+        ;;
+    cygwin*|mingw*)
+        ;;
+    darwin*)
+      CXXFLAGS="-Wno-unknown-warning-option $CXXFLAGS"
+        ;;
+    *)
+        ;;
+esac
+
+
 ############## drop optimization flags if requested ################
-AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
+AC_ARG_WITH(no_optimize, AC_HELP_STRING([--with-no_optimize], [Drop -O C flags]))
+if test x"${NO_OPTIMIZE}" != "x" ; then
+   with_no_optimize="yes";
 fi
 
-if test "${with_noopt}" = "yes" ; then
+if test "${with_no_optimize}" = "yes" ; then
   CFLAGS=`echo "$CFLAGS" | sed s/-O[[0-9]]//`             # note the double quoting! 
   CXXFLAGS=`echo "$CXXFLAGS" | sed s/-O[[0-9]]//`
 fi
