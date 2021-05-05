@@ -16,12 +16,8 @@ mkdir -p $build
 # https://ftpmirror.gnu.org/autoconf
 
 cd $build
-curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.69.tar.gz
-tar xzf autoconf-2.69.tar.gz
-cd autoconf-2.69
-./configure --prefix=/usr/local
-make
-sudo make install
+curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
+tar xzf autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure --prefix=/usr/local && make && sudo make install
 export PATH=$PATH:/usr/local/bin
 
 ##
