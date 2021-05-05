@@ -20,7 +20,7 @@ jobs:
       - name: Install autotools
         run: |
           wget https://gnu.freemirror.org/gnu/autoconf/autoconf-2.71.tar.gz
-          tar xfz autoconf-2.71.tar.gz; cd autoconf-2.71.tar.gz; ./configure && make && sudo make install
+          tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && sudo make install
 
 
       - name: Set up Python ${{ matrix.python-version }}
