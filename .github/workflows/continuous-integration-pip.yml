@@ -20,14 +20,19 @@ jobs:
       - name: Install MacOS dependencies
         if: startsWith(matrix.os, 'macos')
         run: |
-          echo dont wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
-          echo tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && sudo make install
           brew install autoconf automake libtool
 
       - name: Install Ubuntu dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt install -y libtool autoconf automake libssl-dev pkg-config
+
+      - name: Update autoconf
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          wget https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz
+          tar xfz autoconf-2.71.tar.gz && cd autoconf-2.71 && ./configure && make && sudo make install
+
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
