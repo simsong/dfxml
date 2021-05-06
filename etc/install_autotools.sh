@@ -23,9 +23,9 @@ echo PATH=$PATH
 echo ========
 echo autoconf
 cd $build
-(curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz &&
-     tar xzf autoconf-2.71.tar.gz && cd autoconf-2.71
-     && ./configure --prefix=/usr/local && make && sudo make install) || (cat autoconf-2.71/config.log ; exit 1)
+(curl -OL https://ftpmirror.gnu.org/autoconf/autoconf-2.71.tar.gz && \
+     tar xzf autoconf-2.71.tar.gz && cd autoconf-2.71 && \
+         ./configure --prefix=/usr/local && make && sudo make install) || (cat autoconf-2.71/config.log ; exit 1)
 echo which autoconf: `which autoconf`
 
 ##
@@ -35,9 +35,9 @@ echo which autoconf: `which autoconf`
 echo =======
 echo automake
 cd $build
-(curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz &&
-     tar xzf automake-1.16.tar.gz && cd automake-1.16
-     && ./configure --prefix=/usr/local && make && sudo make install) || (cat automake-1.16/config.log ; exit 1)
+(curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz && \
+     tar xzf automake-1.16.tar.gz && cd automake-1.16 && \
+     ./configure --prefix=/usr/local && make && sudo make install) || (cat automake-1.16/config.log ; exit 1)
 echo which automake: `which automake`
 
 ##
@@ -47,8 +47,9 @@ echo which automake: `which automake`
 echo =======
 echo libtool
 cd $build
-(curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz &&
-tar xzf libtool-2.4.6.tar.gz && cd libtool-2.4.6 &&  ./configure --prefix=/usr/local && make && sudo make install) || (cat libtool-2.4.6/config.log ; exit 1)
+(curl -OL https://ftpmirror.gnu.org/libtool/libtool-2.4.6.tar.gz && \
+     tar xzf libtool-2.4.6.tar.gz && cd libtool-2.4.6 &&  \
+     ./configure --prefix=/usr/local && make && sudo make install) || (cat libtool-2.4.6/config.log ; exit 1)
 echo which libtool: `which libtool`
 
 echo =======================
