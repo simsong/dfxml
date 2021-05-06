@@ -38,6 +38,18 @@ cd $build
 (curl -OL https://ftpmirror.gnu.org/automake/automake-1.16.tar.gz && \
      tar xzf automake-1.16.tar.gz && cd automake-1.16 && \
      ./configure --prefix=/usr/local && make && sudo make install) || (cat automake-1.16/config.log ; exit 1)
+echo failure is here
+echo ==============
+pwd
+echo =========
+echo point 1
+ls -l
+cd $build
+cd automake-1.16
+ls -l
+echo here is config.log
+cat config.log
+echo =============
 echo which automake: `which automake`
 
 ##
