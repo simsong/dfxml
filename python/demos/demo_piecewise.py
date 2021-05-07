@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.2
 
 #
-# Demo program that prints piecewise hashes and reports on co-occurance of hashes.
+# Demo program that prints piecewise hashes and reports on co-occurrence of hashes.
 #
 # Multimap from http://stackoverflow.com/questions/1731971/is-there-multimap-implementation-in-python
 

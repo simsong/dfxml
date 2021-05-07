@@ -23,6 +23,6 @@ if __name__=="__main__":
     def process(fi):
         offset = fi.contents().find(data)
         if offset>0:
-            print "%s (offset=%d)" % (fi.filename(),offset)
-            
+            print("%s (offset=%d)" % (fi.filename(),offset))
+
     fiwalk.fiwalk_using_sax(imagefile=open(imagefn),callback=process)

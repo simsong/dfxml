@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Draw a quick hisogram of the timestamps on the hard drive"""
+"""Draw a quick histogram of the timestamps on the hard drive"""
 
 import matplotlib
 matplotlib.use('agg.pdf')

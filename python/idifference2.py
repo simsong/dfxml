@@ -30,7 +30,7 @@ import make_differential_dfxml
 import summarize_differential_dfxml
 
 def ignorable_name(fn):
-    """Filter out recognized pseudo-file names, accomodating user request for including dotdirs."""
+    """Filter out recognized pseudo-file names, accommodating user request for including dotdirs."""
     if fn is None:
         return False
     if args.include_dotdirs and os.path.basename(fn) in [".", ".."]:
