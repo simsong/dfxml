@@ -22,9 +22,9 @@ Produces a differential DFXML file as output.
 This program's main purpose is matching files correctly.  It only performs enough analysis to determine that a fileobject has changed at all.  (This is half of the work done by idifference.py.)
 """
 
-__version__ = "0.11.0"
+__version__ = "0.12.1"
 
-import Objects
+import dfxml.objects as Objects
 import logging
 import xml.etree.ElementTree as ET
 import os
@@ -89,13 +89,16 @@ def make_differential_dfxml(pre, post, **kwargs):
     _logger.debug("diff_mask_set = " + repr(diff_mask_set))
 
     #d: The container DFXMLObject, ultimately returned.
-    d = Objects.DFXMLObject(version="1.1.1")
+    d = Objects.DFXMLObject(version="1.2.0")
     if sys.argv[0] == os.path.basename(__file__):
         d.program = sys.argv[0]
         d.program_version = __version__
     d.command_line = " ".join(sys.argv)
     d.add_namespace("delta", dfxml.XMLNS_DELTA)
     d.dc["type"] = "Disk image difference set"
+    d.add_creator_library("Python", ".".join(map(str, sys.version_info[0:3]))) #A bit of a bend, but gets the major version information out.
+    d.add_creator_library("Objects.py", Objects.__version__)
+    d.add_creator_library("dfxml.py", Objects.dfxml.__version__)
 
     d.diff_file_ignores |= ignore_properties
     _logger.debug("d.diff_file_ignores = " + repr(d.diff_file_ignores))
@@ -162,7 +165,7 @@ def make_differential_dfxml(pre, post, **kwargs):
                 #Use the lower-case volume spelling
                 ftype_str = _lower_ftype_str(new_obj)
 
-                #Re-capping the general differential analysis algorithm: 
+                #Re-capping the general differential analysis algorithm:
                 #0. If the volume is in the new list, something's gone wrong.
                 if (offset, ftype_str) in new_volumes:
                     _logger.debug("new_obj.partition_offset = %r." % offset)
@@ -407,7 +410,8 @@ def make_differential_dfxml(pre, post, **kwargs):
         #Add in the default appender, the DFXML Document itself.
         appenders[None] = d
 
-        content_diffs = set(["md5", "sha1", "mtime"])
+        #A file should only be considered "modified" if its contents have changed.
+        content_diffs = set(["md5", "sha1", "sha256"])
 
         def _maybe_match_attr(obj):
             """Just adds the 'matched' annotation when called."""

@@ -45,7 +45,7 @@ def sanitize_filename(fname):
     return fname
     
 class xml_sanitizer:
-    """Read and write the XML, but sanitize the filename elementss."""
+    """Read and write the XML, but sanitize the filename elements."""
     def __init__(self,out):
         self.out = out
         self.cdata = ""

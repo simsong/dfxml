@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-"""This is a small program written with the python fiwalk framework to
-break the microsoft executables from the m57 corpus. It does this by changing
+"""This is a small program written with the Python fiwalk framework to
+break the Microsoft executables from the m57 corpus. It does this by changing
 characters in the first 4096 bytes of the executable that are over hex 80 to
 hex FF"""
 
@@ -12,8 +12,10 @@ sys.path.append(os.getenv("DOMEX_HOME") + "/src/lib/") # add the library
 sys.path.append(os.getenv("DOMEX_HOME") + "/src/fiwalk/python/") # add the library
 
 
-import fiwalk,hashlib
+import hashlib
 import xml.parsers.expat
+
+import dfxml.fiwalk as fiwalk
 
 redact_extensions = set([".dll",".exe",".com"])
 redact_filenames  = set()
@@ -23,21 +25,21 @@ def should_redact(fi):
     if fi.filename() in redact_filenames: return True
     fnl = fi.filename().lower()
     (root,ext) = os.path.splitext(fnl)
-    if options.debug: print "\r",fnl,
+    if options.debug: print("\r",fnl,)
     if ext in redact_extensions and fnl.startswith("windows"):
         try:
             content = fi.contents(icat_fallback=False)
         except ValueError:
-            if options.debug: print " *** can't redact --- is compressed *** "
+            if options.debug: print(" *** can't redact --- is compressed *** ")
             return False
         if not content:
-            if options.debug: print " *** can't redact --- no content ***"
+            if options.debug: print(" *** can't redact --- no content ***")
             return False
         if "Microsoft" in content:
             return True
         if "\0M\0i\0c\0r\0o\0s\0o\0f\0t" in content:
             return True
-        if options.debug: print " *** won't redact --- no Microsoft ***"
+        if options.debug: print(" *** won't redact --- no Microsoft ***")
         return False
     return False
 
@@ -87,7 +89,7 @@ def redact(fi):
     xml_out.write("    <hashdigest type='SHA1'>%s</hashdigest>\n" % (hashlib.sha1(redacted_content).hexdigest()))
     xml_out.write("  </after_redact>\n")
     xml_out.write("</fileobject>\n")
-    
+
 
 if __name__=="__main__":
     import sys,time
@@ -108,23 +110,15 @@ if __name__=="__main__":
         try:
             fiwalk.fiwalk_using_sax(xmlfile=open(fn),callback=lambda fi:redact_filenames.add(fi.filename()))
         except xml.parsers.expat.ExpatError:
-            print "Invalid XML file:",fn
-    print "number of filenames in redaction XML:",len(redact_filenames)
+            print("Invalid XML file:",fn)
+    print("number of filenames in redaction XML:",len(redact_filenames))
 
     if options.all:
-        for fn in glob("*.aff"):
-            raw = fn.replace(".aff",".raw")
-            if not os.path.exists(raw):
-                print "%s --> %s" % (fn,raw)
-                if call(['afconvert','-e','raw',fn])!=0:
-                    raise RuntimeError,"afconvert of %s failed" % fn
         fns = glob("*.raw")
     else:
         fns = args
-    
+
     for fn in fns:
-        if fn.endswith(".aff"):
-            raise ValueError,"Cannot redact AFF files"
         print "Redacting %s" % fn
         xml_out = open(fn.replace(".raw","-redacted.xml"),"w")
         xml_out.write("<?xml version='1.0' encoding='ISO-8859-1'?>\n")

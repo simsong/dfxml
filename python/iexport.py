@@ -12,7 +12,7 @@ class Run:
         return "Run<%d--%d> (len %d)" % (self.start,self.end,self.len)
     def contains(self,b):
         """Returns true if b is inside self."""
-        print "%d <= %d <= %d = %s" % (self.start,b,self.end,(self.start <= b <= self.end))
+        print("%d <= %d <= %d = %s" % (self.start,b,self.end,(self.start <= b <= self.end)))
         return self.start <= b <= self.end
     def intersects_run(self,r):
         """Return true if self intersects r.  This may be because r.start is
@@ -25,7 +25,7 @@ class Run:
 
 class RunDB:
     """The RunDB maintains a list of all the runs in a disk image. The
-RunDB is created with a single run that represnts all of the sectors
+RunDB is created with a single run that represents all of the sectors
 in the disk image. Runs can then be removed, which causes existing
 runs to be split. Finally all of the remaining runs can be removed."""
     def __init__(self,start,len):
@@ -35,7 +35,7 @@ runs to be split. Finally all of the remaining runs can be removed."""
     def intersecting_runs(self,r):
         """Return a list of all the Runs that intersect with r.
         This may be because r.start is inside the run, r.end is inside
-        the run, because the run completely encloses r, or becuase r completely
+        the run, because the run completely encloses r, or because r completely
         encloses the run."""
         return filter(lambda x:x.intersects_run(r) , self.runs)
     def remove(self,r):
@@ -55,17 +55,4 @@ runs to be split. Finally all of the remaining runs can be removed."""
             if after_len>0:
                 self.runs.append(Run(r.end,after_len))
                 
-
-if __name__=="__main__":
-    r1 = Run(0,1000)
-    r2 = Run(50,60)
-    assert r1.intersects_run(r2)
-    assert r2.intersects_run(r1)
-
-    disk = RunDB(0,1000)
-    print disk
-    disk.remove(Run(50,60))
-    disk.remove(Run(0,10))
-    disk.remove(Run(40,20))
-    print disk
 

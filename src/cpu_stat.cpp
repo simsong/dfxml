@@ -1,15 +1,16 @@
 /*
  * Test program for cpustat instruction.
+ *
+ *
+ * Based on cpustat.h -- Header for cpustat.cpp. Copyright (c) 2004 Brad Fish.
  */
 
+#include <cstdio>
+#include <vector>
+#include <iostream>
 
-/** cpustat.h -- Header for cpustat.cpp.
- * Copyright (c) 2004 Brad Fish (brad.fish@gmail.com).
- */
 
-#if !defined(MAIN_H)
-#define MAIN_H
-
+#ifdef HAS_WINDOWS_H
 #include <windows.h>
 
 // missing Windows processor power information struct
@@ -22,14 +23,6 @@ typedef struct _PROCESSOR_POWER_INFORMATION {
     ULONG  CurrentIdleState;
 } PROCESSOR_POWER_INFORMATION , *PPROCESSOR_POWER_INFORMATION;
 
-int main (int argc, char *argv[]);
-
-#endif  // MAIN_H
-
-#include "cpustat.h"
-#include <cstdio>
-#include <vector>
-#include <iostream>
 
 extern "C" {
 #include <powrprof.h>
@@ -82,4 +75,12 @@ int main (int argc, char *argv[])
         static_cast<int>(spc.ProcessorMinThrottle) << '%' << std::endl;
     std::cout << "  processor maximum throttle: " <<
         static_cast<int>(spc.ProcessorMaxThrottle) << '%' << std::endl;
+    exit(0);
 }
+#else
+int main(int argc,char **argv)
+{
+    std::cerr << "This program only runs under Windows." << std::endl;
+    exit(0);
+}
+#endif

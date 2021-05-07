@@ -3,13 +3,14 @@
 # exp_slack.py: experiment on the slack space 
 # quantify slack space
 #
-# (c) Martin Mulazzani, 2012 mmulazzani@sba-research.org
+# (c) Martin Mulazzani, 2012
 # Additions by Simson Garfinkel
 
 import re
 import os
-import fiwalk
 import sys
+
+import dfxml.fiwalk as fiwalk
 
 def proc(fi):
     # Skip the virtual files?
@@ -57,5 +58,5 @@ if __name__=="__main__":
     #re-open file for binary reading
     #file processing
     f = open(file_name, "rb")
-        fiwalk.fiwalk_using_sax(xmlfile=f,callback=proc)
+    fiwalk.fiwalk_using_sax(xmlfile=f,callback=proc)
 

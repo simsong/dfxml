@@ -58,15 +58,9 @@ check-idifference-dfxml:
 check-mac_timelines:
 	./test_mac_timelines.sh
 
-check-Objects:
-	$(MAKE) -C test_Objects
-
 clean: clean-Objects
 	rm -f dfxml_tool_*xml
 	rm -f cat_test_*.dfxml
 	rm -f idifference_test.txt
 	rm -f idifference_test*.dfxml
 	rm -f demo_mac_timeline*.txt
-
-clean-Objects:
-	$(MAKE) -C test_Objects clean

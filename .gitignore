@@ -5,6 +5,9 @@
 .deps
 .dirstamp
 __pycache__
+_deps
+python/demo.dfxml
+schema
 src/.deps
 src/Makefile
 src/Makefile.in
@@ -26,3 +29,7 @@ stamp-h
 stamp-h1
 src/compile
 src/iblkfind
+python/demo.dfxml
+.cache
+.pytest_cache
+*.log

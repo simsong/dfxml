@@ -6,18 +6,22 @@
  * This file is public domain.
  */
 
+#include "config.h"
+#include "dfxml_reader.h"
 
-#include <config.h>
-#include <iostream>
+#include <algorithm>
 #include <fstream>
-#include <sstream>
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <time.h>
-#include <stdint.h>
 
+//#include <config.h>
+//#include <stdlib.h>
+//#include <stdint.h>
+//#include <stdio.h>
+//#include <errno.h>
+//#include <time.h>
 
+//#include <iostream>
+//#include <fstream>
+//#include <sstream>
 
 /* We need netinet/in.h or windowsx.h */
 #ifdef HAVE_NETINET_IN_H
@@ -29,17 +33,17 @@
 #  include <windows.h>
 #  include <windowsx.h>
 #endif
-#include <string.h>
-#include <algorithm>
 
-#include "dfxml_reader.h"
+//#include <string.h>
 
-std::ostream & operator <<(std::ostream &os,const dfxml::byte_run &b) {
+
+std::ostream & operator <<(std::ostream &os,const dfxml::byte_run &b)
+{
     os << "byte_run[";
-    if(b.img_offset) os << "img_offset=" << b.img_offset << ";";
-    if(b.file_offset) os << "file_offset=" << b.file_offset << ";";
-    if(b.len) os << "len=" << b.len << ";";
-    if(b.sector_size) os << "sector_size=" << b.sector_size << ";";
+    if (b.img_offset) os << "img_offset=" << b.img_offset << ";";
+    if (b.file_offset) os << "file_offset=" << b.file_offset << ";";
+    if (b.len) os << "len=" << b.len << ";";
+    if (b.sector_size) os << "sector_size=" << b.sector_size << ";";
     //os << b.hashdigest;
     os << "]";
     return os;

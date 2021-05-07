@@ -1,11 +1,11 @@
 #!/usr/bin/python
-"""Draw a quick hisogram of the timestamps on the hard drive"""
+"""Draw a quick histogram of the timestamps on the hard drive"""
 
 import matplotlib
 matplotlib.use('agg.pdf')
 
 
-import fiwalk
+import dfxml.fiwalk as fiwalk
 import datetime
 from matplotlib.dates import MonthLocator, WeekdayLocator, DateFormatter
 from matplotlib.dates import MONDAY,SATURDAY

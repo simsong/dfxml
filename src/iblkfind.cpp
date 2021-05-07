@@ -114,7 +114,7 @@ class extents_t {
      * @param[in]  dfxml file name
      */
     extents_t(const std::string& p_dfxml_filename) :
-      dfxml_filename(p_dfxml_filename) {
+      dfxml_filename(p_dfxml_filename),extents() {
 
         dfxml::file_object_reader::read_dfxml(
             dfxml_filename, 
@@ -159,11 +159,6 @@ int main(int argc, char** argv) {
 
   // load the extents from the dfxml
   extents_t extents(argv[1]);
-
-  // Print them back out again
-  //for (const auto& extent : extents.extents)  {
-  //  std::cout << extent << std::endl;
-  //}
 
   // A test list of offsets to look up
   std::vector<uint64_t> offsets = { 

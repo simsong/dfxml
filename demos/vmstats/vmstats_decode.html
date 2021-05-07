@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>History for {{host}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="skeleton.css" rel="stylesheet" >
+    <style>
+     .processes    {line-height: 1.0; }
+     th,td         { padding: 1px 1px;}
+     th            { text-align: center;}
+     .num          { text-align: right;}
+     
+    </style>
+  </head>
+  <body>
+    <div>
+      <table>
+        <tr><th><a href="{{prev_fname}}">[PREV]</a></th>  <th>{{host}} {{start_time}}</th>  <th><a href="{{next_fname}}">[NEXT]</a></th></tr>
+      </table>
+    </div>
+    <div class="u-full-width">
+      <h2>Stats</h2>
+      <table class='stats'>
+        <tr><th>CPU Utilization:</th><td> {{cpu_percent}} % </td> </tr>
+        <tr><th>Mem Utilization:</th><td> {{mem_percent}} % </td> </tr>
+      </table>
+    </div>
+
+    <div class="u-full-width">
+      <h2>Processes</h2>
+      <table class='processes'>
+        <tr><th></th><th></th><th colspan='2'>CPU Time</th></tr>
+        <tr><th class='num'>PID</th><th>NAME</th><th class='num'>User</th><th class='num'>System</th></tr>
+
+        {% for ps in ps_list %}
+        <tr><td>{{ps.pid}}</td> <td>{{ps.name}}</td>  <th>{{ps.user}}</th>  <th>{{ps.system}}</th> </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </body>
+</html>

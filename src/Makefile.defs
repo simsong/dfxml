@@ -1,7 +1,13 @@
-DFXML_WRITER = dfxml/src/dfxml_writer.cpp \
-      dfxml/src/dfxml_writer.h \
-      dfxml/src/hash_t.h 
+#
+# Do not delete this file!
+# It is used by programs that wish to include the DFXML_WRITER or the DFXML_READER
+#
 
-DFXML_READER = dfxml/src/dfxml_reader.cpp \
-      dfxml/src/dfxml_reader.h \
-      dfxml/src/hash_t.h 
+DFXML_WRITER = $(DFXML_SRC_DIR)dfxml_writer.cpp \
+      $(DFXML_SRC_DIR)dfxml_writer.h \
+      $(DFXML_SRC_DIR)hash_t.h \
+      $(DFXML_SRC_DIR)cpuid.h 
+
+DFXML_READER = $(DFXML_SRC_DIR)dfxml_reader.cpp \
+      $(DFXML_SRC_DIR)dfxml_reader.h \
+      $(DFXML_SRC_DIR)hash_t.h 

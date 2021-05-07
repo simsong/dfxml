@@ -1,7 +1,9 @@
-import sys, fiwalk, os.path
+import sys,os.path
 from optparse import OptionParser
 from sys import stdout
  
+import dfxml.fiwalk as fiwalk
+
 def demo_dfxml_time_bug(filename):
     parser = OptionParser()
     parser.usage = '%prog% [options] xmlfile '
@@ -16,8 +18,7 @@ def demo_dfxml_time_bug(filename):
         except KeyboardInterrupt:
             raise
         except:
-            raise
-            print('Abnormal mtime for file with size',fsize)
+            raise RuntimeException('Abnormal mtime for file with size {}'.format(fsize))
  
 if __name__=="__main__":
     filename = sys.argv[1]

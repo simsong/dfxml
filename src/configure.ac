@@ -1,18 +1,20 @@
-#                                               -*- Autoconf -*- 
-# Process this file with autoconf to produce a configure script. 
-# Order is largely irrevellant, although it must start with AC_INIT and end with AC_OUTPUT 
-# See http://autotoolset.sourceforge.net/tutorial.html 
-# and http://www.openismus.com/documents/linux/automake/automake.shtml 
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+# Order is largely irrelevant, although it must start with AC_INIT and end with AC_OUTPUT
+# See http://autotoolset.sourceforge.net/tutorial.html
+# and http://www.openismus.com/documents/linux/automake/automake.shtml
 
 #
 # This file is public domain
 #
 
-AC_PREREQ(2.57)
-AC_INIT(DFXML, 0.0.1, bugs@afflib.org)
+AC_PREREQ([2.71])
+AC_INIT([DFXML],[1.0.1],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
+m4_include([m4/ax_cxx_compile_stdcxx.m4])
+
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
@@ -23,10 +25,10 @@ AC_PROG_CXX
 AM_PROG_CC_C_O                    dnl allow per-produce flags
 AC_PROG_INSTALL
 
-# use C++11 mode if available; HAVE_CXX11 is defined in config.h if so.  Don't
-# use the GNU C++11 extensions for portability's sake (noext).
+# Must use C++14 mode. (mandatory)
+
 AC_LANG_PUSH(C++)
-AX_CXX_COMPILE_STDCXX_11(noext, optional)
+AX_CXX_COMPILE_STDCXX([14], [noext], [mandatory])
 AC_LANG_POP()
 
 m4_include([dfxml_configure.m4])
@@ -50,29 +52,30 @@ AC_CHECK_LIB([expat],[XML_ParserCreate],,[have_expat="no ";AC_MSG_WARN([expat no
 # Enable all the compiler debugging we can find
 #
 # This is originally from PhotoRec, but modified substantially by Simson
-# Figure out which flags we can use with the compiler. 
+# Figure out which flags we can use with the compiler.
 #
 # These I don't like:
 # -Wdeclaration-after-statement -Wconversion
-# doesn't work: -Wunreachable-code 
-# causes configure to crash on gcc-4.2.1: -Wsign-compare-Winline 
-# causes warnings with unistd.h:  -Wnested-externs 
-# Just causes too much annoyance: -Wmissing-format-attribute 
+# doesn't work: -Wunreachable-code
+# causes configure to crash on gcc-4.2.1: -Wsign-compare-Winline
+# causes warnings with unistd.h:  -Wnested-externs
+# Just causes too much annoyance: -Wmissing-format-attribute
 
 # Check GCC
-WARNINGS_TO_TEST="-MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
+GCC_WARNINGS_TO_TEST="-MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
     -Wshadow -Wwrite-strings -Wcast-align -Waggregate-return \
     -Wbad-function-cast -Wcast-qual -Wundef -Wredundant-decls -Wdisabled-optimization \
-    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn "
+    -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wno-deprecated-declarations \
+    -Wno-unknown-warning-option"
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we do not want to do on mingw
-  WARNINGS_TO_TEST="$WARNINGS_TO_TEST -Wall -Wstrict-prototypes"
+  GCC_WARNINGS_TO_TEST="$GCC_WARNINGS_TO_TEST -Wall -Wstrict-prototypes"
 fi
 
-echo "Warnings to test: $WARNINGS_TO_TEST"
+echo "Warnings to test: $GCC_WARNINGS_TO_TEST"
 
-for option in $WARNINGS_TO_TEST
+for option in $GCC_WARNINGS_TO_TEST
 do
   SAVE_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $option"
@@ -96,24 +99,27 @@ unset option
 # -Waggregate-return -- aggregate returns are GOOD; they simplify code design
 # We can use these warnings after ZLIB gets upgraded:
 # -Wundef  --- causes problems with zlib
-# -Wcast-qual 
+# -Wcast-qual
 # -Wmissing-format-attribute  --- Just too annoying
+# 2020-06-04 removed ‘-Wno-unknown-warning-option’
 AC_LANG_PUSH(C++)
-WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
+
+CXX_WARNINGS_TO_TEST="-Wall -MD -Wpointer-arith \
     -Wshadow -Wwrite-strings -Wcast-align  \
     -Wredundant-decls -Wdisabled-optimization \
     -Wfloat-equal -Wmultichar -Wmissing-noreturn \
     -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo \
+    -Wno-deprecated-declarations \
     -funit-at-a-time"
 
 if test x"${mingw}" != "xyes" ; then
   # add the warnings we don't want to do on mingw
-  WARNINGS_TO_TEST="$WARNINGS_TO_TEST  -Weffc++"
+  CXX_WARNINGS_TO_TEST="$CXX_WARNINGS_TO_TEST  -Weffc++"
 fi
 
-echo "Warnings to test: $WARNINGS_TO_TEST"
+echo "Warnings to test: $CXX_WARNINGS_TO_TEST"
 
-for option in $WARNINGS_TO_TEST
+for option in $CXX_WARNINGS_TO_TEST
 do
   SAVE_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS $option"
@@ -126,36 +132,44 @@ do
   unset SAVE_CXXFLAGS
 done
 unset option
-AC_LANG_POP()    
 
+AC_LANG_POP()
 
 ################################################################
 # Specify our other headers
+#
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
 
-AC_HEADER_STDC
-AC_CHECK_HEADERS([\
-	string.h \
-	strings.h sys/cdefs.h sys/resource.h sys/types.h \
-	sys/socket.h \
-	unistd.hsys/bitypes.h \
-	arpa/inet.h \
-	fcntl.h \
-	semaphore.h \
-	inttypes.h \
-	netinet/in.h netinet/tcp.h netinet/in_systm.h netinet/ip.h \
-	netinet/if_ether.h \
-	pcap.h \
-	pcap/pcap.h \
-	linux/if_ether.h signal.h])
+
+
+################################################################
+## os-specific fixups
+# AC_CANONICAL_HOST is needed to access the 'host_os' variable
+AC_CANONICAL_HOST
+case "${host_os}" in
+    linux*)
+        ;;
+    cygwin*|mingw*)
+        ;;
+    darwin*)
+      CXXFLAGS="-Wno-unknown-warning-option $CXXFLAGS"
+        ;;
+    *)
+        ;;
+esac
+
 
 ############## drop optimization flags if requested ################
-AC_ARG_WITH(noopt, AC_HELP_STRING([--with-noopt], [Drop -O C flags]))
-if test x"${AFF_NOOPT}" != "x" ; then
-   with_noopt="yes";
+AC_ARG_WITH(no_optimize, AS_HELP_STRING([--with-no_optimize],[Drop -O C flags]))
+if test x"${NO_OPTIMIZE}" != "x" ; then
+   with_no_optimize="yes";
 fi
 
-if test "${with_noopt}" = "yes" ; then
-  CFLAGS=`echo "$CFLAGS" | sed s/-O[[0-9]]//`             # note the double quoting! 
+if test "${with_no_optimize}" = "yes" ; then
+  CFLAGS=`echo "$CFLAGS" | sed s/-O[[0-9]]//`             # note the double quoting!
   CXXFLAGS=`echo "$CXXFLAGS" | sed s/-O[[0-9]]//`
 fi
 

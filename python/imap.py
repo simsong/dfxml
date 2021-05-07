@@ -5,10 +5,7 @@ Produces a map of imagefile0.iso, using the other image files as "hints" for mis
 data. Only reports files that have been allocated; deleted files are reported only if
 they can be found allocated in another file.
 """
-
-
-import fiwalk
-
+import dfxml.fiwalk as fiwalk
 
 ################################################################
 if __name__=="__main__":
@@ -45,12 +42,12 @@ if __name__=="__main__":
         start_sector = run.img_offset/512
         sector_count = int(run.bytes/512)
         partial        = run.bytes % 512
-    
+
         if not fi.allocated():
             print("***")
 
         if not fi.file_present():       # it's not here!
-            continue 
+            continue
 
         if partial>0:
             sector_count += 1
@@ -60,9 +57,8 @@ if __name__=="__main__":
             fragment = "fragment %d" % fragment_num
 
         if next_sector != start_sector:
-            print "  <-- %5d unallocated sectors @ sector %5d -->" % (start_sector-next_sector,next_sector)
+            print("  <-- %5d unallocated sectors @ sector %5d -->" % (start_sector-next_sector,next_sector))
 
         print("[ %6d  -> %6d sectors %18s ]   %s  %s " % (start_sector,sector_count,extra,fi.filename(),fragment))
 
         next_sector = start_sector + sector_count
-

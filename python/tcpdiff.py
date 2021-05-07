@@ -1,4 +1,19 @@
 #!/usr/bin/env python
+
+# This software was developed in whole or in part by employees of the
+# Federal Government in the course of their official duties, and with
+# other Federal assistance. Pursuant to title 17 Section 105 of the
+# United States Code portions of this software authored by Federal
+# employees are not subject to copyright protection within the United
+# States. For portions not authored by Federal employees, the Federal
+# Government has been granted unlimited rights, and no claim to
+# copyright is made. The Federal Government assumes no responsibility
+# whatsoever for its use by other parties, and makes no guarantees,
+# expressed or implied, about its quality, reliability, or any other
+# characteristic.
+#
+# We would appreciate acknowledgement if the software is used.
+
 """tcpdiff.py
 
 Generates a report about what's different between two tcp DFXML files
@@ -12,7 +27,10 @@ import sys,time
 if sys.version_info < (3,1):
     raise RuntimeError("rdifference.py requires Python 3.1 or above")
 
-import fiwalk,dfxml,dfxml_html
+import dfxml
+import dfxml.fiwalk as fiwalk
+import dfxml.dfxml_html as dfxml_html
+
 def ptime(t):
     """Print the time in the requested format. T is a dfxml time value"""
     global options

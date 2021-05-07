@@ -12,7 +12,7 @@ if __name__=="__main__":
 
     parser = ArgumentParser(description='Make the local system look like the master')
     parser.add_argument('--commit',help='Actually do the job',action='store_true')
-    parser.add_argument('--local',help='speciies an XML file that describes the local system (required)')
+    parser.add_argument('--local',help='specifies an XML file that describes the local system (required)')
     parser.add_argument('masterfiles',
                         help='XML files to process. Files may be prefixed with an [xml] path',
                         nargs='+')
