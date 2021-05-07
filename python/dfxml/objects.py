@@ -791,6 +791,7 @@ class DiskImageObject(object):
     _all_properties = set([
       "byte_runs",
       "child_objects",
+      "error",
       "externals",
       "files",
       "partition_systems",
@@ -803,6 +804,7 @@ class DiskImageObject(object):
 
         self._byte_runs = None
         self._child_objects = []
+        self._error = None
         self._files = []
         self._partition_systems = []
         self._sector_size = None
@@ -843,6 +845,33 @@ class DiskImageObject(object):
             raise ValueError("Unexpected object type passed to DiskImageObject.append(): %r." % type(obj))
         self.child_objects.append(obj)
 
+    def pop_poststream_elements(self, diskimage_element):
+        """
+        This function is a utility function for the two whole-object serialization methods, print_dfxml (to string) and to_Element (to ET.Element).
+
+        This function will mutate the input argument diskimage_element, removing the 'poststream' elements.  diskimage_element is expected to be the element created by self.to_partial_Element.
+
+        Returns a list of child elements in DFXML Schema order.  List might be empty.
+        """
+        retval = []
+
+        errorel = None
+        if not (self.error is None or self.error == ""):
+            if len(diskimage_element) == 0:
+                raise ValueError("Inconsistent serialization state: Partial disk image XML element has no child elements, but at least the 'error' object property was set.")
+            if _qsplit(diskimage_element[-1].tag)[1] == "error":
+                # (ET.Element does not have pop().)
+                errorel = diskimage_element[-1]
+                del(diskimage_element[-1])
+            else:
+                # This branch of code should only be reached in unit testing, as it depends on the output of self.to_partial_Element.
+                if diskimage_element.find("error"):
+                    raise ValueError("Inconsistent serialization state: Partial disk image XML element has an immediate child named 'error', but not as the last child as expected from the schema.")
+        if not errorel is None:
+            retval.append(errorel)
+
+        return retval
+
     def populate_from_Element(self, e):
         global _warned_elements
 
@@ -869,14 +898,20 @@ class DiskImageObject(object):
 
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
-        dfxml_wrapper = _ET_tostring(pe)
 
         if len(pe) == 0 \
           and len(self.child_objects) == 0:
+            dfxml_wrapper = _ET_tostring(pe)
             output_fh.write(dfxml_wrapper)
             return
 
         dfxml_foot = "</diskimageobject>"
+
+        # Deal with "poststream"-section elements.  At the time of this writing, that is just the "error" element.
+        # This needs to be done before child-counting, string rendering, and manipulation.
+        poststream_elements = self.pop_poststream_elements(pe)
+
+        dfxml_wrapper = _ET_tostring(pe)
 
         # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
@@ -887,24 +922,34 @@ class DiskImageObject(object):
 
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+
         _logger.debug("Writing %d partition system objects for this disk image." % len(self.partition_systems))
         for ps in self.partition_systems:
             ps.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d volume objects for this disk image." % len(self.volumes))
         for v in self.volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d file objects for this disk image." % len(self.files))
         for f in self.files:
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
+
+        for poststream_element in poststream_elements:
+            output_fh.write(_ET_tostring(poststream_element))
         output_fh.write(dfxml_foot)
+
         output_fh.write("\n")
 
     def to_Element(self):
         outel = self.to_partial_Element()
+
+        poststream_elements = self.pop_poststream_elements(outel)
+
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
           self.partition_systems,
@@ -914,6 +959,11 @@ class DiskImageObject(object):
             for obj in child_list:
                 tmpel = obj.to_Element()
                 outel.append(tmpel)
+
+        # These elements come after the fileobject list in the schema.
+        for poststream_element in poststream_elements:
+            outel.append(poststream_element)
+
         return outel
 
     def to_partial_Element(self):
@@ -936,7 +986,8 @@ class DiskImageObject(object):
             outel.append(self.byte_runs.to_Element())
 
         for prop in [
-          "sector_size"
+          "sector_size",
+          "error"
         ]:
             _append_str(prop)
 
@@ -955,6 +1006,14 @@ class DiskImageObject(object):
     @property
     def child_objects(self):
         return self._child_objects
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, val):
+        self._error = _strcast(val)
 
     @property
     def files(self):
@@ -986,6 +1045,7 @@ class PartitionSystemObject(object):
       "block_size",
       "byte_runs",
       "child_objects",
+      "error",
       "externals",
       "files",
       "guid",
@@ -999,6 +1059,7 @@ class PartitionSystemObject(object):
 
         self._byte_runs = None
         self._child_objects = []
+        self._error = None
         self._files = []
         self._partitions = []
         self._pstype_str = None
@@ -1071,16 +1132,51 @@ class PartitionSystemObject(object):
                     _warned_elements.add((cns, ctn, PartitionSystemObject))
                     _logger.warning("Unsure what to do with this element in a PartitionSystemObject: %r" % ce)
 
+    def pop_poststream_elements(self, partitionsystem_element):
+        """
+        This function is a utility function for the two whole-object serialization methods, print_dfxml (to string) and to_Element (to ET.Element).
+
+        This function will mutate the input argument partitionsystem_element, removing the 'poststream' elements.  partitionsystem_element is expected to be the element created by self.to_partial_Element.
+
+        Returns a list of child elements in DFXML Schema order.  List might be empty.
+
+        This subroutine implements a re-serialization implementation decision: elements in extension namespaces can appear at the beginning or end of the volume XML child list, per the DFXML Schema.  All of the externals are put into the beginning of the element in to_partial_Element.  Hence, error will be the last child.
+        """
+        retval = []
+
+        errorel = None
+        if not (self.error is None or self.error == ""):
+            if len(partitionsystem_element) == 0:
+                raise ValueError("Inconsistent serialization state: Partial partitionsystem XML element has no child elements, but at least the 'error' object property was set.")
+            if _qsplit(partitionsystem_element[-1].tag)[1] == "error":
+                # (ET.Element does not have pop().)
+                errorel = partitionsystem_element[-1]
+                del(partitionsystem_element[-1])
+            else:
+                # This branch of code should only be reached in unit testing, as it depends on the output of self.to_partial_Element.
+                if partitionsystem_element.find("error"):
+                    raise ValueError("Inconsistent serialization state: Partial partitionsystem XML element has an immediate child named 'error', but not as the last child as expected from the schema.")
+        if not errorel is None:
+            retval.append(errorel)
+
+        return retval
+
     def print_dfxml(self, output_fh=sys.stdout):
         pe = self.to_partial_Element()
-        dfxml_wrapper = _ET_tostring(pe)
 
         if len(pe) == 0 \
           and len(self.child_objects) == 0:
+            dfxml_wrapper = _ET_tostring(pe)
             output_fh.write(dfxml_wrapper)
             return
 
         dfxml_foot = "</partitionsystemobject>"
+
+        # Deal with "poststream"-section elements.  At the time of this writing, that is just the "error" element.
+        # This needs to be done before child-counting, string rendering, and manipulation.
+        poststream_elements = self.pop_poststream_elements(pe)
+
+        dfxml_wrapper = _ET_tostring(pe)
 
         # Deal with an empty element being printed as <elem/>.
         if len(pe) == 0:
@@ -1100,11 +1196,18 @@ class PartitionSystemObject(object):
             e = f.to_Element()
             output_fh.write(_ET_tostring(e))
             output_fh.write("\n")
+
+        for poststream_element in poststream_elements:
+            output_fh.write(_ET_tostring(poststream_element))
         output_fh.write(dfxml_foot)
+
         output_fh.write("\n")
 
     def to_Element(self):
         outel = self.to_partial_Element()
+
+        poststream_elements = self.pop_poststream_elements(outel)
+
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
           self.partitions,
@@ -1113,6 +1216,11 @@ class PartitionSystemObject(object):
             for obj in child_list:
                 tmpel = obj.to_Element()
                 outel.append(tmpel)
+
+        # These elements come after the fileobject list in the schema.
+        for poststream_element in poststream_elements:
+            outel.append(poststream_element)
+
         return outel
 
     def to_partial_Element(self):
@@ -1120,6 +1228,7 @@ class PartitionSystemObject(object):
 
         def _append_el(prop, value):
             if prop in {
+              "error",
               "pstype_str"
             }:
                 tag = prop
@@ -1153,6 +1262,7 @@ class PartitionSystemObject(object):
 
         for prop in [
           "pstype_str",
+          "error"
         ]:
             _append_str(prop)
 
@@ -1172,6 +1282,15 @@ class PartitionSystemObject(object):
     @property
     def child_objects(self):
         return self._child_objects
+
+    @property
+    def error(self):
+        return self._error
+
+    @error.setter
+    def error(self, val):
+        _typecheck(val, str)
+        self._error = val
 
     @property
     def externals(self):
@@ -1213,9 +1332,11 @@ class PartitionObject(object):
       "files",
       "ftype_str",
       "guid",
+      "partition_index",
       "partition_label",
       "partition_system_offset",
       "partition_systems",
+      "partitions",
       "ptype",
       "ptype_str",
       "volumes"
@@ -1227,7 +1348,9 @@ class PartitionObject(object):
         self._byte_runs = None
         self._child_objects = [] # For maintaining order of objects of different types.
         self._files = []
+        self._partition_index = None
         self._partition_systems = []
+        self._partitions = []
         self._volumes = []
         self._ptype = None
         self._ptype_str = None
@@ -1256,6 +1379,7 @@ class PartitionObject(object):
               "externals",
               "files",
               "partition_systems",
+              "partitions",
               "volumes"
             }:
                 continue
@@ -1267,6 +1391,8 @@ class PartitionObject(object):
     def append(self, obj):
         if isinstance(obj, PartitionSystemObject):
             self.partition_systems.append(obj)
+        elif isinstance(obj, PartitionObject):
+            self.partitions.append(obj)
         elif isinstance(obj, VolumeObject):
             self.volumes.append(obj)
         elif isinstance(obj, FileObject):
@@ -1326,14 +1452,22 @@ class PartitionObject(object):
 
         output_fh.write(dfxml_head)
         output_fh.write("\n")
+
         _logger.debug("Writing %d partition system objects for this partition." % len(self.partition_systems))
         for ps in self.partition_systems:
             ps.print_dfxml(output_fh)
             output_fh.write("\n")
+
+        _logger.debug("Writing %d partition objects for this partition." % len(self.partitions))
+        for p in self.partitions:
+            p.print_dfxml(output_fh)
+            output_fh.write("\n")
+
         _logger.debug("Writing %d volume objects for this partition." % len(self.volumes))
         for v in self.volumes:
             v.print_dfxml(output_fh)
             output_fh.write("\n")
+
         _logger.debug("Writing %d file objects for this partition." % len(self.files))
         for f in self.files:
             e = f.to_Element()
@@ -1347,6 +1481,7 @@ class PartitionObject(object):
         # List children grouped by type, in order per DFXML schema.
         for child_list in [
           self.partition_systems,
+          self.partitions,
           self.volumes,
           self.files
         ]:
@@ -1360,6 +1495,7 @@ class PartitionObject(object):
 
         def _append_el(prop, value):
             if prop in {
+              "partition_index",
               "ptype",
               "ptype_str"
             }:
@@ -1393,6 +1529,7 @@ class PartitionObject(object):
             outel.append(self.byte_runs.to_Element())
 
         for prop in [
+          "partition_index",
           "ptype",
           "ptype_str",
         ]:
@@ -1431,9 +1568,22 @@ class PartitionObject(object):
         return self._files
 
     @property
+    def partition_index(self):
+        return self._partition_index
+
+    @partition_index.setter
+    def partition_index(self, val):
+        self._partition_index = _strcast(val)
+
+    @property
     def partition_systems(self):
         """List of partition system objects directly attached to this PartitionObject.  No setter for now."""
         return self._partition_systems
+
+    @property
+    def partitions(self):
+        """List of partition objects directly attached to this PartitionObject.  No setter for now."""
+        return self._partitions
 
     @property
     def ptype(self):
@@ -4434,6 +4584,7 @@ class Parser(object):
         _VOLUME_START, #This is only expected to happen in a DFXMLObject.
         _FILE_START,
         DFXML_POSTSTREAM,
+        PARTITION_POSTSTREAM,
         PARTITION_SYSTEM_POSTSTREAM
       },
       _VOLUME_START: {
@@ -4486,6 +4637,9 @@ class Parser(object):
       PARTITION_SYSTEM_POSTSTREAM: {
         _PARTITION_SYSTEM_END
       },
+      PARTITION_SYSTEM_POSTSTREAM: {
+        _PARTITION_SYSTEM_END
+      },
       PARTITION_SYSTEM_PRESTREAM: {
         _FILE_START,
         _PARTITION_START,
@@ -4495,6 +4649,7 @@ class Parser(object):
         _PARTITION_END
       },
       PARTITION_PRESTREAM: {
+        _PARTITION_START,
         _PARTITION_SYSTEM_START,
         _VOLUME_START,
         _FILE_START,
@@ -4602,7 +4757,7 @@ class Parser(object):
                         elem.clear()
                         elem_handled = True
                     elif ln == "partitionsystemobject":
-                        # A transition through the PARTITION_SYSTEM_POSTSTREAM state may have to be inferred.
+                        # A transition through the PARTITION_SYSTEM_POSTSTREAM state may have to be inferred, if there were no poststream elements (such as 'error').
                         if not self.state == Parser.PARTITION_SYSTEM_POSTSTREAM:
                             for eop in self.transition(Parser.PARTITION_SYSTEM_POSTSTREAM): yield eop
                         for eop in self.transition(Parser._PARTITION_SYSTEM_END): yield eop

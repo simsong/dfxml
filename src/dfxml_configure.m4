@@ -7,38 +7,17 @@
 # 2012 - Simson Garfinkel - Created for bulk_extractor
 #
 
-AC_MSG_NOTICE([Including dfxml/src/dfxml_configure.m4])
-AC_CHECK_HEADERS([\
-        expat.h \
-        fcntl.h \
-        hashdb.hpp \
-        intrin.h \
-        limits.h \
-        netinet/in.h \
-        openssl/evp.h \
-        openssl/hmac.h \
-        powrprof.h \
-        psapi.h \
-        pwd.h \
-        sqlite3.h \
-        sys/cdefs.h \
-        sys/mman.h \
-        sys/mmap.h \
-        sys/param.h \
-        sys/resource.h \
-        sys/stat.h \
-        sys/time.h \
-        sys/types.h \
-        sys/utsname.h \
-        tsk3/libtsk.h \
-        unistd.h \
-        windows.h \
-        windows.h \
-        windowsx.h \
-        winsock2.h \
-        ])
-AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf __cpuid])
+AC_MSG_NOTICE([Including dfxml_configure.m4 from dfxml])
+AC_MSG_NOTICE([Note: checks for libewf.h should be in the caller, so they can be disabled])
+AC_CHECK_HEADERS([err.h expat.h pwd.h sys/cdefs.h sys/mman.h sys/resource.h sys/utsname.h unistd.h winsock2.h ])
+AC_CHECK_FUNCS([fork gmtime_r getuid gethostname getpwuid getrusage mkstemp vasprintf ])
 
+<<<<<<< HEAD
+=======
+AC_LANG_PUSH(C++)
+AC_CHECK_HEADERS([exiv2/image.hpp])
+AC_LANG_POP()
+>>>>>>> master
 
 # Determine UTC date offset
 CPPFLAGS="$CPPFLAGS -DUTC_OFFSET=`TZ=UTC date +%z`"
