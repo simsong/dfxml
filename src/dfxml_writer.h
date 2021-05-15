@@ -135,24 +135,22 @@ public:
         __attribute__((format(printf, 4, 5))); // "4" because this is "1";
     void xmlout( const std::string &tag,const std::string &value, const std::string &attribute, const bool escape_value);
 
+    /* deprecated */
+    void xmloutl( const std::string &tag,const long value )              { xmlout(tag, value); }
+
     /* These all call xmlout or xmlprintf which already has locking, so these are all threadsafe! */
-    void xmlout( const std::string &tag,const std::string &value ){ xmlout(tag,value,"",true); }
-    void xmloutl(const std::string &tag,const long value )     { xmlprintf(tag,"","%ld",value); }
-#ifdef WIN32
-    void xmlout( const std::string &tag,const int32_t value )  { xmlprintf(tag,"","%I32d",value); }
-    void xmlout( const std::string &tag,const uint32_t value ) { xmlprintf(tag,"","%I32u",value); }
-    void xmlout( const std::string &tag,const int64_t value )  { xmlprintf(tag,"","%I64d",value); }
-    void xmlout( const std::string &tag,const uint64_t value ) { xmlprintf(tag,"","%I64u",value); }
-#else
-    void xmlout( const std::string &tag,const int32_t value )  { xmlprintf(tag,"","%" PRId32,value); }
-    void xmlout( const std::string &tag,const uint32_t value ) { xmlprintf(tag,"","%" PRIu32,value); }
-    void xmlout( const std::string &tag,const int64_t value )  { xmlprintf(tag,"","%" PRId64,value); }
-    void xmlout( const std::string &tag,const uint64_t value ) { xmlprintf(tag,"","%" PRIu64,value); }
-#ifdef __APPLE__
-    void xmlout( const std::string &tag,const size_t value )   { xmlprintf(tag,"","%" PRIu64,(unsigned long long)value); }
-#endif
-#endif
-    void xmlout( const std::string &tag,const double value )   { xmlprintf(tag,"","%f",value); }
+    void xmlout( const std::string &tag,const std::string &value )       { xmlout(tag,value,"",true); }
+    void xmlout( const std::string &tag,const signed char value )        { xmlprintf(tag,"","%hhd",value); }
+    void xmlout( const std::string &tag,const short value )              { xmlprintf(tag,"","%hd", value); }
+    void xmlout( const std::string &tag,const int value )                { xmlprintf(tag,"","%d",  value); }
+    void xmlout( const std::string &tag,const long value )               { xmlprintf(tag,"","%ld", value); }
+    void xmlout( const std::string &tag,const long long value )          { xmlprintf(tag,"","%lld",value); }
+    void xmlout( const std::string &tag,const unsigned char value )      { xmlprintf(tag,"","%hhu",value); }
+    void xmlout( const std::string &tag,const unsigned short value )     { xmlprintf(tag,"","%hu", value); }
+    void xmlout( const std::string &tag,const unsigned int value )       { xmlprintf(tag,"","%u",  value); }
+    void xmlout( const std::string &tag,const unsigned long value )      { xmlprintf(tag,"","%lu", value); }
+    void xmlout( const std::string &tag,const unsigned long long value ) { xmlprintf(tag,"","%llu",value); }
+    void xmlout( const std::string &tag,const double value )             { xmlprintf(tag,"","%f",value); }
     void xmlout( const std::string &tag,const struct timeval &ts) {
         xmlprintf(tag,"","%d.%06d",(int)ts.tv_sec, (int)ts.tv_usec);
     }

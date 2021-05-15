@@ -509,12 +509,12 @@ void dfxml_writer::add_rusage()
         push("rusage");
         xmlout("utime",ru.ru_utime);
         xmlout("stime",ru.ru_stime);
-        xmloutl("maxrss",(long)ru.ru_maxrss);
-        xmloutl("minflt",(long)ru.ru_minflt);
-        xmloutl("majflt",(long)ru.ru_majflt);
-        xmloutl("nswap",(long)ru.ru_nswap);
-        xmloutl("inblock",(long)ru.ru_inblock);
-        xmloutl("oublock",(long)ru.ru_oublock);
+        xmlout("maxrss",(long)ru.ru_maxrss);
+        xmlout("minflt",(long)ru.ru_minflt);
+        xmlout("majflt",(long)ru.ru_majflt);
+        xmlout("nswap",(long)ru.ru_nswap);
+        xmlout("inblock",(long)ru.ru_inblock);
+        xmlout("oublock",(long)ru.ru_oublock);
 
         struct timeval t1;
         gettimeofday(&t1,0);
