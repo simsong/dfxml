@@ -519,10 +519,6 @@ public:
     /********************************
      *** THESE ARE ALL THREADSAFE ***
      ********************************/
-    void comment(const std::string &comment);
-    void xmlprintf(const std::string &tag,const std::string &attribute,const char *fmt,...)
-        __attribute__((format(printf, 4, 5))); // "4" because this is "1";
-    void xmlout( const std::string &tag,const std::string &value, const std::string &attribute, const bool escape_value);
     void add_rusage() {
 #ifdef WIN32
         /* Note: must link -lpsapi for this */
