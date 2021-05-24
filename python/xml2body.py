@@ -53,7 +53,7 @@ def make_perms(mode):
     except: pass
 
     buf = list("---------")
-    
+
     # user perms
     if is_rusr(mode):
         buf[0] = 'r'
@@ -111,7 +111,7 @@ def process_fi(self,fi):
       itype = "-"
     # Concatenate inode meta_type and permissions in human-readable form.
     perms = itype + make_perms(fi.mode())
-    print "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % (
+    print("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % (
          fi.md5(),
          fi.filename(),
          fi.inode(),
@@ -122,7 +122,7 @@ def process_fi(self,fi):
          fi.atime(),
          fi.mtime(),
          fi.ctime(),
-         fi.crtime())
+         fi.crtime()))
 
 DiskState.process_fi = process_fi
 

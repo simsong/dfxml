@@ -1,5 +1,11 @@
+2020-01-03    <alexander.nelson@nist.gov>
+
+	* Schema: Update schema pointer to 'develop'
+
 2020-01-02    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test partition object properties
+	* objects.py: Add PartitionObject.partition_index property
 	* objects.py tests: Test empty object serialization
 
 2019-12-18    <alexander.nelson@nist.gov>
@@ -9,10 +15,16 @@
 
 2019-12-10    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test error property on disk image object
+	* objects.py: Add error property to disk image object
+	* Schema: Track schema branch add_disk_image_error
 	* objects.py tests: Reduce set of tests run by Makefile and pytest
 
 2019-12-09    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Test adding partition object as child of partition object
+	* objects.py: Add partition object as child of partition object
+	* Schema: Track DFXML Schema branch add_partition_child_of_partition
 	* objects.py tests: Add I/O round-trip to storage layers tests
 	* objects.py: Implement "poststream" de-serialization of remaining storage layers
 	* objects.py: Add parser transition for partition system containing file
@@ -36,6 +48,9 @@
 
 2019-12-02    <alexander.nelson@nist.gov>
 
+	* objects.py tests: Add test for PartitionSystemObject error property
+	* objects.py: Add error property to PartitionSystemObject, borrowing VolumeObject processing
+	* Schema: Track DFXML Schema branch add_partition_system_error
 	* objects.py tests: Test round-trip of external-namespace elements
 	* objects.py tests: Test ways to encounter error element
 	* objects.py: Revise handling of error element in parser
