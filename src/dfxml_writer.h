@@ -121,12 +121,6 @@ public:
     // adds the creator, build_environment, and execution environment
     void add_DFXML_creator(const std::string &program,const std::string &version,
                            const std::string &git_commit,
-<<<<<<< HEAD
-                           int argc,
-                           char * const *argv);
-
-private:
-=======
                            int argc,char * const *argv) {
         const std::string command_line = make_command_line(argc,argv);
 
@@ -139,7 +133,6 @@ private:
         pop();                  // creator
     }
 
->>>>>>> origin/master
     /*** neither copying nor assignment is implemented ***/
     dfxml_writer(const dfxml_writer &) = delete;
     dfxml_writer &operator=(const dfxml_writer &) = delete;
@@ -523,7 +516,6 @@ public:
 
     const std::string &get_outfilename() const {return outfilename; } ;
 
-<<<<<<< HEAD
     /********************************
      *** THESE ARE ALL THREADSAFE ***
      ********************************/
@@ -531,7 +523,6 @@ public:
     void xmlprintf(const std::string &tag,const std::string &attribute,const char *fmt,...)
         __attribute__((format(printf, 4, 5))); // "4" because this is "1";
     void xmlout( const std::string &tag,const std::string &value, const std::string &attribute, const bool escape_value);
-=======
     void add_rusage() {
 #ifdef WIN32
         /* Note: must link -lpsapi for this */
@@ -626,8 +617,6 @@ public:
         out->flush();
     }
 
-
->>>>>>> origin/master
 
     /* These all call xmlout or xmlprintf which already has locking, so these are all threadsafe! */
     void xmlout( const std::string &tag,const std::string &value ){ xmlout(tag,value,"",true); }
