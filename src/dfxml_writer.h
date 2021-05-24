@@ -516,6 +516,9 @@ public:
 
     const std::string &get_outfilename() const {return outfilename; } ;
 
+    /********************************
+     *** THESE ARE ALL THREADSAFE ***
+     ********************************/
     void add_rusage() {
 #ifdef WIN32
         /* Note: must link -lpsapi for this */
