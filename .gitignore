@@ -32,3 +32,4 @@ src/iblkfind
 python/demo.dfxml
 .cache
 .pytest_cache
+*.log

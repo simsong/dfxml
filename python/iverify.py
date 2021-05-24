@@ -7,7 +7,7 @@ present = []
 not_present = []
 
 def process_fi(fi):
-    print "process file",fi.filename()
+    print("process file",fi.filename())
     if fi.filesize()==0: return
     try:
         if fi.file_present():
@@ -16,7 +16,7 @@ def process_fi(fi):
         else:
             not_present.append(fi)
             return
-    except ValueError,e:
+    except ValueError(e):
         sys.stderr.write(str(e)+"\n")
 
 
@@ -43,23 +43,20 @@ if __name__=="__main__":
     reader.process_xml_stream(open(options.ground,"r"),process_fi)
 
     if len(present)==0:
-        print "None of the files are present in the image"
+        print("None of the files are present in the image")
         sys.exit(0)
 
     if len(not_present)==0:
-        print "All of the files are present in the image"
+        print("All of the files are present in the image")
         sys.exit(0)
 
-    print "\n\n"
-    print "Present in image:"
-    print "================="
-    print "\n".join([fi.filename() for fi in present])
+    print("\n\n")
+    print("Present in image:")
+    print("=================")
+    print("\n".join([fi.filename() for fi in present]))
 
-    print "\n"
-    print "Not Present or altered in image:"
-    print "====================="
+    print("\n")
+    print("Not Present or altered in image:")
+    print("=====================")
     for fi in not_present:
-        print fi.filename()
-
-    
-
+        print(fi.filename())

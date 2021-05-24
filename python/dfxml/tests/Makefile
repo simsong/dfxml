@@ -30,12 +30,13 @@ all: \
   check-diff_file_ignore-py3 \
   check-py2 \
   check-py3 \
+  check-tcpflow \
   check-versioned
 
 check: \
-  check-py2 \
-  check-py3
-	./cat_partitions_test.sh
+  check-py3 \
+  check-tcpflow \
+	./cat_partitions_test.sh \
 	./differential_dfxml_test.sh
 
 check-diff_file_ignore-py2: \
@@ -69,6 +70,13 @@ check-py3:
 	  check-diff_file_ignore-py3 \
 	  check-libraries-py3 \
 	  check-versioned
+
+check-tcpflow: \
+  ../../samples/tcpflow_zip_generic_header.xml \
+  ../TCPFlowObjects.py \
+  test_TCPFlowObjects.py
+	$(PYTHON2) test_TCPFlowObjects.py ../../samples/tcpflow_zip_generic_header.xml
+	$(PYTHON3) test_TCPFlowObjects.py ../../samples/tcpflow_zip_generic_header.xml
 
 check-versioned:
 	@echo Testing Python: $$PY >&2

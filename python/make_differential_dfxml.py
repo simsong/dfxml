@@ -165,7 +165,7 @@ def make_differential_dfxml(pre, post, **kwargs):
                 #Use the lower-case volume spelling
                 ftype_str = _lower_ftype_str(new_obj)
 
-                #Re-capping the general differential analysis algorithm: 
+                #Re-capping the general differential analysis algorithm:
                 #0. If the volume is in the new list, something's gone wrong.
                 if (offset, ftype_str) in new_volumes:
                     _logger.debug("new_obj.partition_offset = %r." % offset)
