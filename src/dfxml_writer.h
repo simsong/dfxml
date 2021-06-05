@@ -613,10 +613,6 @@ public:
         out->flush();
     }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/slg-dev
     /* These all call xmlout or xmlprintf which already has locking, so these are all threadsafe! */
     void xmlout( const std::string &tag,const std::string &value )       { xmlout(tag,value,"",true); }
     void xmlout( const std::string &tag,const signed char value )        { xmlprintf(tag,"","%hhd",value); }
