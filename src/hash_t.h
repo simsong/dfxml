@@ -61,7 +61,7 @@
 #define HAVE_SHA512_T
 #endif
 #else
-#error CommonCrypto or OpenSSL required for hash_t.h
+#error CommonCrypto or OpenSSL required for hash_t.h. Did you include config.h?
 #endif
 
 #ifdef HAVE_SYS_MMAN_H

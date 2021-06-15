@@ -9,6 +9,7 @@
 #define DFXML_WRITER_H
 
 /* c++ */
+#include <cassert>
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
