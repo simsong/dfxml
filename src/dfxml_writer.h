@@ -22,6 +22,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <stdexcept>
 
 #include <sys/time.h>
 
@@ -285,6 +286,15 @@ public:
 
     void close() {                       // writes the output to the file
         const std::lock_guard<std::mutex> lock(M);
+        if (!tag_stack.empty()) {
+            std::cerr << "dfxml::close(): tag stack not empty!\n";
+            while (!tag_stack.empty()){
+                auto it = tag_stack.top();
+                std::cerr << "   " << it << "\n";
+                tag_stack.pop();
+            }
+            throw std::runtime_error("dfxml: tag stack not empty.");
+        }
         outf.close();
         if(make_dtd){
             /* If we are making the DTD, then we should close the file,
@@ -320,13 +330,13 @@ public:
     }
 
     void flush(){ outf.flush(); }
-    void tagout( const std::string &tag,const std::string &attribute) {
+    void tagout( const std::string &tag, const std::string &attribute) {
         verify_tag(tag);
         *out << "<" << tag;
         if(attribute.size()>0) *out << " " << attribute;
         *out << ">";
     }
-    void push( const std::string &tag,const std::string &attribute) {
+    void push( const std::string &tag, const std::string &attribute) {
         spaces();
         tag_stack.push(tag);
         tagout(tag,attribute);
@@ -360,10 +370,10 @@ public:
     void pop() { // close the tag
         assert(tag_stack.size()>0);
         std::string tag = tag_stack.top();
-        tag_stack.pop();
         spaces();
         tagout("/"+tag,"");
         *out << '\n';
+        tag_stack.pop();
     }
 
     void add_timestamp(const std::string &name) {
