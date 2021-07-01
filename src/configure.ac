@@ -8,7 +8,7 @@
 # This file is public domain
 #
 
-AC_PREREQ([2.71])
+AC_PREREQ([2.69])
 AC_INIT([DFXML],[1.0.1],[bugs@digitalcorpora.org])
 AC_CONFIG_MACRO_DIR(m4)
 m4_include([m4/ax_cxx_compile_stdcxx.m4])
@@ -18,6 +18,10 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
+# Initialize libtool support
+LT_PREREQ([2.4.6])
+LT_INIT([shared])
+LT_LANG([C++])
 
 # Programs we will be using
 AC_PROG_CC

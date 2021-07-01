@@ -45,6 +45,19 @@ $ git checkout -b tmp  ; git checkout master ; git merge tmp ; git branch -d tmp
 ### Usage with the DFXML Schema
 The [DFXML schema](https://github.com/dfxml-working-group/dfxml_schema) is tracked here similarly to a Git submodule, but without using the Git submodule mechanism to avoid some operational deployment issues.  If you would like to check out the tracked schema version, run `make schema-init`.  It is only necessary to check this out if you are testing validation of DFXML content against the schema.
 
+### Building dfxml as a shared library
+To build dfxml as a shared library, run the following commands:
+
+```bash
+autoreconf -vif
+automake
+./configure
+make
+sudo make install
+```
+
+Note: If you are on a Linux machine ensure, that the packages specified in `src/requirements-ubuntu.txt` are installed. 
+
 Release Notes
 =============
 - 2018-07-22 @simsong Significant redesign of the Python library.
