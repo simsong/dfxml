@@ -23,6 +23,7 @@
 #include <stack>
 #include <string>
 #include <stdexcept>
+#include <stdarg.h>
 
 #include <sys/time.h>
 
