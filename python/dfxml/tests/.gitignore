@@ -1,6 +1,0 @@
-*.dfxml
-*.xml
-walk_ignore_test/
-differential_dfxml_test_??.txt
-graph.png
-graph_data.json
